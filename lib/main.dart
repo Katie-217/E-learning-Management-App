@@ -4,12 +4,12 @@
 // ========================================
 
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'features/dashboard/presentation/student_dashboard.dart';
-// import 'features/dashboard/presentation/dashboard_view.dart';
-import 'features/role_selection/legacy/role_selection_screen.dart';
-// import 'features/auth/legacy/login_screen.dart';
+import 'features/dashboard/presentation/dashboard_view.dart';
 import 'features/auth/presentation/auth_overlay_screen.dart';
 import 'core/enums/user_role.dart';
 import 'core/models/course.dart';
@@ -21,6 +21,9 @@ import 'features/dashboard/instructor_dashboard.dart';
 // ========================================
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   
   // ========================================
   // PHẦN: Khởi tạo Hive Database
@@ -86,19 +89,18 @@ class ClassroomApp extends StatelessWidget {
       // ========================================
       // home: StudentDashboard(),
       // debugShowCheckedModeBanner: false,
-      home: RoleSelectionScreen(),
+      home: AuthOverlayScreen(),
       // ========================================
       // PHẦN: Định tuyến ứng dụng
       // MÔ TẢ: Cấu hình các đường dẫn điều hướng
       // ========================================
       routes: {
-        '/role-selection': (context) => RoleSelectionScreen(),
-        '/teacher-login': (context) => AuthOverlayScreen(userRole: UserRole.teacher),
-        '/student-login': (context) => AuthOverlayScreen(userRole: UserRole.student),
-        '/teacher-dashboard': (context) => InstructorDashboard(),
+        '/role-selection': (context) => const AuthOverlayScreen(),
+        '/teacher-login': (context) => const AuthOverlayScreen(initialRole: UserRole.teacher),
+        '/student-login': (context) => const AuthOverlayScreen(initialRole: UserRole.student),
+        '/teacher-dashboard': (context) => DashboardView(),
         '/student-dashboard': (context) => StudentDashboard(),
-        // Legacy demo screens (optional routes)
-        '/legacy/role-selection': (context) => RoleSelectionScreen(),
+
       },
     );
   }

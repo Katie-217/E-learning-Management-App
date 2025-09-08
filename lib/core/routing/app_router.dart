@@ -32,7 +32,7 @@ class AppRouter {
       GoRoute(
         path: '/auth',
         name: 'auth',
-        builder: (context, state) => AuthOverlayScreen(userRole: UserRole.student),
+        builder: (context, state) => const AuthOverlayScreen(initialRole: UserRole.student),
       ),
       GoRoute(
         path: '/dashboard',

@@ -4,7 +4,9 @@
 // ========================================
 
 import 'package:flutter/material.dart';
-
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 // ========================================
 // CLASS: GoogleAuthService
 // MÔ TẢ: Service chính cho việc xác thực Google
@@ -14,56 +16,89 @@ class GoogleAuthService {
   // CONSTRUCTOR: Private constructor
   // MÔ TẢ: Singleton pattern cho GoogleAuthService
   // ========================================
-  GoogleAuthService._();
-  
+  GoogleAuthService();
+
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
+
   // ========================================
   // INSTANCE: Singleton instance
   // MÔ TẢ: Instance duy nhất của GoogleAuthService
   // ========================================
-  static final GoogleAuthService _instance = GoogleAuthService._();
-  
+
+
   // ========================================
   // GETTER: instance
   // MÔ TẢ: Truy cập instance singleton
   // ========================================
-  static GoogleAuthService get instance => _instance;
+
 
   // ========================================
   // HÀM: signInWithGoogle()
   // MÔ TẢ: Xử lý đăng nhập bằng Google
   // ========================================
-  Future<GoogleSignInResult> signInWithGoogle() async {
+  Future<User?> signInWithGoogle() async {
     try {
-      // TODO: Implement Google Sign-In logic here
-      // For now, we'll simulate the sign-in process
-      await Future.delayed(const Duration(seconds: 2)); // Simulate network delay
-      
-      // Simulate successful sign-in
-      return GoogleSignInResult.success(
-        GoogleUserInfo(
-          id: 'google_user_123',
-          email: 'user@gmail.com',
-          displayName: 'Google User',
-          photoUrl: null,
-        ),
+      // Đăng xuất trước để ép Google hiển thị danh sách tài khoản mỗi lần chọn
+      await _googleSignIn.signOut();
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) return null;
+
+      final GoogleSignInAuthentication googleAuth = await googleUser
+          .authentication;
+
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
       );
-    } catch (e) {
-      return GoogleSignInResult.error('Đăng nhập Google thất bại: $e');
+
+      final userCredential = await _auth.signInWithCredential(credential);
+      return userCredential.user;
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'account-exists-with-different-credential') {
+        print(
+            " Email đã tồn tại với phương thức khác. Cần đăng nhập bằng Email/Password trước rồi link Google.");
+      }
+      rethrow;
     }
   }
 
-  // ========================================
-  // HÀM: signOut()
-  // MÔ TẢ: Đăng xuất khỏi Google
-  // ========================================
-  Future<void> signOut() async {
-    try {
-      // TODO: Implement Google Sign-Out logic here
-      await Future.delayed(const Duration(milliseconds: 500));
-    } catch (e) {
-      debugPrint('Google sign out error: $e');
+    // Liên kết Google với tài khoản hiện tại (nếu đăng nhập Email/Password trước đó)
+    Future<void> linkGoogleAccount() async {
+      try {
+        final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+        if (googleUser == null) return;
+
+        final GoogleSignInAuthentication googleAuth = await googleUser
+            .authentication;
+
+        final credential = GoogleAuthProvider.credential(
+          accessToken: googleAuth.accessToken,
+          idToken: googleAuth.idToken,
+        );
+
+        await _auth.currentUser?.linkWithCredential(credential);
+
+        print("✅ Google account linked successfully!");
+      } catch (e) {
+        print("❌ Error linking Google account: $e");
+      }
     }
-  }
+
+
+    // ========================================
+    // HÀM: signOut()
+    // MÔ TẢ: Đăng xuất khỏi Google
+    // ========================================
+    Future<void> signOut() async {
+      try {
+        // TODO: Implement Google Sign-Out logic here
+        await Future.delayed(const Duration(milliseconds: 500));
+      } catch (e) {
+        debugPrint('Google sign out error: $e');
+      }
+    }
+
 
   // ========================================
   // HÀM: isSignedIn()
@@ -156,3 +191,6 @@ class GoogleSignInResult {
     );
   }
 }
+
+
+
