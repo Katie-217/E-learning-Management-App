@@ -81,7 +81,7 @@ class _StudentDashboardState extends ConsumerState<StudentDashboard> {
             PopupMenuItem(value: 'settings', child: Text('Cài đặt')),
             PopupMenuDivider(),
             PopupMenuItem(value: 'logout', child: Text('Đăng xuất')),
-          ],
+          ], 
           child: CircleAvatar(
             backgroundColor: Theme.of(context).colorScheme.primary,
             child: Text('S', style: TextStyle(color: Colors.white)),

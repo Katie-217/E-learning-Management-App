@@ -7,12 +7,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'features/dashboard/presentation/student_dashboard.dart';
-import 'features/dashboard/presentation/dashboard_view.dart';
+// import 'features/dashboard/presentation/dashboard_view.dart';
 import 'features/role_selection/legacy/role_selection_screen.dart';
-import 'features/auth/legacy/login_screen.dart';
+// import 'features/auth/legacy/login_screen.dart';
 import 'features/auth/presentation/auth_overlay_screen.dart';
 import 'core/enums/user_role.dart';
 import 'core/models/course.dart';
+import 'features/dashboard/instructor_dashboard.dart';
 
 // ========================================
 // HÀM: main()
@@ -94,7 +95,7 @@ class ClassroomApp extends StatelessWidget {
         '/role-selection': (context) => RoleSelectionScreen(),
         '/teacher-login': (context) => AuthOverlayScreen(userRole: UserRole.teacher),
         '/student-login': (context) => AuthOverlayScreen(userRole: UserRole.student),
-        '/teacher-dashboard': (context) => DashboardView(),
+        '/teacher-dashboard': (context) => InstructorDashboard(),
         '/student-dashboard': (context) => StudentDashboard(),
         // Legacy demo screens (optional routes)
         '/legacy/role-selection': (context) => RoleSelectionScreen(),
