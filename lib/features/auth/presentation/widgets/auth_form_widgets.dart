@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
-import '../../../../core/enums/user_role.dart';
-import '../../auth_service.dart';
+import '../../../../core/config/users-role.dart';
 
+// ========================================
+// CLASS: AuthFormContainer
+// MÔ TẢ: Container chứa form đăng nhập/đăng ký
+// ========================================
 class AuthFormContainer extends StatelessWidget {
   final String title;
   final UserRole role;
@@ -11,9 +14,8 @@ class AuthFormContainer extends StatelessWidget {
   final Widget? secondary;
   final Widget? footer;
 
-  
-   AuthFormContainer({
-    super.key,
+  const AuthFormContainer({
+    Key? key,
     required this.title,
     required this.role,
     required this.fields,
@@ -21,79 +23,135 @@ class AuthFormContainer extends StatelessWidget {
     required this.onPrimaryAction,
     this.secondary,
     this.footer,
-  });
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Container(
-        color: Colors.white,
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 380),
-          child: Container(
-            decoration: const BoxDecoration(),
-            clipBehavior: Clip.antiAlias,
-            child: Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.08),
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // ========================================
+          // PHẦN: Tiêu đề
+          // MÔ TẢ: Tiêu đề form với icon role
+          // ========================================
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                role.icon,
+                color: role.primaryColor,
+                size: 32,
               ),
-              child: SingleChildScrollView(
-              physics: const ClampingScrollPhysics(),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800)),
-                  const SizedBox(height: 24),
-                  ...fields.expand((e) sync* {
-                    yield e;
-                    yield const SizedBox(height: 14);
-                  }),
-                  const SizedBox(height: 4),
-                  if (secondary != null) secondary!,
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 48,
-                    child: ElevatedButton(
-                      onPressed: onPrimaryAction,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: role.primaryColor,
-                        foregroundColor: Colors.white,
-                        shape: const StadiumBorder(),
-                        elevation: 2,
-                      ),
-                      child: Text(primaryActionLabel,style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w400)),
-                    ),
-                  ),
-                  if (footer != null) ...[
-                    const SizedBox(height: 12),
-                    Center(child: footer!),
-                  ],
-                ],
+              const SizedBox(width: 12),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: role.primaryColor,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 32),
+          
+          // ========================================
+          // PHẦN: Các trường input
+          // MÔ TẢ: Danh sách các trường nhập liệu
+          // ========================================
+          ...fields.map((field) => Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: field,
+          )),
+          
+          const SizedBox(height: 24),
+          
+          // ========================================
+          // PHẦN: Nút chính
+          // MÔ TẢ: Nút thực hiện hành động chính
+          // ========================================
+          SizedBox(
+            height: 50,
+            child: ElevatedButton(
+              onPressed: onPrimaryAction,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: role.primaryColor,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(25),
+                ),
+                elevation: 2,
+              ),
+              child: Text(
+                primaryActionLabel,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ),
-        ),
+          
+          // ========================================
+          // PHẦN: Các tùy chọn phụ
+          // MÔ TẢ: Checkbox, link quên mật khẩu, etc.
+          // ========================================
+          if (secondary != null) ...[
+            const SizedBox(height: 16),
+            secondary!,
+          ],
+          
+          // ========================================
+          // PHẦN: Footer
+          // MÔ TẢ: Google login, divider, etc.
+          // ========================================
+          if (footer != null) ...[
+            const SizedBox(height: 24),
+            footer!,
+          ],
+        ],
       ),
-      ));
+    );
   }
 }
 
-class AuthTextField extends StatelessWidget {
+// ========================================
+// CLASS: AuthTextField
+// MÔ TẢ: Text field tùy chỉnh cho form auth
+// ========================================
+class AuthTextField extends StatefulWidget {
   final String hint;
+  final TextEditingController controller;
   final bool isPassword;
-  final TextEditingController? controller;
-  const AuthTextField({super.key, required this.hint, this.isPassword = false, this.controller});
+  final String? Function(String?)? validator;
+
+  const AuthTextField({
+    Key? key,
+    required this.hint,
+    required this.controller,
+    this.isPassword = false,
+    this.validator,
+  }) : super(key: key);
+
+  @override
+  State<AuthTextField> createState() => _AuthTextFieldState();
+}
+
+class _AuthTextFieldState extends State<AuthTextField> {
+  bool _obscureText = true;
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
-      controller: controller,
-      obscureText: isPassword,
+    return TextFormField(
+      controller: widget.controller,
+      obscureText: widget.isPassword ? _obscureText : false,
+      validator: widget.validator,
       decoration: InputDecoration(
-        hintText: hint,
+        hintText: widget.hint,
+        hintStyle: const TextStyle(color: Color(0xFF9CA3AF)),
         filled: true,
         fillColor: const Color(0xFFF6F7F9),
         border: OutlineInputBorder(
@@ -109,64 +167,60 @@ class AuthTextField extends StatelessWidget {
           borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        suffixIcon: widget.isPassword
+            ? IconButton(
+                icon: Icon(
+                  _obscureText ? Icons.visibility_off : Icons.visibility,
+                  color: const Color(0xFF9CA3AF),
+                ),
+                onPressed: () {
+                  setState(() {
+                    _obscureText = !_obscureText;
+                  });
+                },
+              )
+            : null,
       ),
     );
   }
 }
 
+// ========================================
+// CLASS: GoogleLoginButton
+// MÔ TẢ: Nút đăng nhập bằng Google
+// ========================================
 class GoogleLoginButton extends StatelessWidget {
-  const GoogleLoginButton({super.key});
+  final VoidCallback? onPressed;
+
+  const GoogleLoginButton({Key? key, this.onPressed}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return OutlinedButton(
-      style: OutlinedButton.styleFrom(
-        side: const BorderSide(color: Colors.grey),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(30),
+    return SizedBox(
+      width: double.infinity,
+      height: 50,
+      child: OutlinedButton.icon(
+        onPressed: onPressed,
+        icon: Image.asset(
+          'assets/icons/logo-google.png',
+          width: 20,
+          height: 20,
         ),
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
-        backgroundColor: Colors.white,
-      ),
-      onPressed: () async {
-        final authService = AuthService.defaultClient();
-        final user = await authService.signInWithGoogle();
-
-        if (user != null) {
-          // Lấy role và điều hướng tới dashboard tương ứng
-          final role = await authService.fetchUserRole(user.uid) ?? 'student';
-          final routeName = role == 'teacher' ? '/teacher-dashboard' : '/student-dashboard';
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Đăng nhập Google thành công: ${user.email ?? ''}')),
-          );
-          Navigator.of(context).pushReplacementNamed(routeName);
-        }else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Đăng nhập Google thất bại, vui lòng thử lại.')),
-          );
-        }
-      },
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Image.asset(
-           'assets/icons/logo-google.png',
-            height: 24,
-            width: 24,
+        label: const Text(
+          'Continue with Google',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
           ),
-          const SizedBox(width: 24),
-          const Text(
-            "Log in with Google",
-            style: TextStyle(
-              color: Colors.black87,
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-            ),
+        ),
+        style: OutlinedButton.styleFrom(
+          side: const BorderSide(color: Color(0xFFE5E7EB)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(25),
           ),
-        ],
+          foregroundColor: const Color(0xFF374151),
+        ),
       ),
     );
   }
 }
-
-

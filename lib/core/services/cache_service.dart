@@ -5,7 +5,7 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive/hive.dart';
-import '../models/course.dart';
+import '../../data/models/course_model.dart';
 
 // ========================================
 // CLASS: CacheService
@@ -23,7 +23,7 @@ class CacheService {
   // GETTER: _coursesBox
   // MÔ TẢ: Truy cập box lưu trữ khóa học
   // ========================================
-  Box<Course> get _coursesBox => Hive.box<Course>(coursesBoxName);
+  Box<CourseModel> get _coursesBox => Hive.box<CourseModel>(coursesBoxName);
   
   // ========================================
   // GETTER: _appCacheBox
@@ -40,10 +40,10 @@ class CacheService {
   // HÀM: saveCourses()
   // MÔ TẢ: Lưu danh sách khóa học vào cache
   // ========================================
-  Future<void> saveCourses(List<Course> courses) async {
+  Future<void> saveCourses(List<CourseModel> courses) async {
     await _coursesBox.clear();
     for (final course in courses) {
-      await _coursesBox.put(course.id, course);
+      await _coursesBox.put(course.id.toString(), course);
     }
     await _appCacheBox.put('courses_last_updated', DateTime.now().toIso8601String());
   }
@@ -52,7 +52,7 @@ class CacheService {
   // HÀM: getCourses()
   // MÔ TẢ: Lấy danh sách khóa học từ cache
   // ========================================
-  Future<List<Course>> getCourses() async {
+  Future<List<CourseModel>> getCourses() async {
     final courses = _coursesBox.values.toList();
     return courses;
   }
@@ -61,7 +61,7 @@ class CacheService {
   // HÀM: getCourse()
   // MÔ TẢ: Lấy một khóa học cụ thể từ cache
   // ========================================
-  Future<Course?> getCourse(String id) async {
+  Future<CourseModel?> getCourse(String id) async {
     return _coursesBox.get(id);
   }
 

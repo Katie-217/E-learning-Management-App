@@ -41,6 +41,7 @@ dependencies:
   go_router: ^14.2.3
   # Networking
   dio: ^5.7.0
+  http: ^1.2.2
   # Local databases
   hive: ^2.2.3
   hive_flutter: ^1.1.0
