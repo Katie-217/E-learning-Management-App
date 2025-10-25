@@ -41,13 +41,15 @@ dependencies:
   go_router: ^14.2.3
   # Networking
   dio: ^5.7.0
+  http: ^1.2.2
   # Local databases
   hive: ^2.2.3
   hive_flutter: ^1.1.0
   sqflite: ^2.3.3+1
   path: ^1.9.0
+  shared_preferences: ^2.2.2
   # Utils
-  intl: ^0.19.0
+  intl: ^0.20.2
   csv: ^6.0.0
   # Notifications (optional, platform-specific setup required)
   flutter_local_notifications: ^16.3.2
@@ -58,6 +60,13 @@ dependencies:
   image_picker: ^1.1.2
   # UI Effects
   shimmer: ^3.0.0
+  # Firebase core and common services
+  firebase_core: ^3.15.2
+  firebase_auth: ^5.7.0
+  cloud_firestore: ^5.6.12
+  firebase_analytics: ^11.3.1
+  firebase_storage: ^12.4.10
+  google_sign_in: ^6.0.0
 
 dev_dependencies:
   flutter_test:

@@ -5,7 +5,7 @@
 
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/course.dart';
+import '../../data/models/course_model.dart';
 
 // ========================================
 // CLASS: ApiService
@@ -63,7 +63,7 @@ class ApiService {
   // HÀM: getCourses()
   // MÔ TẢ: Lấy danh sách khóa học từ API
   // ========================================
-  Future<List<Course>> getCourses({String? semester}) async {
+  Future<List<CourseModel>> getCourses({String? semester}) async {
     try {
       await Future.delayed(Duration(seconds: 2));
       return _getMockCourses();
@@ -77,10 +77,10 @@ class ApiService {
   // HÀM: getCourseDetail()
   // MÔ TẢ: Lấy chi tiết một khóa học cụ thể
   // ========================================
-  Future<Course> getCourseDetail(String courseId) async {
+  Future<CourseModel> getCourseDetail(String courseId) async {
     await Future.delayed(Duration(milliseconds: 500));
     final courses = _getMockCourses();
-    return courses.firstWhere((course) => course.id == courseId);
+    return courses.firstWhere((course) => course.id.toString() == courseId);
   }
 
   // ========================================
@@ -109,27 +109,10 @@ class ApiService {
 
   // ========================================
   // HÀM: _getMockCourses()
-  // MÔ TẢ: Tạo dữ liệu mock cho khóa học (tạm thời)
+  // MÔ TẢ: Trả về danh sách trống (không sử dụng mock data)
   // ========================================
-  List<Course> _getMockCourses() {
-    return [
-      Course(
-        id: '1',
-        name: 'Mobile App Development with Flutter',
-        code: 'CS450',
-        instructor: 'Dr. Sarah Johnson',
-        description: 'Learn to build cross-platform apps using Flutter.',
-        credits: 3,
-        semester: 'Fall 2024',
-        status: CourseStatus.active,
-        imageUrl: 'https://picsum.photos/400/200?random=1',
-        progress: 75.0,
-        totalStudents: 42,
-        startDate: DateTime(2024, 9, 1),
-        endDate: DateTime(2024, 12, 15),
-      ),
-      // thêm mock khác...
-    ];
+  List<CourseModel> _getMockCourses() {
+    return [];
   }
 }
 

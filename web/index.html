@@ -19,7 +19,9 @@
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="A new Flutter project.">
+  <!-- Google Sign-In Web Client ID -->
 
+  <!-- <meta name="google-signin-client_id" content="601468166401-262tn6igmdcfbkf7e5r0dqgutge768u3.apps.googleusercontent.com" /> -->
   <!-- iOS meta tags & icons -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -34,5 +36,20 @@
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>
+  <script type="module">
+    // Import Firebase SDKs
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+    const firebaseConfig = {
+  apiKey: "AIzaSyADyohRSDQ7XDoGnF4qLzeR4g32oLrbwbc",
+  authDomain: "e-learning-management-79797.firebaseapp.com",
+  projectId: "e-learning-management-79797",
+  storageBucket: "e-learning-management-79797.firebasestorage.app",
+  messagingSenderId: "601468166401",
+  appId: "1:601468166401:web:9c3d5dab0eb2f988c7bb00",
+  measurementId: "G-JQBLRCVK5K"
+};
+    const app = initializeApp(firebaseConfig);
+  </script>
+  
 </body>
 </html>

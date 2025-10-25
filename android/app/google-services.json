@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "601468166401",
+    "project_id": "e-learning-management-79797",
+    "storage_bucket": "e-learning-management-79797.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:601468166401:android:YOUR_ANDROID_APP_ID",
+        "android_client_info": {
+          "package_name": "com.example.elearning_management_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "601468166401-YOUR_OAUTH_CLIENT_ID.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyADyohRSDQ7XDoGnF4qLzeR4g32oLrbwbc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "601468166401-YOUR_OAUTH_CLIENT_ID.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
+
+
+
+
+
+
+
+

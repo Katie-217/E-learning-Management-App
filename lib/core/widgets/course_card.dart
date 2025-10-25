@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
-import '../models/course.dart';
+import '../../data/models/course_model.dart';
 
 class CourseCard extends StatelessWidget {
-  final Course course;
+  final CourseModel course;
   final VoidCallback onTap;
 
   const CourseCard({
-    Key? key,
+    super.key,
     required this.course,
     required this.onTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -143,7 +143,7 @@ class CourseCard extends StatelessWidget {
             ],
           ),
           Spacer(),
-          if (course.status == CourseStatus.active) ...[
+          if (course.status == 'active') ...[
             SizedBox(height: 8),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -188,53 +188,61 @@ class CourseCard extends StatelessWidget {
 
   List<Color> _getGradientColors() {
     switch (course.status) {
-      case CourseStatus.active:
+      case 'active':
         return [Colors.blue.shade400, Colors.blue.shade600];
-      case CourseStatus.completed:
+      case 'completed':
         return [Colors.green.shade400, Colors.green.shade600];
-      case CourseStatus.paused:
+      case 'paused':
         return [Colors.orange.shade400, Colors.orange.shade600];
-      case CourseStatus.archived:
+      case 'archived':
         return [Colors.grey.shade400, Colors.grey.shade600];
+      default:
+        return [Colors.blue.shade400, Colors.blue.shade600];
     }
   }
 
   Color _getStatusColor() {
     switch (course.status) {
-      case CourseStatus.active:
+      case 'active':
         return Colors.green;
-      case CourseStatus.completed:
+      case 'completed':
         return Colors.blue;
-      case CourseStatus.paused:
+      case 'paused':
         return Colors.orange;
-      case CourseStatus.archived:
+      case 'archived':
         return Colors.grey;
+      default:
+        return Colors.green;
     }
   }
 
   IconData _getStatusIcon() {
     switch (course.status) {
-      case CourseStatus.active:
+      case 'active':
         return Icons.play_circle;
-      case CourseStatus.completed:
+      case 'completed':
         return Icons.check_circle;
-      case CourseStatus.paused:
+      case 'paused':
         return Icons.pause_circle;
-      case CourseStatus.archived:
+      case 'archived':
         return Icons.archive;
+      default:
+        return Icons.play_circle;
     }
   }
 
   String _getStatusText() {
     switch (course.status) {
-      case CourseStatus.active:
+      case 'active':
         return 'Active';
-      case CourseStatus.completed:
+      case 'completed':
         return 'Done';
-      case CourseStatus.paused:
+      case 'paused':
         return 'Paused';
-      case CourseStatus.archived:
+      case 'archived':
         return 'Archived';
+      default:
+        return 'Active';
     }
   }
 

@@ -1,23 +1,27 @@
+import 'package:elearning_management_app/features/student/presentation/pages/student_dashboard_page.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../services/user_session_service.dart';
 
-import '../../features/auth/presentation/auth_overlay_screen.dart';
-import '../../core/enums/user_role.dart';
-import '../../features/dashboard/presentation/dashboard_view.dart';
-import '../../features/profile/presentation/profile_view.dart';
-import '../../features/semester_course_group_student/semester_page.dart';
-import '../../features/semester_course_group_student/course_page.dart';
-import '../../features/semester_course_group_student/group_page.dart';
-import '../../features/semester_course_group_student/student_page.dart';
-import '../../features/semester_course_group_student/csv_import_preview.dart';
-import '../../features/content/announcements_page.dart';
-import '../../features/content/assignments_page.dart';
-import '../../features/content/quizzes_page.dart';
-import '../../features/content/materials_page.dart';
-import '../../features/forum_chat/forum_page.dart';
-import '../../features/forum_chat/chat_page.dart';
-import '../../features/notifications/notification_page.dart';
-import '../../features/analytics/analytics_page.dart';
+import '../../features/auth/presentation/pages/auth_overlay_screen.dart';
+import '../../core/config/users-role.dart';
+import '../../features/instructor/presentation/pages/instructor_dashboard.dart';
+import '../../features/settings/presentation/pages/profile_view.dart';
+import '../../features/courses/presentation/pages/course_page.dart';
+// import '../../features/student/presentation/pages/semester_page.dart';
+// import '../../features/student/presentation/pages/course_page.dart';
+// import '../../features/groups/presentation/pages/group_page.dart';
+// import '../../features/student/presentation/pages/student_page.dart';
+// import '../../features/student/presentation/pages/csv_import_preview.dart';
+// import '../../features/announcements/presentation/pages/announcements_page.dart';
+// import '../../features/assignments/presentation/pages/assignments_page.dart';
+// import '../../features/quizzes/presentation/pages/quizzes_page.dart';
+// import '../../features/materials/presentation/pages/materials_page.dart';
+// import '../../features/forum/presentation/pages/forum_page.dart';
+// import '../../features/chat/presentation/pages/chat_page.dart';
+// import '../../features/notifications/presentation/pages/notification_page.dart';
+// import '../../features/analytics/presentation/pages/analytics_page.dart';
 
 class AppRouter {
   AppRouter._();
@@ -28,36 +32,75 @@ class AppRouter {
   static final GoRouter router = GoRouter(
     navigatorKey: _rootNavigatorKey,
     initialLocation: '/auth',
+    redirect: (context, state) async {
+      final isLoggingIn = state.matchedLocation == '/auth';
+      
+      // Kiểm tra Firebase Auth trước
+      final firebaseUser = FirebaseAuth.instance.currentUser;
+      if (firebaseUser != null) {
+        print('DEBUG: 🔍 Firebase user found: ${firebaseUser.email}');
+        if (isLoggingIn) return '/dashboard';
+        return null;
+      }
+      
+      // Nếu không có Firebase user, kiểm tra SharedPreferences
+      final hasSession = await UserSessionService.isUserLoggedIn();
+      print('DEBUG: 🔍 SharedPreferences session: $hasSession');
+      
+      if (!hasSession && !isLoggingIn) {
+        print('DEBUG: ❌ No session found, redirecting to auth');
+        return '/auth';
+      }
+      
+      if (hasSession && isLoggingIn) {
+        print('DEBUG: ✅ Session found, redirecting to dashboard');
+        return '/dashboard';
+      }
+      
+      return null;
+    },
     routes: <RouteBase>[
       GoRoute(
         path: '/auth',
         name: 'auth',
-        builder: (context, state) => AuthOverlayScreen(userRole: UserRole.student),
+        builder: (context, state) => const AuthOverlayScreen(initialRole: UserRole.student),
       ),
       GoRoute(
         path: '/dashboard',
         name: 'dashboard',
-        builder: (context, state) => const DashboardView(),
+        builder: (context, state) => const StudentDashboardPage(),
       ),
       GoRoute(
         path: '/profile',
         name: 'profile',
         builder: (context, state) => const ProfileView(),
       ),
-      GoRoute(path: '/semesters', builder: (c, s) => const SemesterPage()),
-      GoRoute(path: '/courses', builder: (c, s) => const CoursePage()),
-      GoRoute(path: '/groups', builder: (c, s) => const GroupPage()),
-      GoRoute(path: '/students', builder: (c, s) => const StudentPage()),
-      GoRoute(path: '/csv-import', builder: (c, s) => const CsvImportPreviewPage()),
-      GoRoute(path: '/announcements', builder: (c, s) => const AnnouncementsPage()),
-      GoRoute(path: '/assignments', builder: (c, s) => const AssignmentsPage()),
-      GoRoute(path: '/quizzes', builder: (c, s) => const QuizzesPage()),
-      GoRoute(path: '/materials', builder: (c, s) => const MaterialsPage()),
-      GoRoute(path: '/forum', builder: (c, s) => const ForumPage()),
-      GoRoute(path: '/chat', builder: (c, s) => const ChatPage()),
-      GoRoute(path: '/notifications', builder: (c, s) => const NotificationPage()),
-      GoRoute(path: '/analytics', builder: (c, s) => const AnalyticsPage()),
+      GoRoute(
+        path: '/courses',
+        name: 'courses',
+        builder: (context, state) => const CoursePage(),
+      ),
+      // GoRoute(path: '/semesters', builder: (c, s) => const SemesterPage()),
+      // GoRoute(path: '/courses', builder: (c, s) => const CoursePage()),
+      // GoRoute(path: '/groups', builder: (c, s) => const GroupPage()),
+      // GoRoute(path: '/students', builder: (c, s) => const StudentPage()),
+      // GoRoute(path: '/csv-import', builder: (c, s) => const CsvImportPreviewPage()),
+      // GoRoute(path: '/announcements', builder: (c, s) => const AnnouncementsPage()),
+      // GoRoute(path: '/assignments', builder: (c, s) => const AssignmentsPage()),
+      // GoRoute(path: '/quizzes', builder: (c, s) => const QuizzesPage()),
+      // GoRoute(path: '/materials', builder: (c, s) => const MaterialsPage()),
+      // GoRoute(path: '/forum', builder: (c, s) => const ForumPage()),
+      // GoRoute(path: '/chat', builder: (c, s) => const ChatPage()),
+      // GoRoute(path: '/notifications', builder: (c, s) => const NotificationsView()),
+      // GoRoute(path: '/analytics', builder: (c, s) => const AnalyticsPage()),
     ],
+  // static const String auth = '/auth';
+  // static const String dashboard = '/dashboard';
+  // static const String profile = '/profile';
+  // static const String content = '/content';
+  // static const String forum = '/forum';
+  // static const String notifications = '/notifications';
+  // static const String analytics = '/analytics';
   );
 }
 
