@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'sidebar_model.dart';
 import '../../features/student/presentation/pages/student_dashboard_page.dart';
 import '../../features/courses/presentation/pages/course_page.dart';
@@ -12,11 +14,110 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   String activeKey = 'dashboard';
+  String _userName = 'User';
+  String? _userPhotoUrl;
+  String _userEmail = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Không tự động set route, để user tự chọn
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+        
+        if (doc.exists) {
+          final data = doc.data()!;
+          setState(() {
+            _userName = data['name'] ?? user.displayName ?? 'User';
+            _userPhotoUrl = data['photoUrl'] ?? user.photoURL;
+            _userEmail = data['email'] ?? user.email ?? '';
+          });
+        } else {
+          // Fallback to Firebase Auth data
+          setState(() {
+            _userName = user.displayName ?? 'User';
+            _userPhotoUrl = user.photoURL;
+            _userEmail = user.email ?? '';
+          });
+        }
+      }
+    } catch (e) {
+      print('Error loading user data: $e');
+    }
+  }
+
+  Widget _buildUserAvatar() {
+    if (_userPhotoUrl != null && _userPhotoUrl!.isNotEmpty) {
+      return ClipOval(
+        child: Image.network(
+          _userPhotoUrl!,
+          width: 40,
+          height: 40,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return _buildDefaultAvatar();
+          },
+        ),
+      );
+    }
+    return _buildDefaultAvatar();
+  }
+
+  Widget _buildDefaultAvatar() {
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(colors: [Colors.indigo, Colors.purple]),
+        shape: BoxShape.circle,
+      ),
+      child: Center(
+        child: Text(
+          _userName.isNotEmpty ? _userName[0].toUpperCase() : 'U',
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
+        ),
+      ),
+    );
+  }
 
   void onSelect(String key) {
+    print('DEBUG: onSelect called with key = $key'); // Debug log
     setState(() {
       activeKey = key;
     });
+  }
+
+  Widget _buildCurrentPage() {
+    print('DEBUG: _buildCurrentPage called with activeKey = $activeKey'); // Debug log
+    switch (activeKey) {
+      case 'dashboard':
+        print('DEBUG: Building StudentDashboardPage'); // Debug log
+        return const StudentDashboardPage(showSidebar: false);
+      case 'courses':
+        print('DEBUG: Building CoursePage'); // Debug log
+        return const CoursePage(showSidebar: false);
+      default:
+        print('DEBUG: Building default StudentDashboardPage'); // Debug log
+        return const StudentDashboardPage(showSidebar: false);
+    }
   }
 
   @override
@@ -64,16 +165,9 @@ class _MainShellState extends State<MainShell> {
           Padding(
             padding: const EdgeInsets.only(right: 12),
             child: Row(children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(colors: [Colors.indigo, Colors.purple]),
-                  shape: BoxShape.circle,
-                ),
-              ),
+              _buildUserAvatar(),
               const SizedBox(width: 8),
-              const Text('Jara Khan'),
+              Text(_userName),
             ]),
           )
         ],
@@ -84,13 +178,7 @@ class _MainShellState extends State<MainShell> {
           if (MediaQuery.of(context).size.width > 800)
             SidebarWidget(onSelect: onSelect, activeKey: activeKey),
           Expanded(
-            child: IndexedStack(
-              index: activeKey == 'dashboard' ? 0 : 1,
-              children: const [
-                StudentDashboardPage(showSidebar: false),
-                CoursePage(showSidebar: false),
-              ],
-            ),
+            child: _buildCurrentPage(),
           ),
         ],
       ),

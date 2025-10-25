@@ -5,9 +5,8 @@
 
 import 'package:flutter/material.dart';
 import '../../../../core/config/users-role.dart';
-// import 'google_auth_service.dart'; // Unused import removed
-// import 'login_form.dart';
-// import 'register_form.dart';
+import '../widgets/login_form.dart';
+import 'register_form.dart';
 
 
 // ========================================
@@ -87,11 +86,17 @@ class _AuthOverlayScreenState extends State<AuthOverlayScreen> {
                       child: isLogin
                           ? Container(
                               key: const ValueKey('login'),
-                              child: const Center(child: Text('Login Form - Coming Soon')),
+                              child: LoginForm(
+                                role: role,
+                                onSwitchToRegister: _toRegister,
+                              ),
                             )
                           : Container(
                               key: const ValueKey('register'),
-                              child: const Center(child: Text('Register Form - Coming Soon')),
+                              child: RegisterForm(
+                                initialRole: role,
+                                onSwitchToLogin: _toLogin,
+                              ),
                             ),
                     ),
                   ),

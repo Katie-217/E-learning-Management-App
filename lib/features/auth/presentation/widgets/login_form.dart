@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-// import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../core/config/users-role.dart';
-// import 'widgets/auth_form_widgets.dart';
-import '../controllers/login_controller.dart';
+import '../../repositories/auth_service.dart';
+import '../widgets/auth_form_widgets.dart';
+import '../../../../core/widgets/main_shell.dart';
 
 class LoginForm extends StatefulWidget {
   final UserRole role;
@@ -15,33 +15,35 @@ class LoginForm extends StatefulWidget {
 }
 
 class _LoginFormState extends State<LoginForm> {
-  late final LoginController controller;
+  final _formKey = GlobalKey<FormState>();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
   bool isLoading = false;
 
   @override
-  void initState() {
-    super.initState();
-    controller = LoginController();
-    // controller = ref.read(loginControllerProvider);
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
   }
 
   Future<void> _handleLogin() async {
-    final email = controller.emailController.text.trim();
-    final password = controller.passwordController.text.trim();
-
-    if (email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng nhập email và mật khẩu')),
-      );
-      return;
-    }
+    if (!_formKey.currentState!.validate()) return;
 
     setState(() => isLoading = true);
     try {
-      // await controller.signIn(context, ref, GlobalKey<FormState>());
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Login feature coming soon')),
-      );
+      final authService = AuthService.defaultClient();
+      final user = await authService.signIn(_emailController.text.trim(), _passwordController.text.trim());
+      
+      if (user != null) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const MainShell())
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Đăng nhập thất bại')),
+        );
+      }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Lỗi đăng nhập: $e')),
@@ -54,32 +56,110 @@ class _LoginFormState extends State<LoginForm> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        children: [
-          const Text('Login Form - Coming Soon', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 20),
-          TextField(
-            controller: controller.emailController,
-            decoration: const InputDecoration(hintText: 'Email'),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: controller.passwordController,
-            obscureText: true,
-            decoration: const InputDecoration(hintText: 'Password'),
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton(
-            onPressed: isLoading ? null : _handleLogin,
-            child: Text(isLoading ? 'Loading...' : 'Login'),
-          ),
-          const SizedBox(height: 16),
-          TextButton(
-            onPressed: widget.onSwitchToRegister,
-            child: const Text('Don\'t have an account? Register'),
-          ),
-        ],
+      padding: const EdgeInsets.all(32),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Tiêu đề
+            Text(
+              'Đăng nhập',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: widget.role.primaryColor,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 32),
+            
+            // Email field
+            AuthTextField(
+              controller: _emailController,
+              hintText: 'Email',
+              keyboardType: TextInputType.emailAddress,
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Vui lòng nhập email';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+            
+            // Password field
+            AuthTextField(
+              controller: _passwordController,
+              hintText: 'Mật khẩu',
+              obscureText: true,
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Vui lòng nhập mật khẩu';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 24),
+            
+            // Login button
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                onPressed: isLoading ? null : _handleLogin,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: widget.role.primaryColor,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(25),
+                  ),
+                ),
+                child: isLoading 
+                  ? const CircularProgressIndicator(color: Colors.white)
+                  : const Text(
+                      'Đăng nhập',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            
+            // Google login button
+            GoogleLoginButton(
+              onPressed: () async {
+                setState(() => isLoading = true);
+                try {
+                  final authService = AuthService.defaultClient();
+                  final user = await authService.signInWithGoogle();
+                  
+                  if (user != null) {
+                    Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(builder: (_) => const MainShell())
+                    );
+                  }
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Lỗi đăng nhập Google: $e')),
+                  );
+                } finally {
+                  if (mounted) setState(() => isLoading = false);
+                }
+              },
+            ),
+            const SizedBox(height: 16),
+            
+            // Switch to register
+            TextButton(
+              onPressed: widget.onSwitchToRegister,
+              child: const Text('Chưa có tài khoản? Đăng ký'),
+            ),
+          ],
+        ),
       ),
     );
   }

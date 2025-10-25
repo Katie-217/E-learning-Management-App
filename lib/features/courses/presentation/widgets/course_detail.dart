@@ -3,21 +3,34 @@ import '../../../../data/models/course_model.dart';
 
 class CourseDetailHeader extends StatelessWidget {
   final CourseModel course;
+  final VoidCallback? onBack;
 
-  const CourseDetailHeader({super.key, required this.course});
+  const CourseDetailHeader({super.key, required this.course, this.onBack});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       decoration: BoxDecoration(
-        gradient: LinearGradient(colors: course.gradient),
+        gradient: const LinearGradient(colors: [Colors.blue, Colors.cyan]),
         borderRadius: const BorderRadius.only(
             bottomLeft: Radius.circular(14), bottomRight: Radius.circular(14)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Nút back
+          if (onBack != null)
+            Row(
+              children: [
+                IconButton(
+                  onPressed: onBack,
+                  icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  tooltip: 'Quay lại danh sách',
+                ),
+                const SizedBox(width: 8),
+              ],
+            ),
           const SizedBox(height: 12),
           Text(course.name,
               style: const TextStyle(

@@ -9,10 +9,11 @@ const morgan = require('morgan');
 const { initializeFirebase } = require('./config/firebase');
 
 // Import routes
-const courseRoutes = require('./routes/course.routes');
-const assignmentRoutes = require('./routes/assignment.routes');
-const studentRoutes = require('./routes/student.routes');
-const teacherRoutes = require('./routes/teacher.routes');
+const authRoutes = require('../routes/auth');
+const courseRoutes = require('../routes/course.routes');
+const assignmentRoutes = require('../routes/assignment.routes');
+const studentRoutes = require('../routes/student.routes');
+const teacherRoutes = require('../routes/teacher.routes');
 
 // ========================================
 // HÀM: createApp
@@ -54,6 +55,7 @@ const createApp = () => {
   });
 
   // API routes
+  app.use('/api/auth', authRoutes);
   app.use('/api/courses', courseRoutes);
   app.use('/api/assignments', assignmentRoutes);
   app.use('/api/students', studentRoutes);

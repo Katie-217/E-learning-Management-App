@@ -123,16 +123,18 @@ class AuthFormContainer extends StatelessWidget {
 // MÔ TẢ: Text field tùy chỉnh cho form auth
 // ========================================
 class AuthTextField extends StatefulWidget {
-  final String hint;
+  final String hintText;
   final TextEditingController controller;
-  final bool isPassword;
+  final bool obscureText;
+  final TextInputType? keyboardType;
   final String? Function(String?)? validator;
 
   const AuthTextField({
     Key? key,
-    required this.hint,
+    required this.hintText,
     required this.controller,
-    this.isPassword = false,
+    this.obscureText = false,
+    this.keyboardType,
     this.validator,
   }) : super(key: key);
 
@@ -147,10 +149,11 @@ class _AuthTextFieldState extends State<AuthTextField> {
   Widget build(BuildContext context) {
     return TextFormField(
       controller: widget.controller,
-      obscureText: widget.isPassword ? _obscureText : false,
+      obscureText: widget.obscureText ? _obscureText : false,
+      keyboardType: widget.keyboardType,
       validator: widget.validator,
       decoration: InputDecoration(
-        hintText: widget.hint,
+        hintText: widget.hintText,
         hintStyle: const TextStyle(color: Color(0xFF9CA3AF)),
         filled: true,
         fillColor: const Color(0xFFF6F7F9),
@@ -167,7 +170,7 @@ class _AuthTextFieldState extends State<AuthTextField> {
           borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        suffixIcon: widget.isPassword
+        suffixIcon: widget.obscureText
             ? IconButton(
                 icon: Icon(
                   _obscureText ? Icons.visibility_off : Icons.visibility,

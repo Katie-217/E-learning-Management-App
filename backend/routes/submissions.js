@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { verifyFirebaseToken, requireRole } = require('../middlewares/firebaseAuth');
+const { verifyFirebaseToken, requireRole } = require('../middleware/firebaseAuth');
 const Submission = require('../models/submission');
 
 // GET all submissions

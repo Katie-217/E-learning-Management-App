@@ -12,122 +12,104 @@ class CourseCardWidget extends StatefulWidget {
 }
 
 class _CourseCardWidgetState extends State<CourseCardWidget> {
-  bool isHovering = false;
-
   @override
   Widget build(BuildContext context) {
     final c = widget.course;
-    return MouseRegion(
-      onEnter: (_) => setState(() => isHovering = true),
-      onExit: (_) => setState(() => isHovering = false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeInOut,
-        transform: Matrix4.identity()
-          ..scale(isHovering ? 1.03 : 1.0),
-        decoration: BoxDecoration(
-          color: const Color(0xFF1F2937),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: isHovering ? Colors.indigo : Colors.grey[800]!,
-            width: 1.2,
-          ),
-          boxShadow: isHovering
-              ? [
-                  BoxShadow(
-                      color: Colors.indigo.withOpacity(0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 3))
-                ]
-              : [],
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF1F2937),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: Colors.grey[800]!,
+          width: 1.2,
         ),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(14),
-          onTap: widget.onTap,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header Gradient
-              Container(
-                height: 100,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: c.gradient),
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
-                ),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: widget.onTap,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header Gradient
+            Container(
+              height: 100,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(colors: [Colors.blue, Colors.cyan]),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+              ),
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _chip(c.code),
+                        _chip(c.group),
+                      ]),
+                  const Spacer(),
+                  Text(c.name,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          color: Colors.white)),
+                ],
+              ),
+            ),
+            Expanded(
+              child: Padding(
                 padding: const EdgeInsets.all(12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Row(children: [
+                      const Icon(Icons.person_outline, size: 16, color: Colors.grey),
+                      const SizedBox(width: 6),
+                      Expanded(
+                          child: Text(c.instructor,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(color: Colors.grey, fontSize: 13))),
+                    ]),
+                    const SizedBox(height: 8),
                     Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          _chip(c.code),
-                          _chip(c.group),
-                        ]),
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('${c.sessions} sessions',
+                            style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                        Text('${c.students} students',
+                            style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                      ],
+                    ),
                     const Spacer(),
-                    Text(c.name,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                    const Text('Progress',
+                        style: TextStyle(color: Colors.grey, fontSize: 12)),
+                    const SizedBox(height: 4),
+                    Stack(children: [
+                      Container(
+                          height: 6,
+                          decoration: BoxDecoration(
+                              color: Colors.grey[800],
+                              borderRadius: BorderRadius.circular(8))),
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        height: 6,
+                        width: MediaQuery.of(context).size.width * (c.progress / 100) / 3,
+                        decoration: BoxDecoration(
+                            color: Colors.indigo[500],
+                            borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ]),
+                    const SizedBox(height: 4),
+                    Text('${c.progress}%',
                         style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                            color: Colors.white)),
+                            fontWeight: FontWeight.bold, color: Colors.indigo)),
                   ],
                 ),
               ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(children: [
-                        const Icon(Icons.person_outline, size: 16, color: Colors.grey),
-                        const SizedBox(width: 6),
-                        Expanded(
-                            child: Text(c.instructor,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(color: Colors.grey, fontSize: 13))),
-                      ]),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('${c.sessions} sessions',
-                              style: const TextStyle(color: Colors.grey, fontSize: 12)),
-                          Text('${c.students} students',
-                              style: const TextStyle(color: Colors.grey, fontSize: 12)),
-                        ],
-                      ),
-                      const Spacer(),
-                      const Text('Progress',
-                          style: TextStyle(color: Colors.grey, fontSize: 12)),
-                      const SizedBox(height: 4),
-                      Stack(children: [
-                        Container(
-                            height: 6,
-                            decoration: BoxDecoration(
-                                color: Colors.grey[800],
-                                borderRadius: BorderRadius.circular(8))),
-                        AnimatedContainer(
-                          duration: const Duration(milliseconds: 300),
-                          height: 6,
-                          width: MediaQuery.of(context).size.width * (c.progress / 100) / 3,
-                          decoration: BoxDecoration(
-                              color: Colors.indigo[500],
-                              borderRadius: BorderRadius.circular(8)),
-                        ),
-                      ]),
-                      const SizedBox(height: 4),
-                      Text('${c.progress}%',
-                          style: const TextStyle(
-                              fontWeight: FontWeight.bold, color: Colors.indigo)),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

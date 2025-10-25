@@ -1,41 +1,47 @@
 
-// MÔ TẢ: Provider quản lý trạng thái và logic cho khóa học
-
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../data/models/course_model.dart';
 import '../services/api_service.dart';
 import '../services/cache_service.dart';
+import '../services/course_api_service.dart';
+import '../services/firestore_course_service.dart';
+import '../services/user_session_service.dart';
 
-
-//Model chứa trạng thái của danh sách khóa học
+// Course state management
 
 class CourseState {
   final List<CourseModel> courses;
+  final List<CourseModel> filteredCourses;
   final bool isLoading;
   final String? error;
+  final String selectedSemester;
+  final String selectedStatus;
 
-
-  // Khởi tạo trạng thái khóa học
- 
   CourseState({
     this.courses = const [],
+    this.filteredCourses = const [],
     this.isLoading = false,
     this.error,
+    this.selectedSemester = 'All',
+    this.selectedStatus = 'All',
   });
-
- 
-  // Tạo bản sao với các thay đổi mới
  
   CourseState copyWith({
     List<CourseModel>? courses,
+    List<CourseModel>? filteredCourses,
     bool? isLoading,
     String? error,
+    String? selectedSemester,
+    String? selectedStatus,
   }) {
     return CourseState(
       courses: courses ?? this.courses,
+      filteredCourses: filteredCourses ?? this.filteredCourses,
       isLoading: isLoading ?? this.isLoading,
       error: error ?? this.error,
+      selectedSemester: selectedSemester ?? this.selectedSemester,
+      selectedStatus: selectedStatus ?? this.selectedStatus,
     );
   }
 }
@@ -75,12 +81,42 @@ class CourseNotifier extends StateNotifier<CourseState> {
       // }
 
 
-      // Gọi API và cập nhật cache
-      // Lấy dữ liệu mới từ server và lưu vào cache
-     
-      courses = await _apiService.getCourses();
-      await _cacheService.saveCourses(courses);
-      state = state.copyWith(courses: courses, isLoading: false);
+
+      // Gọi dữ liệu từ Firestore
+      print('DEBUG: ========== COURSE PROVIDER LOADING ==========');
+      try {
+        courses = await FirestoreCourseService.getCourses();
+        print('DEBUG: ✅ Provider received ${courses.length} courses');
+        
+        if (courses.isNotEmpty) {
+          print('DEBUG: 📚 Courses loaded:');
+          for (int i = 0; i < courses.length; i++) {
+            final course = courses[i];
+            print('DEBUG:   ${i + 1}. ${course.name} (${course.code}) - ${course.semester}');
+          }
+          
+          // Lưu session nếu load courses thành công
+          final user = FirebaseAuth.instance.currentUser;
+          if (user != null) {
+            await UserSessionService.saveUserSession(user);
+            print('DEBUG: ✅ User session saved after successful course loading');
+          }
+        } else {
+          print('DEBUG: ⚠️ No courses found for current user');
+        }
+      } catch (e) {
+        print('DEBUG: ❌ Provider failed to load courses: $e');
+        courses = [];
+      }
+      print('DEBUG: ===========================================');
+      
+      // Áp dụng bộ lọc hiện tại
+      final filteredCourses = _applyFilters(courses);
+      state = state.copyWith(
+        courses: courses, 
+        filteredCourses: filteredCourses,
+        isLoading: false
+      );
     } catch (e) {
       state = state.copyWith(error: e.toString(), isLoading: false);
     }
@@ -101,8 +137,51 @@ class CourseNotifier extends StateNotifier<CourseState> {
   }
 
   // ========================================
+  // Lọc khóa học theo học kì
   void filterCoursesBySemester(String semester) {
-    loadCourses();
+    state = state.copyWith(selectedSemester: semester);
+    final filteredCourses = _applyFilters(state.courses);
+    state = state.copyWith(filteredCourses: filteredCourses);
+  }
+
+  // Lọc khóa học theo trạng thái
+  void filterCoursesByStatus(String status) {
+    state = state.copyWith(selectedStatus: status);
+    final filteredCourses = _applyFilters(state.courses);
+    state = state.copyWith(filteredCourses: filteredCourses);
+  }
+
+  // Áp dụng tất cả bộ lọc
+  List<CourseModel> _applyFilters(List<CourseModel> courses) {
+    List<CourseModel> filtered = courses;
+
+    // Lọc theo học kì
+    if (state.selectedSemester != 'All') {
+      filtered = filtered.where((course) => 
+        course.semester == state.selectedSemester
+      ).toList();
+    }
+
+    // Lọc theo trạng thái
+    if (state.selectedStatus != 'All') {
+      filtered = filtered.where((course) => 
+        course.status == state.selectedStatus
+      ).toList();
+    }
+
+    return filtered;
+  }
+
+  // Lấy danh sách học kì có sẵn
+  List<String> getAvailableSemesters() {
+    final semesters = state.courses.map((course) => course.semester).toSet().toList();
+    semesters.sort();
+    return ['All', ...semesters];
+  }
+
+  // Lấy danh sách trạng thái có sẵn
+  List<String> getAvailableStatuses() {
+    return ['All', 'active', 'completed'];
   }
 }
 

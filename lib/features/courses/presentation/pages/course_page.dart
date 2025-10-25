@@ -1,20 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../data/models/course_model.dart';
 import '../widgets/course_card_widget.dart';
 import '../widgets/course_detail.dart';
 import '../widgets/course_tabs_widget.dart';
+import '../widgets/course_filter_widget.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/sidebar_model.dart';
+import '../../../../core/providers/course_provider.dart';
 
-class CoursePage extends StatefulWidget {
+class CoursePage extends ConsumerStatefulWidget {
   final bool showSidebar;
   const CoursePage({super.key, this.showSidebar = true});
 
   @override
-  State<CoursePage> createState() => _CoursePageState();
+  ConsumerState<CoursePage> createState() => _CoursePageState();
 }
 
-class _CoursePageState extends State<CoursePage>
+class _CoursePageState extends ConsumerState<CoursePage>
     with SingleTickerProviderStateMixin {
   bool isDetailView = false;
   CourseModel? selectedCourse;
@@ -24,6 +27,10 @@ class _CoursePageState extends State<CoursePage>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    // Load courses when page initializes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(courseProvider.notifier).loadCourses();
+    });
   }
 
   @override
@@ -39,16 +46,19 @@ class _CoursePageState extends State<CoursePage>
     });
   }
 
-  // void backToList() {
-  //   setState(() {
-  //     isDetailView = false;
-  //     selectedCourse = null;
-  //   });
-  // }
+  void backToList() {
+    setState(() {
+      isDetailView = false;
+      selectedCourse = null;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final courses = CourseModel.mockCourses;
+    final courseState = ref.watch(courseProvider);
+    final courses = courseState.filteredCourses.isNotEmpty 
+        ? courseState.filteredCourses 
+        : courseState.courses;
 
     return Scaffold(
       backgroundColor: AppColors.bgDark,
@@ -121,16 +131,28 @@ class _CoursePageState extends State<CoursePage>
 
           // Main Content
           Expanded(
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 400),
-              child: isDetailView
-                  ? CourseDetailView(
-                      course: selectedCourse!,
-                      tabController: _tabController,)
-                  : CourseListView(
-                      courses: courses,
-                      onCourseSelect: openCourse,
-                    ),
+            child: GestureDetector(
+              onTap: () {}, // Ngăn chặn tap events lan truyền
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 400),
+                child: isDetailView
+                    ? CourseDetailView(
+                        course: selectedCourse!,
+                        tabController: _tabController,
+                        onBack: backToList,
+                      )
+                    : Column(
+                        children: [
+                          const CourseFilterWidget(),
+                          Expanded(
+                            child: CourseListView(
+                              courses: courses,
+                              onCourseSelect: openCourse,
+                            ),
+                          ),
+                        ],
+                      ),
+              ),
             ),
           ),
         ],
@@ -179,6 +201,38 @@ class CourseListView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (courses.isEmpty) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.school_outlined,
+              size: 64,
+              color: Colors.grey,
+            ),
+            SizedBox(height: 16),
+            Text(
+              'Không có khóa học nào',
+              style: TextStyle(
+                color: Colors.grey,
+                fontSize: 18,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Thử thay đổi bộ lọc để xem thêm khóa học',
+              style: TextStyle(
+                color: Colors.grey,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Padding(
       padding: const EdgeInsets.all(16),
       child: GridView.builder(
@@ -201,18 +255,20 @@ class CourseListView extends StatelessWidget {
 class CourseDetailView extends StatelessWidget {
   final CourseModel course;
   final TabController tabController;
+  final VoidCallback? onBack;
 
   const CourseDetailView({
     super.key,
     required this.course,
     required this.tabController,
+    this.onBack,
   });
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        CourseDetailHeader(course: course),
+        CourseDetailHeader(course: course, onBack: onBack),
         Expanded(
           child: CourseTabsWidget(
             course: course,
@@ -223,3 +279,5 @@ class CourseDetailView extends StatelessWidget {
     );
   }
 }
+
+
