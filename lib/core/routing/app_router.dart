@@ -2,6 +2,7 @@ import 'package:elearning_management_app/features/student/presentation/pages/stu
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../services/user_session_service.dart';
 
 import '../../features/auth/presentation/pages/auth_overlay_screen.dart';
 import '../../core/config/users-role.dart';
@@ -31,11 +32,31 @@ class AppRouter {
   static final GoRouter router = GoRouter(
     navigatorKey: _rootNavigatorKey,
     initialLocation: '/auth',
-    redirect: (context, state) {
+    redirect: (context, state) async {
       final isLoggingIn = state.matchedLocation == '/auth';
-      final signedIn = FirebaseAuth.instance.currentUser != null;
-      if (!signedIn && !isLoggingIn) return '/auth';
-      if (signedIn && isLoggingIn) return '/dashboard';
+      
+      // Kiểm tra Firebase Auth trước
+      final firebaseUser = FirebaseAuth.instance.currentUser;
+      if (firebaseUser != null) {
+        print('DEBUG: 🔍 Firebase user found: ${firebaseUser.email}');
+        if (isLoggingIn) return '/dashboard';
+        return null;
+      }
+      
+      // Nếu không có Firebase user, kiểm tra SharedPreferences
+      final hasSession = await UserSessionService.isUserLoggedIn();
+      print('DEBUG: 🔍 SharedPreferences session: $hasSession');
+      
+      if (!hasSession && !isLoggingIn) {
+        print('DEBUG: ❌ No session found, redirecting to auth');
+        return '/auth';
+      }
+      
+      if (hasSession && isLoggingIn) {
+        print('DEBUG: ✅ Session found, redirecting to dashboard');
+        return '/dashboard';
+      }
+      
       return null;
     },
     routes: <RouteBase>[

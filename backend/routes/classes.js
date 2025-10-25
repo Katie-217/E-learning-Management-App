@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { verifyFirebaseToken, requireRole } = require('../middlewares/firebaseAuth');
+const { verifyFirebaseToken, requireRole } = require('../middleware/firebaseAuth');
 const ClassModel = require('../models/class');
 
 // GET all classes

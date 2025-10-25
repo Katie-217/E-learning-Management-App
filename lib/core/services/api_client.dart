@@ -1,16 +1,4 @@
-// import 'dart:convert';
-// import 'package:http/http.dart' as http;
 
-/// ApiClient
-/// -------------------------------------------------------------------------
-/// ✅ Hợp nhất từ: 
-/// - api_client.dart
-/// - backend_api_service.dart
-/// 
-/// Hỗ trợ gọi API REST (GET, POST, PUT, DELETE)
-/// ⚙️ Tạm thời giữ mock data để test UI.
-/// 🔥 Khi backend sẵn sàng, chỉ cần bật phần “Real API Call”
-/// -------------------------------------------------------------------------
 class ApiClient {
   static final ApiClient _instance = ApiClient._internal();
   factory ApiClient() => _instance;

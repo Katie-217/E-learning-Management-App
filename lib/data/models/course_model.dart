@@ -1,130 +1,8 @@
-
-// // Model dữ liệu cho khóa học và trạng thái khóa học
-
-
-// import 'package:hive/hive.dart';
-
-// part 'course.g.dart'; // Generated file
-
-
-// //  Model chính cho thông tin khóa học
-
-// @HiveType(typeId: 0)
-// class CourseModel extends HiveObject {
-//   @HiveField(0)
-//   final String id;
-
-//   @HiveField(1)
-//   final String name;
-
-//   @HiveField(2)
-//   final String code;
-
-//   @HiveField(3)
-//   final String instructor;
-
-//   @HiveField(4)
-//   final String description;
-
-//   @HiveField(5)
-//   final int credits;
-
-//   @HiveField(6)
-//   final String semester;
-
-//   @HiveField(7)
-//   final CourseStatus status;
-
-//   @HiveField(8)
-//   final String imageUrl;
-
-//   @HiveField(9)
-//   final double progress;
-
-//   @HiveField(10)
-//   final int totalStudents;
-
-//   @HiveField(11)
-//   final DateTime startDate;
-
-//   @HiveField(12)
-//   final DateTime endDate;
-
-//   CourseModel({
-//     required this.id,
-//     required this.name,
-//     required this.code,
-//     required this.instructor,
-//     required this.description,
-//     required this.credits,
-//     required this.semester,
-//     required this.status,
-//     required this.imageUrl,
-//     required this.progress,
-//     required this.totalStudents,
-//     required this.startDate,
-//     required this.endDate,
-//   });
-
-//   factory CourseModel.fromJson(Map<String, dynamic> json) {
-//     return CourseModel(
-//       id: json['id'] ?? '',
-//       name: json['name'] ?? '',
-//       code: json['code'] ?? '',
-//       instructor: json['instructor'] ?? '',
-//       description: json['description'] ?? '',
-//       credits: json['credits'] ?? 0,
-//       semester: json['semester'] ?? '',
-//       status: CourseStatus.values.firstWhere(
-//         (e) => e.toString().split('.').last == json['status'],
-//         orElse: () => CourseStatus.active,
-//       ),
-//       imageUrl: json['imageUrl'] ?? '',
-//       progress: (json['progress'] ?? 0).toDouble(),
-//       totalStudents: json['totalStudents'] ?? 0,
-//       startDate: DateTime.parse(json['startDate'] ?? DateTime.now().toIso8601String()),
-//       endDate: DateTime.parse(json['endDate'] ?? DateTime.now().toIso8601String()),
-//     );
-//   }
-
-//   Map<String, dynamic> toJson() {
-//     return {
-//       'id': id,
-//       'name': name,
-//       'code': code,
-//       'instructor': instructor,
-//       'description': description,
-//       'credits': credits,
-//       'semester': semester,
-//       'status': status.toString().split('.').last,
-//       'imageUrl': imageUrl,
-//       'progress': progress,
-//       'totalStudents': totalStudents,
-//       'startDate': startDate.toIso8601String(),
-//       'endDate': endDate.toIso8601String(),
-//     };
-//   }
-// }
-
-// @HiveType(typeId: 1)
-// enum CourseStatus {
-//   @HiveField(0)
-//   active,
-//   @HiveField(1)
-//   completed,
-//   @HiveField(2)
-//   paused,
-//   @HiveField(3)
-//   archived,
-// }
-
-// // Alias for backward compatibility
-// typedef Course = CourseModel;
-
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class CourseModel {
-  final int id;
+  final String id;
   final String code;
   final String name;
   final String instructor;
@@ -132,7 +10,6 @@ class CourseModel {
   final int sessions;
   final int students;
   final String group;
-  final List<Color> gradient;
   final int progress;
   
   // Additional properties for compatibility
@@ -153,7 +30,6 @@ class CourseModel {
     required this.sessions,
     required this.students,
     required this.group,
-    required this.gradient,
     required this.progress,
     this.description = '',
     this.credits = 3,
@@ -165,63 +41,154 @@ class CourseModel {
   }) : startDate = startDate ?? DateTime.now(),
        endDate = endDate ?? DateTime.now().add(const Duration(days: 90));
 
-  static List<CourseModel> mockCourses = [
-    CourseModel(
-      id: 1,
-      code: 'IT4409',
-      name: 'Web Programming & Applications',
-      instructor: 'Dr. Nguyen Van A',
-      semester: 'Spring 2025',
-      sessions: 15,
-      students: 50,
-      group: 'Group 1',
-      gradient: [Colors.blue, Colors.cyan],
-      progress: 65,
-      description: 'Learn modern web development with React, Node.js, and databases',
-      credits: 3,
-      imageUrl: 'https://picsum.photos/400/200?random=1',
-      totalStudents: 50,
-      startDate: DateTime(2025, 1, 15),
-      endDate: DateTime(2025, 5, 15),
-      status: 'active',
-    ),
-    CourseModel(
-      id: 2,
-      code: 'IT3100',
-      name: 'Database Management Systems',
-      instructor: 'Dr. Tran Thi B',
-      semester: 'Spring 2025',
-      sessions: 15,
-      students: 45,
-      group: 'Group 2',
-      gradient: [Colors.purple, Colors.pink],
-      progress: 45,
-      description: 'Database design, SQL, and database administration',
-      credits: 3,
-      imageUrl: 'https://picsum.photos/400/200?random=2',
-      totalStudents: 45,
-      startDate: DateTime(2025, 1, 15),
-      endDate: DateTime(2025, 5, 15),
-      status: 'active',
-    ),
-    CourseModel(
-      id: 3,
-      code: 'IT4788',
-      name: 'Mobile Application Development',
-      instructor: 'Dr. Le Van C',
-      semester: 'Spring 2025',
-      sessions: 15,
-      students: 40,
-      group: 'Group 1',
-      gradient: [Colors.green, Colors.teal],
-      progress: 80,
-      description: 'Cross-platform mobile development with Flutter',
-      credits: 3,
-      imageUrl: 'https://picsum.photos/400/200?random=3',
-      totalStudents: 40,
-      startDate: DateTime(2025, 1, 15),
-      endDate: DateTime(2025, 5, 15),
-      status: 'active',
-    ),
-  ];
+  // Factory constructor để tạo từ JSON (cho API calls)
+  factory CourseModel.fromJson(Map<String, dynamic> json) {
+    return CourseModel(
+      id: json['id'] ?? '',
+      code: json['code'] ?? '',
+      name: json['name'] ?? '',
+      instructor: json['instructor'] ?? '',
+      semester: json['semester'] ?? '',
+      sessions: json['session'] ?? 0,
+      students: json['students'] ?? 0,
+      group: json['group'] ?? '',
+      progress: json['progress'] ?? 0,
+      description: json['description'] ?? '',
+      credits: json['credits'] ?? 3,
+      imageUrl: json['imageUrl'] ?? '',
+      totalStudents: json['totalStudents'] ?? 0,
+      startDate: json['startDate'] != null 
+          ? DateTime.parse(json['startDate']) 
+          : DateTime.now(),
+      endDate: json['endDate'] != null 
+          ? DateTime.parse(json['endDate']) 
+          : DateTime.now().add(const Duration(days: 90)),
+      status: json['status'] ?? 'active',
+    );
+  }
+
+  // Factory constructor để tạo từ Firestore DocumentSnapshot
+  factory CourseModel.fromFirestore(DocumentSnapshot doc) {
+    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+    
+    return CourseModel(
+      id: doc.id,
+      code: data['code'] ?? '',
+      name: data['name'] ?? '',
+      instructor: data['teacherName'] ?? data['instructor'] ?? '',
+      semester: data['semester'] ?? '',
+      sessions: data['session'] ?? 0,
+      students: (data['students'] as List<dynamic>?)?.length ?? 0,
+      group: data['group'] ?? '',
+      progress: _parseProgress(data['progress']),
+      description: data['description'] ?? '',
+      credits: data['credits'] ?? 0,
+      imageUrl: data['imageUrl'] ?? '',
+      totalStudents: (data['students'] as List<dynamic>?)?.length ?? 0,
+      startDate: data['startDate'] != null 
+          ? (data['startDate'] as Timestamp).toDate() 
+          : DateTime.now(),
+      endDate: data['endDate'] != null 
+          ? (data['endDate'] as Timestamp).toDate() 
+          : DateTime.now(),
+      status: data['status'] ?? '',
+    );
+  }
+
+  // Method để convert thành JSON (cho API calls)
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'code': code,
+      'name': name,
+      'instructor': instructor,
+      'semester': semester,
+      'sessions': sessions,
+      'students': students,
+      'group': group,
+      'progress': progress,
+      'description': description,
+      'credits': credits,
+      'imageUrl': imageUrl,
+      'totalStudents': totalStudents,
+      'startDate': startDate.toIso8601String(),
+      'endDate': endDate.toIso8601String(),
+      'status': status,
+    };
+  }
+
+  // Method để convert thành Map cho Firestore
+  Map<String, dynamic> toFirestore() {
+    return {
+      'code': code,
+      'name': name,
+      'instructor': instructor,
+      'semester': semester,
+      'sessions': sessions,
+      'students': students,
+      'group': group,
+      'progress': progress,
+      'description': description,
+      'credits': credits,
+      'imageUrl': imageUrl,
+      'totalStudents': totalStudents,
+      'startDate': Timestamp.fromDate(startDate),
+      'endDate': Timestamp.fromDate(endDate),
+      'status': status,
+    };
+  }
+
+
+  // Helper method để parse progress từ string hoặc number
+  static int _parseProgress(dynamic progressData) {
+    if (progressData == null) {
+      return 0;
+    }
+    if (progressData is int) {
+      return progressData;
+    }
+    if (progressData is String) {
+      return int.tryParse(progressData) ?? 0;
+    }
+    return 0;
+  }
+
+  // Copy with method để tạo bản sao với thay đổi
+  CourseModel copyWith({
+    String? id,
+    String? code,
+    String? name,
+    String? instructor,
+    String? semester,
+    int? sessions,
+    int? students,
+    String? group,
+    int? progress,
+    String? description,
+    int? credits,
+    String? imageUrl,
+    int? totalStudents,
+    DateTime? startDate,
+    DateTime? endDate,
+    String? status,
+  }) {
+    return CourseModel(
+      id: id ?? this.id,
+      code: code ?? this.code,
+      name: name ?? this.name,
+      instructor: instructor ?? this.instructor,
+      semester: semester ?? this.semester,
+      sessions: sessions ?? this.sessions,
+      students: students ?? this.students,
+      group: group ?? this.group,
+      progress: progress ?? this.progress,
+      description: description ?? this.description,
+      credits: credits ?? this.credits,
+      totalStudents: totalStudents ?? this.totalStudents,
+      startDate: startDate ?? this.startDate,
+      endDate: endDate ?? this.endDate,
+      status: status ?? this.status,
+    );
+  }
+
 }

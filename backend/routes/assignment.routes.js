@@ -6,7 +6,7 @@
 const express = require('express');
 const router = express.Router();
 const AssignmentController = require('../controllers/assignment.controller');
-const { verifyFirebaseToken, requireRole } = require('../middlewares/firebaseAuth');
+const { verifyFirebaseToken, requireRole } = require('../middleware/firebaseAuth');
 
 // ========================================
 // PHẦN: Public routes (không cần authentication)

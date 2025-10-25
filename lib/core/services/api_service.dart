@@ -109,10 +109,10 @@ class ApiService {
 
   // ========================================
   // HÀM: _getMockCourses()
-  // MÔ TẢ: Tạo dữ liệu mock cho khóa học (tạm thời)
+  // MÔ TẢ: Trả về danh sách trống (không sử dụng mock data)
   // ========================================
   List<CourseModel> _getMockCourses() {
-    return CourseModel.mockCourses;
+    return [];
   }
 }
 
