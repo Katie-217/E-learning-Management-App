@@ -1,134 +1,234 @@
-# Backend API
+# E-Learning Management System - Backend API
 
-Node.js + Express API with Firebase Admin SDK for the E-Learning Management System.
+## 📋 Tổng quan
 
-## Structure
+Backend API cho hệ thống E-Learning Management System được xây dựng với Node.js, Express.js và Firebase Firestore. API cung cấp các endpoints để quản lý khóa học, bài tập, quiz, tài liệu, nhóm và người dùng.
+
+## 🛠 Technology Stack
+
+- **Runtime**: Node.js 18+
+- **Framework**: Express.js
+- **Database**: Firebase Firestore
+- **Authentication**: Firebase Admin SDK
+- **File Storage**: Firebase Storage
+- **Middleware**: CORS, Morgan, Firebase Auth
+
+## 📁 Cấu trúc Project
 
 ```
 backend/
 ├── src/
-│   ├── config/            # Firebase admin configuration
-│   ├── models/            # Data models (Teacher, Class, Assignment, Submission)
-│   ├── controllers/        # Business logic controllers
-│   ├── routes/            # API route definitions
-│   └── middlewares/       # Authentication, authorization middleware
-├── tests/                 # Test files
-├── package.json
-└── server.js
+│   ├── config/
+│   │   └── firebase.js              # Firebase configuration
+│   ├── controllers/
+│   │   ├── assignment.controller.js # Assignment business logic
+│   │   ├── course.controller.js     # Course business logic
+│   │   ├── student.controller.js    # Student business logic
+│   │   └── teacher.controller.js     # Teacher business logic
+│   ├── models/
+│   │   ├── assignment.js            # Assignment model
+│   │   ├── class.js                 # Class model
+│   │   ├── submission.js            # Submission model
+│   │   └── Teacher.js               # Teacher model
+│   └── app.js                       # Express app configuration
+├── routes/
+│   ├── assignment.routes.js          # Assignment routes
+│   ├── auth.js                       # Authentication routes
+│   ├── classes.js                    # Class routes
+│   ├── course.routes.js              # Course routes
+│   ├── student.routes.js             # Student routes
+│   ├── submissions.js                # Submission routes
+│   └── teacher.routes.js             # Teacher routes
+├── middleware/
+│   ├── authMiddleware.js             # Authentication middleware
+│   └── firebaseAuth.js               # Firebase auth middleware
+├── tests/                            # Test files
+├── package.json                      # Dependencies
+├── server.js                         # Server entry point
+├── serviceAccountKey.json           # Firebase service account
+└── README_API_SPECIFICATION.md      # Detailed API documentation
 ```
 
-## Features
+## 🚀 Quick Start
 
-- Firebase Admin SDK integration
-- JWT token verification
-- Role-based authorization
-- RESTful API endpoints
-- CORS enabled for Flutter/web access
-- Error handling and logging
+### 1. Installation
 
-## API Endpoints
-
-### Authentication
-All protected routes require Firebase ID token in Authorization header:
-```
-Authorization: Bearer <firebase-id-token>
-```
-
-### Teachers
-- `GET /api/teachers` - Get all teachers
-- `GET /api/teachers/:id` - Get teacher by ID
-- `POST /api/teachers` - Create teacher (Teacher role required)
-- `PUT /api/teachers/:id` - Update teacher (Teacher role required)
-- `DELETE /api/teachers/:id` - Delete teacher (Teacher role required)
-- `POST /api/teachers/:id/assign-class` - Assign class to teacher
-
-### Classes
-- `GET /api/classes` - Get all classes
-- `GET /api/classes/:id` - Get class by ID
-- `GET /api/classes/teacher/:teacherId` - Get classes by teacher
-- `POST /api/classes` - Create class (Teacher role required)
-- `PUT /api/classes/:id` - Update class (Teacher role required)
-- `DELETE /api/classes/:id` - Delete class (Teacher role required)
-
-### Assignments
-- `GET /api/assignments` - Get all assignments
-- `GET /api/assignments/:id` - Get assignment by ID
-- `GET /api/assignments/class/:classId` - Get assignments by class
-- `POST /api/assignments` - Create assignment (Teacher role required)
-- `PUT /api/assignments/:id` - Update assignment (Teacher role required)
-- `DELETE /api/assignments/:id` - Delete assignment (Teacher role required)
-
-### Submissions
-- `GET /api/submissions` - Get all submissions
-- `GET /api/submissions/:id` - Get submission by ID
-- `GET /api/submissions/assignment/:assignmentId` - Get submissions by assignment
-- `GET /api/submissions/student/:studentId` - Get submissions by student
-- `POST /api/submissions` - Create submission (Authenticated users)
-- `PUT /api/submissions/:id` - Update submission (Authenticated users)
-- `PUT /api/submissions/:id/grade` - Grade submission (Teacher role required)
-- `DELETE /api/submissions/:id` - Delete submission (Authenticated users)
-
-## Development
-
-### Prerequisites
-- Node.js 16.x or higher
-- Firebase project with Admin SDK
-- Service account key file
-
-### Installation
 ```bash
+# Clone repository
+git clone <repository-url>
+cd Final-pro/backend
+
+# Install dependencies
 npm install
+
+# Copy environment file
+cp .env.example .env
 ```
 
-### Environment Setup
-Create a `.env` file:
-```
+### 2. Environment Configuration
+
+Tạo file `.env` với nội dung:
+
+```env
+NODE_ENV=development
 PORT=4000
+FIREBASE_PROJECT_ID=your-project-id
+FIREBASE_PRIVATE_KEY=your-private-key
+FIREBASE_CLIENT_EMAIL=your-client-email
 FIREBASE_SERVICE_ACCOUNT=./serviceAccountKey.json
 ```
 
-### Running the Server
+### 3. Firebase Setup
+
+1. Tạo Firebase project tại [Firebase Console](https://console.firebase.google.com)
+2. Enable Authentication và Firestore Database
+3. Tạo Service Account và download key file
+4. Đặt file key vào `serviceAccountKey.json`
+
+### 4. Run Development Server
+
+```bash
+# Development mode
+npm run dev
+
+# Production mode
+npm start
+```
+
+Server sẽ chạy tại `http://localhost:4000`
+
+## 📚 API Documentation
+
+### Base URL
+```
+http://localhost:4000/api
+```
+
+### Authentication
+Tất cả protected endpoints cần header:
+```
+Authorization: Bearer <firebase_token>
+```
+
+### Main Endpoints
+
+#### 🔐 Authentication
+- `POST /api/auth/login` - Đăng nhập
+- `POST /api/auth/register` - Đăng ký
+- `GET /api/auth/profile` - Lấy thông tin profile
+- `PUT /api/auth/profile` - Cập nhật profile
+
+#### 📚 Courses
+- `GET /api/courses` - Lấy danh sách khóa học
+- `GET /api/courses/:id` - Lấy chi tiết khóa học
+- `POST /api/courses` - Tạo khóa học mới
+- `PUT /api/courses/:id` - Cập nhật khóa học
+- `DELETE /api/courses/:id` - Xóa khóa học
+- `POST /api/courses/:id/enroll` - Đăng ký khóa học
+
+#### 📝 Assignments
+- `GET /api/assignments` - Lấy danh sách bài tập
+- `GET /api/assignments/:id` - Lấy chi tiết bài tập
+- `POST /api/assignments` - Tạo bài tập mới
+- `PUT /api/assignments/:id` - Cập nhật bài tập
+- `DELETE /api/assignments/:id` - Xóa bài tập
+- `POST /api/assignments/:id/submit` - Nộp bài tập
+
+#### 🧠 Quizzes
+- `GET /api/quizzes` - Lấy danh sách quiz
+- `GET /api/quizzes/:id` - Lấy chi tiết quiz
+- `POST /api/quizzes` - Tạo quiz mới
+- `POST /api/quizzes/:id/start` - Bắt đầu làm quiz
+- `POST /api/quizzes/:id/submit` - Nộp bài quiz
+
+#### 📁 Materials
+- `GET /api/materials` - Lấy danh sách tài liệu
+- `POST /api/materials` - Upload tài liệu
+- `GET /api/materials/:id/download` - Tải xuống tài liệu
+
+#### 👥 Groups
+- `GET /api/groups` - Lấy danh sách nhóm
+- `POST /api/groups` - Tạo nhóm mới
+- `POST /api/groups/:id/join` - Tham gia nhóm
+- `DELETE /api/groups/:id/leave` - Rời khỏi nhóm
+
+#### 🔔 Notifications
+- `GET /api/notifications` - Lấy thông báo
+- `PUT /api/notifications/:id/read` - Đánh dấu đã đọc
+- `PUT /api/notifications/read-all` - Đánh dấu tất cả đã đọc
+
+#### 📊 Dashboard
+- `GET /api/dashboard/stats` - Lấy thống kê dashboard
+- `GET /api/dashboard/upcoming` - Lấy sự kiện sắp tới
+
+## 🗄️ Database Schema
+
+### Firestore Collections
+
+1. **users** - Thông tin người dùng
+2. **courses** - Khóa học
+3. **assignments** - Bài tập
+4. **submissions** - Bài nộp
+5. **quizzes** - Quiz
+6. **quiz_questions** - Câu hỏi quiz
+7. **quiz_attempts** - Lần làm quiz
+8. **materials** - Tài liệu
+9. **groups** - Nhóm
+10. **notifications** - Thông báo
+11. **enrollments** - Đăng ký khóa học
+
+### Relationships
+
+```
+users (1) ←→ (n) courses
+courses (1) ←→ (n) assignments
+courses (1) ←→ (n) quizzes
+courses (1) ←→ (n) materials
+courses (1) ←→ (n) groups
+assignments (1) ←→ (n) submissions
+quizzes (1) ←→ (n) quiz_attempts
+```
+
+## 🔧 Development
+
+### Scripts
+
 ```bash
 # Development
 npm run dev
 
 # Production
 npm start
-```
 
-### Testing
-```bash
-# Run tests
+# Test
 npm test
+
+# Lint
+npm run lint
 ```
 
-## Firebase Configuration
+### Code Structure
 
-1. Create a Firebase project
-2. Generate a service account key
-3. Download the JSON key file
-4. Place it as `serviceAccountKey.json` in the backend root
-5. Configure Firestore security rules
+- **Controllers**: Business logic và xử lý request/response
+- **Models**: Data models và database operations
+- **Routes**: API route definitions
+- **Middleware**: Authentication, validation, error handling
 
-## Security
+### Error Handling
 
-- All routes are protected with Firebase token verification
-- Role-based access control for teacher-specific operations
-- CORS configured for Flutter/web applications
-- Input validation and sanitization
-- Error handling without sensitive information exposure
+Tất cả API responses tuân theo format:
 
-## Error Handling
-
-The API returns consistent error responses:
 ```json
 {
-  "message": "Error description",
-  "error": "Error type"
+  "success": true/false,
+  "data": {}, // hoặc []
+  "message": "string",
+  "error": "string" // chỉ khi success = false
 }
 ```
 
-Common HTTP status codes:
+### HTTP Status Codes
+
 - `200` - Success
 - `201` - Created
 - `400` - Bad Request
@@ -137,16 +237,106 @@ Common HTTP status codes:
 - `404` - Not Found
 - `500` - Internal Server Error
 
-## Deployment
+## 🧪 Testing
+
+### Manual Testing
+
+1. **Authentication**
+   - Test login/register
+   - Test token validation
+   - Test role-based access
+
+2. **Course Management**
+   - Test CRUD operations
+   - Test enrollment
+   - Test data relationships
+
+3. **Assignment System**
+   - Test assignment creation
+   - Test submission
+   - Test grading
+
+4. **Quiz System**
+   - Test quiz creation
+   - Test quiz attempts
+   - Test scoring
+
+### Test Data
+
+```javascript
+// Sample course data
+{
+  "code": "IT4409",
+  "name": "Web Programming",
+  "description": "Learn web development with modern technologies",
+  "credits": 3,
+  "semester": "Spring 2025",
+  "teacherId": "teacher_uid_here"
+}
+```
+
+## 🚀 Deployment
 
 ### Environment Variables
-- `PORT` - Server port (default: 4000)
-- `FIREBASE_SERVICE_ACCOUNT` - Path to service account key
 
-### Production Considerations
-- Use environment variables for sensitive data
-- Implement rate limiting
-- Add request logging
-- Set up monitoring and alerting
-- Use HTTPS in production
-- Configure proper CORS origins
+```env
+NODE_ENV=production
+PORT=4000
+FIREBASE_PROJECT_ID=your-project-id
+FIREBASE_PRIVATE_KEY=your-private-key
+FIREBASE_CLIENT_EMAIL=your-client-email
+```
+
+### Docker Deployment
+
+```dockerfile
+FROM node:18-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+COPY . .
+EXPOSE 4000
+CMD ["npm", "start"]
+```
+
+### Production Checklist
+
+- [ ] Environment variables configured
+- [ ] Firebase service account setup
+- [ ] CORS configured for production domains
+- [ ] Rate limiting enabled
+- [ ] Error logging configured
+- [ ] Health check endpoint working
+- [ ] SSL certificate installed
+
+## 📖 Detailed Documentation
+
+Để xem tài liệu chi tiết về API endpoints, database schema và data relationships, vui lòng tham khảo:
+
+**[📋 README_API_SPECIFICATION.md](./README_API_SPECIFICATION.md)**
+
+File này chứa:
+- Chi tiết tất cả API endpoints
+- Cấu trúc Firestore collections
+- Relationships giữa các collections
+- Cách kết hợp dữ liệu cho course page
+- Error handling và status codes
+- Testing và deployment guides
+
+## 🤝 Contributing
+
+1. Fork repository
+2. Create feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to branch (`git push origin feature/AmazingFeature`)
+5. Open Pull Request
+
+## 📞 Support
+
+- **Issues**: [GitHub Issues](https://github.com/your-repo/issues)
+- **Documentation**: [API Docs](./README_API_SPECIFICATION.md)
+- **Contact**: backend-support@yourcompany.com
+
+---
+
+*Made with ❤️ by the E-Learning Development Team*
