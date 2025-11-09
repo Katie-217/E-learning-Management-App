@@ -38,12 +38,12 @@ const requireAuth = async (req, res, next) => {
 // Middleware kiểm tra session (không bắt buộc)
 const checkSession = async (req, res, next) => {
   try {
-    console.log('DEBUG: 🔍 SessionMiddleware - Checking session...');
+    console.log('DEBUG: SessionMiddleware - Checking session...');
     
     const authHeader = req.headers.authorization;
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      console.log('DEBUG: ⚠️ No session found');
+      console.log('DEBUG: No session found');
       req.hasSession = false;
       return next();
     }
@@ -52,7 +52,7 @@ const checkSession = async (req, res, next) => {
     
     try {
       const decodedToken = await admin.auth().verifyIdToken(token);
-      console.log('DEBUG: ✅ Valid session found for user:', decodedToken.uid);
+      console.log('DEBUG: Valid session found for user:', decodedToken.uid);
       
       req.user = {
         uid: decodedToken.uid,
@@ -62,13 +62,13 @@ const checkSession = async (req, res, next) => {
       };
       req.hasSession = true;
     } catch (error) {
-      console.log('DEBUG: ⚠️ Invalid session:', error.message);
+      console.log('DEBUG: Invalid session:', error.message);
       req.hasSession = false;
     }
     
     next();
   } catch (error) {
-    console.log('DEBUG: ❌ Session check failed:', error.message);
+    console.log('DEBUG: Session check failed:', error.message);
     req.hasSession = false;
     next();
   }
@@ -85,7 +85,7 @@ const checkUserExists = async (req, res, next) => {
       });
     }
 
-    console.log('DEBUG: 🔍 Checking if user exists in database:', req.user.uid);
+    console.log('DEBUG: Checking if user exists in database:', req.user.uid);
     
     // Kiểm tra user có tồn tại trong Firestore không
     const userDoc = await admin.firestore()
@@ -94,7 +94,7 @@ const checkUserExists = async (req, res, next) => {
       .get();
     
     if (!userDoc.exists) {
-      console.log('DEBUG: ⚠️ User not found in database');
+      console.log('DEBUG: User not found in database');
       return res.status(404).json({
         success: false,
         message: 'User không tồn tại trong hệ thống',
@@ -102,11 +102,11 @@ const checkUserExists = async (req, res, next) => {
       });
     }
     
-    console.log('DEBUG: ✅ User exists in database');
+    console.log('DEBUG: User exists in database');
     req.userData = userDoc.data();
     next();
   } catch (error) {
-    console.log('DEBUG: ❌ Error checking user existence:', error.message);
+    console.log('DEBUG: Error checking user existence:', error.message);
     return res.status(500).json({
       success: false,
       message: 'Lỗi kiểm tra user',
@@ -126,7 +126,7 @@ const createSession = async (req, res, next) => {
       });
     }
 
-    console.log('DEBUG: 🔄 Creating new session for user:', req.user.uid);
+    console.log('DEBUG: Creating new session for user:', req.user.uid);
     
     // Tạo custom token cho session
     const customToken = await admin.auth().createCustomToken(req.user.uid);
@@ -140,10 +140,10 @@ const createSession = async (req, res, next) => {
       expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
     };
     
-    console.log('DEBUG: ✅ Session created successfully');
+    console.log('DEBUG: Session created successfully');
     next();
   } catch (error) {
-    console.log('DEBUG: ❌ Error creating session:', error.message);
+    console.log('DEBUG: Error creating session:', error.message);
     return res.status(500).json({
       success: false,
       message: 'Lỗi tạo session',

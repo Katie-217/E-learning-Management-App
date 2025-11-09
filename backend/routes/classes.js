@@ -1,12 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const { verifyFirebaseToken, requireRole } = require('../middleware/firebaseAuth');
-const ClassModel = require('../models/class');
+const { Course } = require('../models');
 
 // GET all classes
 router.get('/', async (req, res) => {
   try {
-    const classes = await ClassModel.findAll();
+    const classes = await Course.findAll();
     res.json(classes);
   } catch (err) { 
     res.status(500).json({ message: err.message }); 
