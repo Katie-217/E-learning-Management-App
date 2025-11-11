@@ -2,17 +2,38 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:go_router/go_router.dart';
+import '../../../courses/presentation/pages/course_page.dart';
+import '../pages/instructor_students_page.dart';
+import '../../../assignments/presentation/pages/assignments_page.dart';
+import '../pages/instructor_grades_page.dart';
 
 import '../../providers/instructor_profile_provider.dart';
 import '../widgets/calendar_widget.dart';
 import '../widgets/task_list_widget.dart';
 
-class InstructorDashboard extends ConsumerWidget {
+class InstructorDashboard extends ConsumerStatefulWidget {
   const InstructorDashboard({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<InstructorDashboard> createState() => _InstructorDashboardState();
+}
+
+class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
+  String _activeKey = 'dashboard';
+
+  @override
+  Widget build(BuildContext context) {
     final profileAsync = ref.watch(instructorProfileProvider);
+
+    final instructorName = profileAsync.when(
+      data: (data) {
+        final raw = data?['name'] as String?;
+        if (raw == null || raw.trim().isEmpty) return 'Instructor';
+        return raw;
+      },
+      loading: () => 'Instructor',
+      error: (_, __) => 'Instructor',
+    );
     return Theme(
       data: ThemeData(
         primaryColor: Colors.blue[800],
@@ -47,7 +68,7 @@ class InstructorDashboard extends ConsumerWidget {
           // AppBar with menu button for small screens
           final appBar = AppBar(
             title: const Text('Teacher Dashboard'),
-            backgroundColor: Theme.of(context).primaryColor,
+            backgroundColor: const Color(0xFF1F2937),
             foregroundColor: Colors.white,
             elevation: 2,
             actions: [
@@ -67,6 +88,7 @@ class InstructorDashboard extends ConsumerWidget {
 
           return Scaffold(
             appBar: appBar,
+            backgroundColor: const Color(0xFF0F172A),
             drawer: isSmallScreen
                 ? Drawer(
                     child: _buildSidebar(context),
@@ -78,7 +100,7 @@ class InstructorDashboard extends ConsumerWidget {
                 if (!isSmallScreen)
                   Container(
                     width: sidebarWidth,
-                    color: Colors.blue[50],
+                    color: const Color(0xFF111827),
                     child: _buildSidebar(context),
                   ),
                 // Main Content
@@ -89,191 +111,14 @@ class InstructorDashboard extends ConsumerWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Welcome Banner
-                          Container(
-                            padding: EdgeInsets.all(isSmallScreen ? 8.0 : 16.0),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [Colors.blue[800]!, Colors.blue[400]!],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Welcome back, Dr. Johnson!',
-                                        style: Theme.of(context).textTheme.titleLarge!.copyWith(
-                                              fontSize: isSmallScreen ? 20 : 24,
-                                            ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        'Ready to inspire and educate your students?',
-                                        style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                                              fontSize: isSmallScreen ? 14 : 16,
-                                            ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Icon(Icons.school, size: isSmallScreen ? 32 : 40, color: Colors.white),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          // Stats Section
-                          Wrap(
-                            spacing: 8.0,
-                            runSpacing: 8.0,
-                            children: [
-                              _buildStatCard(context, 'Students', '156', Icons.people, isSmallScreen),
-                              _buildStatCard(context, 'Groups', '8', Icons.group, isSmallScreen),
-                              _buildStatCard(context, 'Courses', '50', Icons.book, isSmallScreen),
-                              _buildStatCard(context, 'New Assignments', '23', Icons.assignment, isSmallScreen),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          // Progress Charts Section
-                          const Text(
-                            'Progress Overview',
-                            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 16),
-                          SizedBox(
-                            height: isSmallScreen ? 400 : 200, // Stack charts vertically on small screens
-                            child: isSmallScreen
-                                ? Column(
-                                    children: [
-                                      Expanded(
-                                        child: _buildPieChart(
-                                          context,
-                                          'Assignment Completion',
-                                          [
-                                            PieChartSectionData(
-                                              value: 75,
-                                              color: Colors.blue[600],
-                                              title: '75%',
-                                              radius: isSmallScreen ? 40 : 50,
-                                              titleStyle: const TextStyle(color: Colors.white, fontSize: 12),
-                                            ),
-                                            PieChartSectionData(
-                                              value: 25,
-                                              color: Colors.grey[400],
-                                              title: '25%',
-                                              radius: isSmallScreen ? 40 : 50,
-                                              titleStyle: const TextStyle(color: Colors.white, fontSize: 12),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      Expanded(
-                                        child: _buildPieChart(
-                                          context,
-                                          'Quiz Completion',
-                                          [
-                                            PieChartSectionData(
-                                              value: 60,
-                                              color: Colors.teal[300],
-                                              title: '60%',
-                                              radius: isSmallScreen ? 40 : 50,
-                                              titleStyle: const TextStyle(color: Colors.white, fontSize: 12),
-                                            ),
-                                            PieChartSectionData(
-                                              value: 40,
-                                              color: Colors.grey[400],
-                                              title: '40%',
-                                              radius: isSmallScreen ? 40 : 50,
-                                              titleStyle: const TextStyle(color: Colors.white, fontSize: 12),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  )
-                                : Row(
-                                    children: [
-                                      Expanded(
-                                        child: _buildPieChart(
-                                          context,
-                                          'Assignment Completion',
-                                          [
-                                            PieChartSectionData(
-                                              value: 75,
-                                              color: Colors.blue[600],
-                                              title: '75%',
-                                              radius: 50,
-                                              titleStyle: const TextStyle(color: Colors.white, fontSize: 12),
-                                            ),
-                                            PieChartSectionData(
-                                              value: 25,
-                                              color: Colors.grey[400],
-                                              title: '25%',
-                                              radius: 50,
-                                              titleStyle: const TextStyle(color: Colors.white, fontSize: 12),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      Expanded(
-                                        child: _buildPieChart(
-                                          context,
-                                          'Quiz Completion',
-                                          [
-                                            PieChartSectionData(
-                                              value: 60,
-                                              color: Colors.teal[300],
-                                              title: '60%',
-                                              radius: 50,
-                                              titleStyle: const TextStyle(color: Colors.white, fontSize: 12),
-                                            ),
-                                            PieChartSectionData(
-                                              value: 40,
-                                              color: Colors.grey[400],
-                                              title: '40%',
-                                              radius: 50,
-                                              titleStyle: const TextStyle(color: Colors.white, fontSize: 12),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                          ),
-                          const SizedBox(height: 16),
-                          // My Courses Section
-                          const Text(
-                            'My Courses',
-                            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 16),
-                          SizedBox(
-                            height: isSmallScreen ? 600 : 300,
-                            child: GridView.count(
-                              crossAxisCount: crossAxisCount,
-                              crossAxisSpacing: 12,
-                              mainAxisSpacing: 12,
-                              childAspectRatio: isSmallScreen ? 2.0 : 1.8,
-                              children: [
-                                _buildCourseCard('CS450', 'Advanced Web Development', 45, Colors.blue[600]!, 'Fall 2024', isSmallScreen),
-                                _buildCourseCard('CS380', 'Database Systems', 38, Colors.green[600]!, 'Fall 2024', isSmallScreen),
-                                _buildCourseCard('CS420', 'Software Engineering', 32, Colors.purple[600]!, 'Fall 2024', isSmallScreen),
-                                _buildCourseCard('CS300', 'Data Structures', 31, Colors.orange[600]!, 'Summer 2024', isSmallScreen, inactive: true),
-                              ],
-                            ),
-                          ),
+                          _buildMainContent(context, isSmallScreen, crossAxisCount),
                         ],
                       ),
                     ),
                   ),
                 ),
-                // Calendar and Tasks Panel (Right Side - Only on large screens)
-                if (calendarPanelWidth > 0)
+                // Calendar and Tasks Panel (Right Side - Only on large screens, only on dashboard tab)
+                if (calendarPanelWidth > 0 && _activeKey == 'dashboard')
                   Container(
                     width: calendarPanelWidth,
                     decoration: BoxDecoration(
@@ -312,29 +157,46 @@ class InstructorDashboard extends ConsumerWidget {
         ListTile(
           leading: const Icon(Icons.dashboard),
           title: const Text('Dashboard'),
-          onTap: () => context.go('/dashboard'),
+          selected: _activeKey == 'dashboard',
+          onTap: () {
+            setState(() => _activeKey = 'dashboard');
+            if (Navigator.of(context).canPop()) Navigator.of(context).pop();
+          },
         ),
         ListTile(
           leading: const Icon(Icons.people),
           title: const Text('Students'),
-          onTap: () => context.go('/instructor/students'),
+          selected: _activeKey == 'students',
+          onTap: () {
+            setState(() => _activeKey = 'students');
+            if (Navigator.of(context).canPop()) Navigator.of(context).pop();
+          },
         ),
         ListTile(
           leading: const Icon(Icons.book),
           title: const Text('Courses'),
-          onTap: () => context.go('/instructor/courses'),
+          selected: _activeKey == 'courses',
+          onTap: () {
+            setState(() => _activeKey = 'courses');
+            if (Navigator.of(context).canPop()) Navigator.of(context).pop();
+          },
         ),
         ListTile(
           leading: const Icon(Icons.assignment),
           title: const Text('Assignments'),
-          onTap: () => context.go('/instructor/assignments'),
+          selected: _activeKey == 'assignments',
+          onTap: () {
+            setState(() => _activeKey = 'assignments');
+            if (Navigator.of(context).canPop()) Navigator.of(context).pop();
+          },
         ),
         ListTile(
           leading: const Icon(Icons.grade),
           title: const Text('Grades'),
+          selected: _activeKey == 'grades',
           onTap: () {
-            print('DEBUG: Navigating to /instructor/grades');
-            context.go('/instructor/grades');
+            setState(() => _activeKey = 'grades');
+            if (Navigator.of(context).canPop()) Navigator.of(context).pop();
           },
         ),
       ],
@@ -384,6 +246,201 @@ class InstructorDashboard extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  Widget _buildMainContent(BuildContext context, bool isSmallScreen, int crossAxisCount) {
+    switch (_activeKey) {
+      case 'students':
+        return const InstructorStudentsPage();
+      case 'courses':
+        return const CoursePage(showSidebar: false);
+      case 'assignments':
+        return const AssignmentsPage();
+      case 'grades':
+        return const InstructorGradesPage();
+      case 'dashboard':
+      default:
+        // Original dashboard UI
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: EdgeInsets.all(isSmallScreen ? 8.0 : 16.0),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.blue[800]!, Colors.blue[400]!],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Welcome back, Dr. Johnson!',
+                          style: Theme.of(context).textTheme.titleLarge!.copyWith(
+                                fontSize: isSmallScreen ? 20 : 24,
+                              ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Ready to inspire and educate your students?',
+                          style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                                fontSize: isSmallScreen ? 14 : 16,
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.school, size: isSmallScreen ? 32 : 40, color: Colors.white),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8.0,
+              runSpacing: 8.0,
+              children: [
+                _buildStatCard(context, 'Students', '156', Icons.people, isSmallScreen),
+                _buildStatCard(context, 'Groups', '8', Icons.group, isSmallScreen),
+                _buildStatCard(context, 'Courses', '50', Icons.book, isSmallScreen),
+                _buildStatCard(context, 'New Assignments', '23', Icons.assignment, isSmallScreen),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Progress Overview',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: isSmallScreen ? 400 : 200,
+              child: isSmallScreen
+                  ? Column(
+                      children: [
+                        Expanded(
+                          child: _buildPieChart(
+                            context,
+                            'Assignment Completion',
+                            [
+                              PieChartSectionData(
+                                value: 75,
+                                color: Colors.blue[600],
+                                title: '75%',
+                                radius: isSmallScreen ? 40 : 50,
+                                titleStyle: const TextStyle(color: Colors.white, fontSize: 12),
+                              ),
+                              PieChartSectionData(
+                                value: 25,
+                                color: Colors.grey[400],
+                                title: '25%',
+                                radius: isSmallScreen ? 40 : 50,
+                                titleStyle: const TextStyle(color: Colors.white, fontSize: 12),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Expanded(
+                          child: _buildPieChart(
+                            context,
+                            'Quiz Completion',
+                            [
+                              PieChartSectionData(
+                                value: 60,
+                                color: Colors.teal[300],
+                                title: '60%',
+                                radius: isSmallScreen ? 40 : 50,
+                                titleStyle: const TextStyle(color: Colors.white, fontSize: 12),
+                              ),
+                              PieChartSectionData(
+                                value: 40,
+                                color: Colors.grey[400],
+                                title: '40%',
+                                radius: isSmallScreen ? 40 : 50,
+                                titleStyle: const TextStyle(color: Colors.white, fontSize: 12),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    )
+                  : Row(
+                      children: [
+                        Expanded(
+                          child: _buildPieChart(
+                            context,
+                            'Assignment Completion',
+                            [
+                              PieChartSectionData(
+                                value: 75,
+                                color: Colors.blue[600],
+                                title: '75%',
+                                radius: 50,
+                                titleStyle: const TextStyle(color: Colors.white, fontSize: 12),
+                              ),
+                              PieChartSectionData(
+                                value: 25,
+                                color: Colors.grey[400],
+                                title: '25%',
+                                radius: 50,
+                                titleStyle: const TextStyle(color: Colors.white, fontSize: 12),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Expanded(
+                          child: _buildPieChart(
+                            context,
+                            'Quiz Completion',
+                            [
+                              PieChartSectionData(
+                                value: 60,
+                                color: Colors.teal[300],
+                                title: '60%',
+                                radius: 50,
+                                titleStyle: const TextStyle(color: Colors.white, fontSize: 12),
+                              ),
+                              PieChartSectionData(
+                                value: 40,
+                                color: Colors.grey[400],
+                                title: '40%',
+                                radius: 50,
+                                titleStyle: const TextStyle(color: Colors.white, fontSize: 12),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'My Courses',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: isSmallScreen ? 600 : 300,
+              child: GridView.count(
+                crossAxisCount: crossAxisCount,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: isSmallScreen ? 2.0 : 1.8,
+                children: [
+                  _buildCourseCard('CS450', 'Advanced Web Development', 45, Colors.blue[600]!, 'Fall 2024', isSmallScreen),
+                  _buildCourseCard('CS380', 'Database Systems', 38, Colors.green[600]!, 'Fall 2024', isSmallScreen),
+                  _buildCourseCard('CS420', 'Software Engineering', 32, Colors.purple[600]!, 'Fall 2024', isSmallScreen),
+                  _buildCourseCard('CS300', 'Data Structures', 31, Colors.orange[600]!, 'Summer 2024', isSmallScreen, inactive: true),
+                ],
+              ),
+            ),
+          ],
+        );
+    }
   }
 
   Widget _buildCourseCard(String code, String title, int students, Color color, String semester, bool isSmallScreen, {bool inactive = false}) {
