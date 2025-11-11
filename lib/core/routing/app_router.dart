@@ -1,4 +1,4 @@
-import 'package:elearning_management_app/features/student/presentation/pages/student_dashboard_page.dart';
+import 'package:elearning_management_app/core/widgets/role_based_dashboard.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -7,8 +7,11 @@ import '../services/user_session_service.dart';
 import '../../features/auth/presentation/pages/auth_overlay_screen.dart';
 import '../../core/config/users-role.dart';
 import '../../features/instructor/presentation/pages/instructor_dashboard.dart';
+import '../../features/instructor/presentation/pages/instructor_students_page.dart';
+import '../../features/instructor/presentation/pages/instructor_grades_page.dart';
 import '../../features/settings/presentation/pages/profile_view.dart';
 import '../../features/courses/presentation/pages/course_page.dart';
+import '../../features/assignments/presentation/pages/assignments_page.dart';
 // import '../../features/student/presentation/pages/semester_page.dart';
 // import '../../features/student/presentation/pages/course_page.dart';
 // import '../../features/groups/presentation/pages/group_page.dart';
@@ -68,7 +71,7 @@ class AppRouter {
       GoRoute(
         path: '/dashboard',
         name: 'dashboard',
-        builder: (context, state) => const StudentDashboardPage(),
+        builder: (context, state) => const RoleBasedDashboard(),
       ),
       GoRoute(
         path: '/profile',
@@ -80,13 +83,41 @@ class AppRouter {
         name: 'courses',
         builder: (context, state) => const CoursePage(),
       ),
+      // Instructor routes
+      GoRoute(
+        path: '/instructor',
+        redirect: (context, state) => '/instructor/dashboard',
+      ),
+      GoRoute(
+        path: '/instructor/dashboard',
+        name: 'instructor-dashboard',
+        builder: (context, state) => const InstructorDashboard(),
+      ),
+      GoRoute(
+        path: '/instructor/students',
+        name: 'instructor-students',
+        builder: (context, state) => const InstructorStudentsPage(),
+      ),
+      GoRoute(
+        path: '/instructor/courses',
+        name: 'instructor-courses',
+        builder: (context, state) => const CoursePage(),
+      ),
+      GoRoute(
+        path: '/instructor/assignments',
+        name: 'instructor-assignments',
+        builder: (context, state) => const AssignmentsPage(),
+      ),
+      GoRoute(
+        path: '/instructor/grades',
+        name: 'instructor-grades',
+        builder: (context, state) => const InstructorGradesPage(),
+      ),
       // GoRoute(path: '/semesters', builder: (c, s) => const SemesterPage()),
-      // GoRoute(path: '/courses', builder: (c, s) => const CoursePage()),
       // GoRoute(path: '/groups', builder: (c, s) => const GroupPage()),
       // GoRoute(path: '/students', builder: (c, s) => const StudentPage()),
       // GoRoute(path: '/csv-import', builder: (c, s) => const CsvImportPreviewPage()),
       // GoRoute(path: '/announcements', builder: (c, s) => const AnnouncementsPage()),
-      // GoRoute(path: '/assignments', builder: (c, s) => const AssignmentsPage()),
       // GoRoute(path: '/quizzes', builder: (c, s) => const QuizzesPage()),
       // GoRoute(path: '/materials', builder: (c, s) => const MaterialsPage()),
       // GoRoute(path: '/forum', builder: (c, s) => const ForumPage()),

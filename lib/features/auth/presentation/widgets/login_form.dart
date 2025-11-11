@@ -3,6 +3,7 @@ import '../../../../core/config/users-role.dart';
 import '../../repositories/auth_service.dart';
 import '../widgets/auth_form_widgets.dart';
 import '../../../../core/widgets/main_shell.dart';
+import '../../../instructor/presentation/pages/instructor_dashboard.dart';
 
 class LoginForm extends StatefulWidget {
   final UserRole role;
@@ -35,11 +36,19 @@ class _LoginFormState extends State<LoginForm> {
       final authService = AuthService.defaultClient();
       final user = await authService.signIn(_emailController.text.trim(), _passwordController.text.trim());
       
-      if (user != null) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const MainShell())
-        );
-      } else {
+       if (user != null) {
+        final role = await authService.fetchUserRole(user.uid);
+        final norm = (role ?? '').toString().trim().toLowerCase();
+        if (norm == 'teacher' || norm == 'instructor') {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const InstructorDashboard()),
+          );
+        } else {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const MainShell()),
+          );
+        }
+      }  else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Đăng nhập thất bại')),
         );

@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../providers/instructor_profile_provider.dart';
+import '../widgets/calendar_widget.dart';
+import '../widgets/task_list_widget.dart';
 
 class InstructorDashboard extends ConsumerWidget {
   const InstructorDashboard({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final profileAsync = ref.watch(instructorProfileProvider);
     return Theme(
       data: ThemeData(
         primaryColor: Colors.blue[800],
@@ -25,12 +31,15 @@ class InstructorDashboard extends ConsumerWidget {
       child: LayoutBuilder(
         builder: (context, constraints) {
           // Determine screen size
-          final isLargeScreen = constraints.maxWidth > 800;
-          final isMediumScreen = constraints.maxWidth > 600 && constraints.maxWidth <= 800;
-          final isSmallScreen = constraints.maxWidth <= 600;
+          final isLargeScreen = constraints.maxWidth > 1200;
+          final isMediumScreen = constraints.maxWidth > 800 && constraints.maxWidth <= 1200;
+          final isSmallScreen = constraints.maxWidth <= 800;
 
           // Sidebar width
           final sidebarWidth = isLargeScreen ? 200.0 : (isMediumScreen ? 150.0 : 0.0);
+
+          // Calendar/Tasks panel width (only show on large screens)
+          final calendarPanelWidth = isLargeScreen ? 400.0 : 0.0;
 
           // GridView crossAxisCount
           final crossAxisCount = isLargeScreen ? 3 : (isMediumScreen ? 2 : 1);
@@ -41,16 +50,19 @@ class InstructorDashboard extends ConsumerWidget {
             backgroundColor: Theme.of(context).primaryColor,
             foregroundColor: Colors.white,
             elevation: 2,
-            actions: isSmallScreen
-                ? [
-                    IconButton(
-                      icon: const Icon(Icons.menu),
-                      onPressed: () {
-                        Scaffold.of(context).openDrawer();
-                      },
-                    ),
-                  ]
-                : null,
+            actions: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: _buildProfileButton(context, profileAsync),
+              ),
+              if (isSmallScreen)
+                IconButton(
+                  icon: const Icon(Icons.menu),
+                  onPressed: () {
+                    Scaffold.of(context).openDrawer();
+                  },
+                ),
+            ],
           );
 
           return Scaffold(
@@ -120,11 +132,10 @@ class InstructorDashboard extends ConsumerWidget {
                             spacing: 8.0,
                             runSpacing: 8.0,
                             children: [
-                              _buildStatCard(context, 'Total Students', '156', Icons.people, isSmallScreen),
-                              _buildStatCard(context, 'Total Groups', '8', Icons.group, isSmallScreen),
-                              _buildStatCard(context, 'Total Courses', '50', Icons.book, isSmallScreen),
-                              _buildStatCard(context, 'Assignments', '23', Icons.assignment, isSmallScreen),
-                              _buildStatCard(context, 'Quizzes', '15', Icons.quiz, isSmallScreen),
+                              _buildStatCard(context, 'Students', '156', Icons.people, isSmallScreen),
+                              _buildStatCard(context, 'Groups', '8', Icons.group, isSmallScreen),
+                              _buildStatCard(context, 'Courses', '50', Icons.book, isSmallScreen),
+                              _buildStatCard(context, 'New Assignments', '23', Icons.assignment, isSmallScreen),
                             ],
                           ),
                           const SizedBox(height: 16),
@@ -261,6 +272,31 @@ class InstructorDashboard extends ConsumerWidget {
                     ),
                   ),
                 ),
+                // Calendar and Tasks Panel (Right Side - Only on large screens)
+                if (calendarPanelWidth > 0)
+                  Container(
+                    width: calendarPanelWidth,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade50,
+                      border: Border(
+                        left: BorderSide(
+                          color: Colors.grey.shade300,
+                          width: 1,
+                        ),
+                      ),
+                    ),
+                    child: const SingleChildScrollView(
+                      padding: EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          CalendarWidget(),
+                          SizedBox(height: 24),
+                          TaskListWidget(),
+                        ],
+                      ),
+                    ),
+                  ),
               ],
             ),
           );
@@ -271,38 +307,35 @@ class InstructorDashboard extends ConsumerWidget {
 
   Widget _buildSidebar(BuildContext context) {
     return ListView(
+      padding: const EdgeInsets.symmetric(vertical: 8),
       children: [
         ListTile(
-          leading: Icon(Icons.dashboard),
-          title: Text('Dashboard'),
+          leading: const Icon(Icons.dashboard),
+          title: const Text('Dashboard'),
+          onTap: () => context.go('/dashboard'),
         ),
         ListTile(
-          leading: Icon(Icons.people),
-          title: Text('Students'),
+          leading: const Icon(Icons.people),
+          title: const Text('Students'),
+          onTap: () => context.go('/instructor/students'),
         ),
         ListTile(
-          leading: Icon(Icons.book),
-          title: Text('Courses'),
+          leading: const Icon(Icons.book),
+          title: const Text('Courses'),
+          onTap: () => context.go('/instructor/courses'),
         ),
         ListTile(
-          leading: Icon(Icons.assignment),
-          title: Text('Assignments'),
+          leading: const Icon(Icons.assignment),
+          title: const Text('Assignments'),
+          onTap: () => context.go('/instructor/assignments'),
         ),
         ListTile(
-          leading: Icon(Icons.grade),
-          title: Text('Grades'),
-        ),
-        ListTile(
-          leading: Icon(Icons.schedule),
-          title: Text('Schedule'),
-        ),
-        ListTile(
-          leading: Icon(Icons.settings),
-          title: Text('Settings'),
-        ),
-        ListTile(
-          leading: Icon(Icons.help),
-          title: Text('Help'),
+          leading: const Icon(Icons.grade),
+          title: const Text('Grades'),
+          onTap: () {
+            print('DEBUG: Navigating to /instructor/grades');
+            context.go('/instructor/grades');
+          },
         ),
       ],
     );
@@ -453,14 +486,220 @@ class InstructorDashboard extends ConsumerWidget {
       ),
     );
   }
+
+  Widget _buildProfileButton(BuildContext context,
+      AsyncValue<Map<String, dynamic>?> profileAsync) {
+    return profileAsync.when(
+      loading: () => const Center(
+        child: SizedBox(
+          width: 32,
+          height: 32,
+          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+        ),
+      ),
+      error: (_, __) => _ProfileAvatar(
+        initials: 'T',
+        onTap: () => _showProfileSheet(context, null),
+      ),
+      data: (data) {
+        final initials = _extractInitials(data?['name'] ?? '');
+        final photoUrl = data?['photoUrl'] as String?;
+        return _ProfileAvatar(
+          initials: initials,
+          photoUrl: photoUrl,
+          onTap: () => _showProfileSheet(context, data),
+        );
+      },
+    );
+  }
+
+  String _extractInitials(String name) {
+    if (name.isEmpty) return 'T';
+    final parts = name.trim().split(RegExp(r'\s+'));
+    if (parts.length == 1) return parts.first.substring(0, 1).toUpperCase();
+    return (parts.first.substring(0, 1) + parts.last.substring(0, 1))
+        .toUpperCase();
+  }
+
+  void _showProfileSheet(
+      BuildContext context, Map<String, dynamic>? profileData) {
+    final name = profileData?['name'] as String? ?? 'Teacher';
+    final email = profileData?['email'] as String? ?? 'No email';
+    final role = profileData?['role'] as String? ?? 'teacher';
+    final photoUrl = profileData?['photoUrl'] as String?;
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: _ProfileAvatar(
+                  initials: _extractInitials(name),
+                  photoUrl: photoUrl,
+                  size: 72,
+                  onTap: () {},
+                ),
+              ),
+              const SizedBox(height: 16),
+              Center(
+                child: Text(
+                  name,
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleLarge
+                      ?.copyWith(color: Colors.black87),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Center(
+                child: Text(
+                  email,
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodyMedium
+                      ?.copyWith(color: Colors.black54),
+                ),
+              ),
+              const SizedBox(height: 16),
+              _ProfileInfoRow(
+                icon: Icons.badge_outlined,
+                label: 'Role',
+                value: role.toUpperCase(),
+              ),
+              if (profileData?['settings'] is Map<String, dynamic>) ...[
+                const SizedBox(height: 12),
+                _ProfileInfoRow(
+                  icon: Icons.language,
+                  label: 'Language',
+                  value:
+                      profileData!['settings']['language']?.toString() ?? '--',
+                ),
+                const SizedBox(height: 12),
+                _ProfileInfoRow(
+                  icon: Icons.brightness_6_outlined,
+                  label: 'Theme',
+                  value: profileData['settings']['theme']?.toString() ?? '--',
+                ),
+              ],
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        context.go('/profile');
+                      },
+                      icon: const Icon(Icons.person),
+                      label: const Text('View Profile'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close),
+                      label: const Text('Close'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 }
 
-void main() {
-  runApp(
-    ProviderScope(
-      child: MaterialApp(
-        home: const InstructorDashboard(),
-      ),
-    ),
-  );
+class _ProfileAvatar extends StatelessWidget {
+  const _ProfileAvatar({
+    required this.initials,
+    required this.onTap,
+    this.photoUrl,
+    this.size = 40,
+  });
+
+  final String initials;
+  final VoidCallback onTap;
+  final String? photoUrl;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final avatar = CircleAvatar(
+      radius: size / 2,
+      backgroundImage: photoUrl != null && photoUrl!.isNotEmpty
+          ? NetworkImage(photoUrl!)
+          : null,
+      backgroundColor: Colors.white24,
+      child: (photoUrl == null || photoUrl!.isEmpty)
+          ? Text(
+              initials,
+              style: TextStyle(
+                fontSize: size / 2.3,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            )
+          : null,
+    );
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(size),
+      onTap: onTap,
+      child: avatar,
+    );
+  }
+}
+
+class _ProfileInfoRow extends StatelessWidget {
+  const _ProfileInfoRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, color: Colors.blue[600]),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: Theme.of(context)
+                    .textTheme
+                    .bodySmall
+                    ?.copyWith(color: Colors.grey[600]),
+              ),
+              Text(
+                value,
+                style: Theme.of(context)
+                    .textTheme
+                    .bodyLarge
+                    ?.copyWith(fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
 }

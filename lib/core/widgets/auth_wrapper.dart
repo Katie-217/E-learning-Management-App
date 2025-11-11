@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/user_session_service.dart';
-import '../services/auth_api_service.dart';
 import '../config/users-role.dart';
-import '../config/app_theme.dart';
 import '../../features/auth/presentation/pages/auth_overlay_screen.dart';
-import 'main_shell.dart';
+import 'role_based_dashboard.dart';
 
 class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
@@ -111,7 +109,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
     }
 
     if (_isAuthenticated) {
-      return const MainShell();
+      return const RoleBasedDashboard();
     } else {
       return const AuthOverlayScreen(initialRole: UserRole.student);
     }
