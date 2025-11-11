@@ -1,43 +1,38 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AuthApiService {
-  static const String _baseUrl = 'http://localhost:3000/api/auth';
-  
-  // Kiểm tra session hiện tại
+  // Kiểm tra session hiện tại (Firebase-only)
   static Future<Map<String, dynamic>> checkSession() async {
     try {
-      print('DEBUG: 🔍 AuthApiService - Checking session...');
-      
+      print('DEBUG: 🔍 AuthApiService(Firebase) - Checking session...');
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
-        print('DEBUG: ❌ No Firebase user found');
         return {
           'success': false,
           'hasSession': false,
           'message': 'No user logged in'
         };
       }
-      
-      // Lấy ID token
-      final idToken = await user.getIdToken();
-      
-      final response = await http.get(
-        Uri.parse('$_baseUrl/check-session'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $idToken',
-        },
-      );
-      
-      final data = json.decode(response.body);
-      print('DEBUG: 📊 Session check response: $data');
-      
-      return data;
-      
+      // Kiểm tra user document trong Firestore
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      final exists = userDoc.exists;
+      return {
+        'success': exists,
+        'message': exists ? 'Session hợp lệ' : 'User không tồn tại trong hệ thống',
+        'hasSession': exists,
+        'data': {
+          'user': {
+            'uid': user.uid,
+            'email': user.email,
+            'displayName': user.displayName,
+            'photoURL': user.photoURL,
+          },
+          'userData': exists ? userDoc.data() : null,
+        }
+      };
     } catch (e) {
-      print('DEBUG: ❌ Error checking session: $e');
+      print('DEBUG: ❌ Error checking session(Firebase): $e');
       return {
         'success': false,
         'hasSession': false,
@@ -45,147 +40,93 @@ class AuthApiService {
       };
     }
   }
-  
-  // Đăng nhập và tạo session
+
+  // "Đăng nhập" (Firebase đã đăng nhập ở client) -> trả thông tin hợp nhất
   static Future<Map<String, dynamic>> login() async {
     try {
-      print('DEBUG: 🔑 AuthApiService - Logging in...');
-      
+      print('DEBUG: 🔑 AuthApiService(Firebase) - Login passthrough...');
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
-        print('DEBUG: ❌ No Firebase user found');
-        return {
-          'success': false,
-          'message': 'No user logged in'
-        };
+        return { 'success': false, 'message': 'No user logged in' };
       }
-      
-      // Lấy ID token
-      final idToken = await user.getIdToken();
-      
-      final response = await http.post(
-        Uri.parse('$_baseUrl/login'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $idToken',
-        },
-      );
-      
-      final data = json.decode(response.body);
-      print('DEBUG: 📊 Login response: $data');
-      
-      return data;
-      
-    } catch (e) {
-      print('DEBUG: ❌ Error logging in: $e');
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
       return {
-        'success': false,
-        'error': e.toString()
+        'success': true,
+        'message': 'Đăng nhập thành công',
+        'data': {
+          'user': {
+            'uid': user.uid,
+            'email': user.email,
+            'displayName': user.displayName,
+            'photoURL': user.photoURL,
+          },
+          'userData': userDoc.data(),
+          'hasSession': true
+        }
       };
+    } catch (e) {
+      print('DEBUG: ❌ Error login(Firebase): $e');
+      return { 'success': false, 'error': e.toString() };
     }
   }
-  
-  // Đăng xuất
+
+  // Đăng xuất trực tiếp Firebase
   static Future<Map<String, dynamic>> logout() async {
     try {
-      print('DEBUG: 🚪 AuthApiService - Logging out...');
-      
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        print('DEBUG: ⚠️ No user to logout');
-        return {
-          'success': true,
-          'message': 'No user to logout'
-        };
-      }
-      
-      // Lấy ID token
-      final idToken = await user.getIdToken();
-      
-      final response = await http.post(
-        Uri.parse('$_baseUrl/logout'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $idToken',
-        },
-      );
-      
-      final data = json.decode(response.body);
-      print('DEBUG: 📊 Logout response: $data');
-      
-      return data;
-      
-    } catch (e) {
-      print('DEBUG: ❌ Error logging out: $e');
+      print('DEBUG: 🚪 AuthApiService(Firebase) - Logging out...');
+      await FirebaseAuth.instance.signOut();
       return {
-        'success': false,
-        'error': e.toString()
+        'success': true,
+        'message': 'Đăng xuất thành công',
+        'data': { 'hasSession': false }
       };
+    } catch (e) {
+      print('DEBUG: ❌ Error logging out(Firebase): $e');
+      return { 'success': false, 'error': e.toString() };
     }
   }
-  
-  // Lấy thông tin user
+
+  // Lấy thông tin user từ Firebase Auth + Firestore
   static Future<Map<String, dynamic>> getUserInfo() async {
     try {
-      print('DEBUG: 👤 AuthApiService - Getting user info...');
-      
+      print('DEBUG: 👤 AuthApiService(Firebase) - Getting user info...');
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
-        print('DEBUG: ❌ No Firebase user found');
-        return {
-          'success': false,
-          'message': 'No user logged in'
-        };
+        return { 'success': false, 'message': 'No user logged in' };
       }
-      
-      // Lấy ID token
-      final idToken = await user.getIdToken();
-      
-      final response = await http.get(
-        Uri.parse('$_baseUrl/user-info'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $idToken',
-        },
-      );
-      
-      final data = json.decode(response.body);
-      print('DEBUG: 📊 User info response: $data');
-      
-      return data;
-      
-    } catch (e) {
-      print('DEBUG: ❌ Error getting user info: $e');
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
       return {
-        'success': false,
-        'error': e.toString()
+        'success': true,
+        'message': 'Lấy thông tin user thành công',
+        'data': {
+          'user': {
+            'uid': user.uid,
+            'email': user.email,
+            'displayName': user.displayName,
+            'photoURL': user.photoURL,
+          },
+          'userData': userDoc.data()
+        }
       };
+    } catch (e) {
+      print('DEBUG: ❌ Error getting user info(Firebase): $e');
+      return { 'success': false, 'error': e.toString() };
     }
   }
-  
-  // Kiểm tra user có tồn tại không
+
+  // Kiểm tra user có tồn tại trong Firestore
   static Future<Map<String, dynamic>> checkUserExists(String uid) async {
     try {
-      print('DEBUG: 🔍 AuthApiService - Checking if user exists: $uid');
-      
-      final response = await http.get(
-        Uri.parse('$_baseUrl/user-exists/$uid'),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      );
-      
-      final data = json.decode(response.body);
-      print('DEBUG: 📊 User exists response: $data');
-      
-      return data;
-      
-    } catch (e) {
-      print('DEBUG: ❌ Error checking user existence: $e');
+      print('DEBUG: 🔍 AuthApiService(Firebase) - Checking user exists: $uid');
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
       return {
-        'success': false,
-        'error': e.toString()
+        'success': true,
+        'message': 'Kiểm tra user thành công',
+        'data': { 'uid': uid, 'exists': userDoc.exists }
       };
+    } catch (e) {
+      print('DEBUG: ❌ Error checking user existence(Firebase): $e');
+      return { 'success': false, 'error': e.toString() };
     }
   }
 }
