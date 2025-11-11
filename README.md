@@ -1,6 +1,6 @@
 # E-Learning Management System
 
-A comprehensive e-learning platform built with Flutter frontend and Node.js backend, using Firebase for authentication and data storage.
+A comprehensive e-learning platform built with Flutter and Firebase (Auth, Firestore, Storage). The legacy Node.js backend has been deprecated and replaced by a Firebase-only architecture. See `docs/CHANGE_ARCHITECTURE.md` for rationale and details.
 
 ## 📁 Project Structure
 
@@ -99,30 +99,7 @@ Final-pro/
 │   ├── firebase_options.dart      # Firebase configuration
 │   └── debug_firebase.dart        # Firebase debugging
 │
-├── backend/                       # Node.js backend
-│   ├── src/
-│   │   ├── config/
-│   │   │   └── firebase.js
-│   │   ├── controllers/
-│   │   │   ├── assignment.controller.js
-│   │   │   ├── course.controller.js
-│   │   │   ├── student.controller.js
-│   │   │   └── teacher.controller.js
-│   │   ├── models/
-│   │   │   ├── assignment.js
-│   │   │   ├── class.js
-│   │   │   ├── submission.js
-│   │   │   └── Teacher.js
-│   │   ├── routes/
-│   │   │   ├── assignment.routes.js
-│   │   │   ├── course.routes.js
-│   │   │   ├── student.routes.js
-│   │   │   └── teacher.routes.js
-│   │   └── middlewares/
-│   │       └── firebaseAuth.js
-│   ├── package.json
-│   ├── server.js
-│   └── serviceAccountKey.json
+├── backend/                       # Legacy Node.js backend (DEPRECATED - not used)
 │
 ├── assets/                        # Static assets
 │   ├── icons/
@@ -157,12 +134,8 @@ Final-pro/
 - **UI**: Material Design 3
 - **Architecture**: Feature-based architecture
 
-### Backend (Node.js)
-- **Runtime**: Node.js
-- **Framework**: Express.js
-- **Authentication**: Firebase Admin SDK
-- **Database**: Firebase Firestore
-- **Middleware**: CORS, Morgan
+### Backend
+- Replaced by Firebase (Firestore, Auth, Storage). No self-hosted server required.
 
 ## ✨ Features
 
@@ -200,7 +173,6 @@ Final-pro/
 
 ### Prerequisites
 - Flutter SDK (3.x or higher)
-- Node.js (16.x or higher)
 - Firebase project setup
 - Android Studio / VS Code
 - Git
@@ -213,15 +185,7 @@ Final-pro/
    cd Final-pro
    ```
 
-2. **Backend Setup**
-   ```bash
-   cd backend
-   npm install
-   # Add your Firebase service account key to serviceAccountKey.json
-   npm run dev
-   ```
-
-3. **Frontend Setup**
+2. **App Setup (Firebase-only)**
    ```bash
    flutter pub get
    # Configure Firebase for your project
@@ -234,7 +198,7 @@ Final-pro/
 2. Enable Authentication and Firestore
 3. Download `google-services.json` for Android
 4. Add Firebase configuration to your Flutter app
-5. Set up Firebase Admin SDK for backend
+5. (Optional) Set up Firebase Storage rules for uploads
 
 ### Environment Variables
 
@@ -264,43 +228,7 @@ flutter build macos --release
 flutter build ios --release
 ```
 
-### Backend
-```bash
-# Development
-npm run dev
-
-# Production build
-npm run start
-```
-
-## 📡 API Endpoints
-
-### Teachers
-- `GET /api/teachers` - Get all teachers
-- `POST /api/teachers` - Create teacher
-- `GET /api/teachers/:id` - Get teacher by ID
-- `PUT /api/teachers/:id` - Update teacher
-- `DELETE /api/teachers/:id` - Delete teacher
-
-### Classes
-- `GET /api/classes` - Get all classes
-- `POST /api/classes` - Create class
-- `GET /api/classes/:id` - Get class by ID
-- `PUT /api/classes/:id` - Update class
-- `DELETE /api/classes/:id` - Delete class
-
-### Assignments
-- `GET /api/assignments` - Get all assignments
-- `POST /api/assignments` - Create assignment
-- `GET /api/assignments/class/:classId` - Get assignments by class
-- `PUT /api/assignments/:id` - Update assignment
-- `DELETE /api/assignments/:id` - Delete assignment
-
-### Submissions
-- `GET /api/submissions` - Get all submissions
-- `POST /api/submissions` - Create submission
-- `GET /api/submissions/assignment/:assignmentId` - Get submissions by assignment
-- `PUT /api/submissions/:id/grade` - Grade submission
+> Note: REST API endpoints listed previously were for the deprecated Node.js backend. Data access is now performed directly via Firebase SDK in the Flutter app (see `docs/CHANGE_ARCHITECTURE.md`).
 
 ## 🧪 Testing
 
@@ -324,9 +252,7 @@ npm run start
 - **Desktop**: Distribute executable files
 
 ### Backend Deployment
-- Deploy to Heroku, Railway, or any Node.js hosting service
-- Configure environment variables
-- Set up Firebase service account
+Not applicable. The app uses Firebase services directly (Firestore, Auth, Storage). Consider Firebase Hosting for web.
 
 ## 🏗 Architecture
 
@@ -338,10 +264,8 @@ npm run start
 - **Responsive Design**: Adaptive UI for all screen sizes
 
 ### Backend Architecture
-- **RESTful API**: Standard HTTP methods
-- **Middleware**: Authentication and authorization
-- **Firebase Integration**: Real-time database
-- **Error Handling**: Comprehensive error responses
+- Firebase as Backend: Firestore (real-time DB), Firebase Auth, Firebase Storage
+- Access control via Firebase Security Rules
 
 ## 📱 Supported Platforms
 
