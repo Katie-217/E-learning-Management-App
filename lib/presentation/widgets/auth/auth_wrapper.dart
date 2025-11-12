@@ -111,7 +111,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
     if (_isAuthenticated) {
       return const RoleBasedDashboard();
     } else {
-      return const AuthOverlayScreen(initialRole: UserRole.student);
+      return AuthOverlayScreen(initialRole: UserRole.student);
     }
   }
 }
