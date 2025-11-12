@@ -4,7 +4,7 @@
 // ========================================
 
 import 'package:dio/dio.dart';
-import '../../../core/services/api/api_client.dart';
+import '../common/api_client.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -34,7 +34,13 @@ String getLocalDateTime() {
   // HÀM: defaultClient()
   // MÔ TẢ: Factory constructor tạo instance mặc định
   // ========================================
-  factory AuthService.defaultClient() => AuthService(ApiClient.instance.client);
+  factory AuthService.defaultClient() {
+    final dio = Dio(BaseOptions(
+      baseUrl: ApiClient().baseUrl,
+      headers: ApiClient().defaultHeaders,
+    ));
+    return AuthService(dio);
+  }
 
  
   // Đăng ký tài khoản mới
