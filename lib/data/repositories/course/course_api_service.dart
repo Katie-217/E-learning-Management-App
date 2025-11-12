@@ -1,5 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../domain/models/course_model.dart';
+import 'package:elearning_management_app/domain/models/course_model.dart';
 
 class CourseApiService {
   

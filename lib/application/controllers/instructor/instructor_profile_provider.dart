@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../repositories/instructor_profile_repository.dart';
+import 'package:elearning_management_app/data/repositories/instructor/instructor_profile_repository.dart';
 
 final instructorProfileRepositoryProvider =
     Provider<InstructorProfileRepository>((ref) {

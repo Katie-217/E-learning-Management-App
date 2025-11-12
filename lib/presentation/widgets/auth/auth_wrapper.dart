@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../../data/repositories/auth/user_session_service.dart';
-import '../../core/config/users-role.dart';
-import '../screens/auth/auth_overlay_screen.dart';
-import '../common/role_based_dashboard.dart';
+import 'package:elearning_management_app/data/repositories/auth/user_session_service.dart';
+import 'package:elearning_management_app/core/config/users-role.dart';
+import 'package:elearning_management_app/presentation/screens/auth/auth_overlay_screen.dart';
+import 'package:elearning_management_app/presentation/widgets/common/role_based_dashboard.dart';
 
 class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});

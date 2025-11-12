@@ -1,12 +1,12 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../../domain/models/course_model.dart';
-import '../../data/repositories/common/api_service.dart';
-import '../../data/repositories/common/cache_service.dart';
-import '../../data/repositories/course/course_api_service.dart';
-import '../../data/repositories/course/firestore_course_service.dart';
-import '../../data/repositories/auth/user_session_service.dart';
+import 'package:elearning_management_app/domain/models/course_model.dart';
+import 'package:elearning_management_app/data/repositories/common/api_service.dart';
+import 'package:elearning_management_app/data/repositories/common/cache_service.dart';
+import 'package:elearning_management_app/data/repositories/course/course_api_service.dart';
+import 'package:elearning_management_app/data/repositories/course/firestore_course_service.dart';
+import 'package:elearning_management_app/data/repositories/auth/user_session_service.dart';
 
 // Course state management
 

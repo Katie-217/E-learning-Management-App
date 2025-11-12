@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../domain/models/course_model.dart';
-import '../services/firestore_course_service.dart';
+import 'package:elearning_management_app/domain/models/course_model.dart';
+import 'package:elearning_management_app/data/repositories/course/firestore_course_service.dart';
 
 // Provider để lắng nghe thay đổi real-time từ Firestore
 final firestoreCoursesProvider = StreamProvider<List<CourseModel>>((ref) {

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../../../core/config/users-role.dart';
 import '../../../../data/repositories/auth/auth_service.dart';
-import '../widgets/auth_form_widgets.dart';
-import '../widgets/main_shell.dart';
-import '../screens/instructor_dashboard.dart';
+import 'auth_form_widgets.dart';
+import '../common/main_shell.dart';
+import '../../screens/instructor/instructor_dashboard.dart';
 
 class LoginForm extends StatefulWidget {
   final UserRole role;

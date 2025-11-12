@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../../../core/config/users-role.dart';
-import '../../../../data/repositories/auth/auth_service.dart';
-import '../widgets/auth_form_widgets.dart';
-import '../widgets/main_shell.dart';
+import 'package:elearning_management_app/core/config/users-role.dart';
+import 'package:elearning_management_app/data/repositories/auth/auth_service.dart';
+import 'package:elearning_management_app/presentation/widgets/auth/auth_form_widgets.dart';
+import 'package:elearning_management_app/presentation/widgets/common/main_shell.dart';
 
 
 class RegisterForm extends StatefulWidget {

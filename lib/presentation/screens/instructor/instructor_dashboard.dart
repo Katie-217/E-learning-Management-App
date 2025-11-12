@@ -2,14 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:go_router/go_router.dart';
-import '../screens/course_page.dart';
-import '../screens/instructor_students_page.dart';
-import '../screens/assignments_page.dart';
-import '../screens/instructor_grades_page.dart';
-
-import '../../application/controllers/instructor/instructor_profile_provider.dart';
-import '../widgets/calendar_widget.dart';
-import '../widgets/task_list_widget.dart';
+import 'package:elearning_management_app/presentation/screens/course/course_page.dart';
+import 'package:elearning_management_app/presentation/screens/instructor/instructor_students_page.dart';
+import 'package:elearning_management_app/presentation/screens/assignment/assignments_page.dart';
+import 'package:elearning_management_app/presentation/screens/instructor/instructor_grades_page.dart';
+import 'package:elearning_management_app/application/controllers/instructor/instructor_profile_provider.dart';
+import 'package:elearning_management_app/presentation/widgets/instructor/calendar_widget.dart';
+import 'package:elearning_management_app/presentation/widgets/instructor/task_list_widget.dart';
 
 class InstructorDashboard extends ConsumerStatefulWidget {
   const InstructorDashboard({super.key});

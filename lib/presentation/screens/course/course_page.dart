@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../domain/models/course_model.dart';
-import '../widgets/course_card_widget.dart';
-import '../widgets/course_detail.dart';
-import '../widgets/course_tabs_widget.dart';
-import '../widgets/course_filter_widget.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../widgets/sidebar_model.dart';
-import '../../../../application/controllers/course/course_provider.dart';
+import 'package:elearning_management_app/domain/models/course_model.dart';
+import 'package:elearning_management_app/presentation/widgets/course/course_card_widget.dart';
+import 'package:elearning_management_app/presentation/widgets/course/course_detail.dart';
+import 'package:elearning_management_app/presentation/widgets/course/course_tabs_widget.dart';
+import 'package:elearning_management_app/presentation/widgets/course/course_filter_widget.dart';
+import 'package:elearning_management_app/core/theme/app_colors.dart';
+import 'package:elearning_management_app/presentation/widgets/common/sidebar_model.dart';
+import 'package:elearning_management_app/application/controllers/course/course_provider.dart';
 
 class CoursePage extends ConsumerStatefulWidget {
   final bool showSidebar;

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'sidebar_model.dart';
-import '../screens/student_dashboard_page.dart';
-import '../screens/course_page.dart';
+import '../../screens/student/student_dashboard_page.dart';
+import '../../screens/course/course_page.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});

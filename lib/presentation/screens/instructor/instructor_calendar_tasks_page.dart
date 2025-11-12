@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../widgets/calendar_widget.dart';
-import '../widgets/task_list_widget.dart';
+import 'package:elearning_management_app/presentation/widgets/instructor/calendar_widget.dart';
+import 'package:elearning_management_app/presentation/widgets/instructor/task_list_widget.dart';
 
 class InstructorCalendarTasksPage extends StatelessWidget {
   const InstructorCalendarTasksPage({super.key});

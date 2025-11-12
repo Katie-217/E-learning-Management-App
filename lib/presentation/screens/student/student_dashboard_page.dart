@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
-import '../../domain/models/assignment_model.dart';
-import '../../domain/models/quiz_model.dart';
-// import '../../data/repositories/common/firestore_service.dart';
-import '../widgets/stats_card.dart';
-import '../widgets/assignment_card.dart';
-import '../widgets/quiz_card.dart';
-import '../widgets/bar_chart.dart';
-import '../widgets/circular_progress_widget.dart';
-import '../widgets/calendar_widget.dart';
-import '../widgets/upcoming_events_widget.dart';
-import '../widgets/sidebar_model.dart';
+import 'package:elearning_management_app/domain/models/assignment_model.dart';
+import 'package:elearning_management_app/domain/models/quiz_model.dart';
+// import 'package:elearning_management_app/data/repositories/common/firestore_service.dart';
+import 'package:elearning_management_app/presentation/widgets/student/stats_card.dart';
+import 'package:elearning_management_app/presentation/widgets/assignment/assignment_card.dart';
+import 'package:elearning_management_app/presentation/widgets/quiz/quiz_card.dart';
+import 'package:elearning_management_app/presentation/widgets/student/bar_chart.dart';
+import 'package:elearning_management_app/presentation/widgets/student/circular_progress_widget.dart';
+import 'package:elearning_management_app/presentation/widgets/instructor/calendar_widget.dart';
+import 'package:elearning_management_app/presentation/widgets/student/upcoming_events_widget.dart';
+import 'package:elearning_management_app/presentation/widgets/common/sidebar_model.dart';
 
 class StudentDashboardPage extends StatefulWidget {
   final bool showSidebar;

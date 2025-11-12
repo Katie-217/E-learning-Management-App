@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import 'package:elearning_management_app/domain/models/task_model.dart';
-import '../repositories/task_repository.dart';
+import 'package:elearning_management_app/data/repositories/instructor/task_repository.dart';
 
 final taskRepositoryProvider = Provider<TaskRepository>((ref) {
   // Create Dio instance with base URL configuration

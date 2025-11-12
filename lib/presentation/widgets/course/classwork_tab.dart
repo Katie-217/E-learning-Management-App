@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../../assignments/presentation/widgets/assignment_card.dart';
-import '../../../quizzes/presentation/widgets/quiz_card.dart';
-import '../../../materials/presentation/widgets/material_card.dart';
+import '../assignment/assignment_card.dart';
+import '../quiz/quiz_card.dart';
+import '../material/material_card.dart';
 
 class ClassworkTab extends StatelessWidget {
   const ClassworkTab({super.key});

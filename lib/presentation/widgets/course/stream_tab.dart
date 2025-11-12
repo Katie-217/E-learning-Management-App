@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../../domain/models/course_model.dart';
+import 'package:elearning_management_app/domain/models/course_model.dart';
 import 'upcoming_widget.dart';
 
 class StreamTab extends StatelessWidget {

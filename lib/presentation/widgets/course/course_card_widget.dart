@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../../domain/models/course_model.dart';
+import 'package:elearning_management_app/domain/models/course_model.dart';
 
 class CourseCardWidget extends StatefulWidget {
   final CourseModel course;

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 // import 'package:hooks_riverpod/hooks_riverpod.dart';
-import '../../../../core/config/users-role.dart';
-import '../controllers/login_controller.dart';
+import 'package:elearning_management_app/core/config/users-role.dart';
+import 'package:elearning_management_app/application/controllers/auth/login_controller.dart';
 
 class LoginPage extends StatefulWidget {
   final UserRole userRole;

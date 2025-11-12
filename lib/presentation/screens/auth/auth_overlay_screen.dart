@@ -4,9 +4,9 @@
 // ========================================
 
 import 'package:flutter/material.dart';
-import '../../../../core/config/users-role.dart';
-import '../widgets/login_form.dart';
-import 'register_form.dart';
+import 'package:elearning_management_app/core/config/users-role.dart';
+import 'package:elearning_management_app/presentation/widgets/auth/login_form.dart';
+import 'package:elearning_management_app/presentation/screens/auth/register_form.dart';
 
 
 // ========================================

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:elearning_management_app/domain/models/task_model.dart';
-import '../../application/controllers/instructor/task_provider.dart';
+import 'package:elearning_management_app/application/controllers/instructor/task_provider.dart';
 
 class TaskListWidget extends ConsumerWidget {
   const TaskListWidget({super.key});
