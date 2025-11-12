@@ -153,6 +153,7 @@ class CourseModel {
     return 0;
   }
 
+  // Copy with method để tạo bản sao với thay đổi
   CourseModel copyWith({
     String? id,
     String? code,
