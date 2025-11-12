@@ -127,7 +127,7 @@ class _CoursePageState extends ConsumerState<CoursePage>
         children: [
           // Sidebar
           if (widget.showSidebar && MediaQuery.of(context).size.width > 800)
-            const SidebarWidget(),
+            SidebarWidget(),
 
           // Main Content
           Expanded(
@@ -143,7 +143,7 @@ class _CoursePageState extends ConsumerState<CoursePage>
                       )
                     : Column(
                         children: [
-                          const CourseFilterWidget(),
+                          CourseFilterWidget(),
                           Expanded(
                             child: CourseListView(
                               courses: courses,
