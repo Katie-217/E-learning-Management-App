@@ -15,10 +15,10 @@ class InstructorCalendarTasksPage extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Calendar Section
-            const CalendarWidget(),
+            CalendarWidget(),
             const SizedBox(height: 24),
             // Tasks Section
-            const TaskListWidget(),
+            TaskListWidget(),
           ],
         ),
       ),

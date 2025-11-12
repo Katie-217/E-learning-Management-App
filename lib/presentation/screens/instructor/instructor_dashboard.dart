@@ -135,7 +135,7 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           CalendarWidget(),
-                          SizedBox(height: 24),
+                          const SizedBox(height: 24),
                           TaskListWidget(),
                         ],
                       ),
@@ -250,13 +250,13 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
   Widget _buildMainContent(BuildContext context, bool isSmallScreen, int crossAxisCount) {
     switch (_activeKey) {
       case 'students':
-        return const InstructorStudentsPage();
+        return InstructorStudentsPage();
       case 'courses':
-        return const CoursePage(showSidebar: false);
+        return CoursePage(showSidebar: false);
       case 'assignments':
-        return const AssignmentsPage();
+        return AssignmentsPage();
       case 'grades':
-        return const InstructorGradesPage();
+        return InstructorGradesPage();
       case 'dashboard':
       default:
         // Original dashboard UI

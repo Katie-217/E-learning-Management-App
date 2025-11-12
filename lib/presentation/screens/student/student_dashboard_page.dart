@@ -89,7 +89,7 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
         children: [
           // Sidebar
           if (widget.showSidebar && MediaQuery.of(context).size.width > 800)
-            const SidebarWidget(),
+            SidebarWidget(),
           // Main content
           Expanded(
             child: SingleChildScrollView(
@@ -156,7 +156,7 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
                                           children: [
                                             const Text('Active Hours', style: TextStyle(fontWeight: FontWeight.w600)),
                                             const SizedBox(height: 12),
-                                            SimpleBarChart(data: [
+                                            SimpleBarChart(data: const [
                                               {'day': 'M', 'height': 90.0},
                                               {'day': 'T', 'height': 120.0},
                                               {'day': 'W', 'height': 70.0},
@@ -210,12 +210,12 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
                                 ),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: const [
-                                    Text('My Assignments', style: TextStyle(fontWeight: FontWeight.w600)),
-                                    SizedBox(height: 8),
+                                  children: [
+                                    const Text('My Assignments', style: TextStyle(fontWeight: FontWeight.w600)),
+                                    const SizedBox(height: 8),
                                     // Gắn Firestore hoặc mock data trong AssignmentCard
                                     AssignmentCard(
-                                      assignment: Assignment(id: '1', title: 'Mobile App Development', dueDate: 'Today, 11:59 PM', grade: '85/100', status: 'completed'),
+                                      assignment: const Assignment(id: '1', title: 'Mobile App Development', dueDate: 'Today, 11:59 PM', grade: '85/100', status: 'completed'),
                                     ),
                                   ],
                                 ),
@@ -234,11 +234,11 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
                                 ),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: const [
-                                    Text('Quizzes & Exams', style: TextStyle(fontWeight: FontWeight.w600)),
-                                    SizedBox(height: 8),
+                                  children: [
+                                    const Text('Quizzes & Exams', style: TextStyle(fontWeight: FontWeight.w600)),
+                                    const SizedBox(height: 8),
                                     QuizCard(
-                                      quiz: Quiz(id: '1', title: 'Database Management Quiz', dueDate: 'Tomorrow, 2:00 PM', duration: '45 min', questions: 20, status: 'upcoming'),
+                                      quiz: const Quiz(id: '1', title: 'Database Management Quiz', dueDate: 'Tomorrow, 2:00 PM', duration: '45 min', questions: 20, status: 'upcoming'),
                                     ),
                                   ],
                                 ),
@@ -263,10 +263,14 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
                                 ),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.center,
-                                  children: const [
-                                    Text('February 2025', style: TextStyle(fontWeight: FontWeight.w600)),
-                                    SizedBox(height: 12),
-                                    SimpleCalendar(),
+                                  children: [
+                                    const Text('February 2025', style: TextStyle(fontWeight: FontWeight.w600)),
+                                    const SizedBox(height: 12),
+                                    SimpleCalendar(
+                                      currentDate: DateTime.now(),
+                                      selectedDate: DateTime.now(),
+                                      tasksForMonth: const [],
+                                    ),
                                   ],
                                 ),
                               ),
