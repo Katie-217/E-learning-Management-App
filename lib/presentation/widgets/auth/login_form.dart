@@ -1,15 +1,21 @@
+// ========================================
+// FILE: login_form.dart
+// MÔ TẢ: Login Form sử dụng AuthRepository - Clean Architecture
+// ========================================
+
 import 'package:flutter/material.dart';
 import '../../../../core/config/users-role.dart';
-import '../../../../data/repositories/auth/auth_service.dart';
+import '../../../../data/repositories/auth/auth_repository.dart';
+import '../../../../data/repositories/auth/user_session_service.dart';
+
 import 'auth_form_widgets.dart';
 import '../common/main_shell.dart';
 import '../../screens/instructor/instructor_dashboard.dart';
 
 class LoginForm extends StatefulWidget {
   final UserRole role;
-  final VoidCallback onSwitchToRegister;
 
-   const LoginForm({super.key, required this.role, required this.onSwitchToRegister});
+  const LoginForm({super.key, required this.role});
 
   @override
   State<LoginForm> createState() => _LoginFormState();
@@ -28,35 +34,51 @@ class _LoginFormState extends State<LoginForm> {
     super.dispose();
   }
 
+  // ========================================
+  // HÀM: _handleLogin - Sử dụng AuthRepository Clean Architecture
+  // ========================================
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => isLoading = true);
     try {
-      final authService = AuthService.defaultClient();
-      final user = await authService.signIn(_emailController.text.trim(), _passwordController.text.trim());
-      
-       if (user != null) {
-        final role = await authService.fetchUserRole(user.uid);
-        final norm = (role ?? '').toString().trim().toLowerCase();
-        if (norm == 'teacher' || norm == 'instructor') {
+      final authRepository = AuthRepository.defaultClient();
+
+      // Đăng nhập và nhận UserModel
+      final userModel = await authRepository.signInWithEmailAndPassword(
+        _emailController.text.trim(),
+        _passwordController.text.trim(),
+      );
+
+      // Lưu session
+      await UserSessionService.saveUserSession(userModel);
+
+      print("🎯 Điều hướng với role: ${userModel.role.name}");
+
+      // Navigation dựa trên UserModel role
+      if (userModel.role == UserRole.instructor) {
+        if (mounted) {
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(builder: (_) => const InstructorDashboard()),
           );
-        } else {
+        }
+      } else {
+        if (mounted) {
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(builder: (_) => const MainShell()),
           );
         }
-      }  else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Đăng nhập thất bại')),
-        );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lỗi đăng nhập: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                'Lỗi đăng nhập: ${e.toString().replaceAll("Exception: ", "")}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => isLoading = false);
     }
@@ -83,7 +105,7 @@ class _LoginFormState extends State<LoginForm> {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 32),
-            
+
             // Email field
             AuthTextField(
               controller: _emailController,
@@ -97,7 +119,7 @@ class _LoginFormState extends State<LoginForm> {
               },
             ),
             const SizedBox(height: 16),
-            
+
             // Password field
             AuthTextField(
               controller: _passwordController,
@@ -111,7 +133,7 @@ class _LoginFormState extends State<LoginForm> {
               },
             ),
             const SizedBox(height: 24),
-            
+
             // Login button
             SizedBox(
               width: double.infinity,
@@ -124,48 +146,66 @@ class _LoginFormState extends State<LoginForm> {
                     borderRadius: BorderRadius.circular(25),
                   ),
                 ),
-                child: isLoading 
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text(
-                      'Đăng nhập',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+                child: isLoading
+                    ? Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: const [
+                          SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          ),
+                          SizedBox(width: 8),
+                          Text(
+                            'Đang đăng nhập...',
+                            style: TextStyle(color: Colors.white, fontSize: 14),
+                          ),
+                        ],
+                      )
+                    : const Text(
+                        'Đăng nhập',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
               ),
             ),
             const SizedBox(height: 16),
-            
-            // Google login button
-            GoogleLoginButton(
-              onPressed: () async {
-                setState(() => isLoading = true);
-                try {
-                  final authService = AuthService.defaultClient();
-                  final user = await authService.signInWithGoogle();
-                  
-                  if (user != null) {
-                    Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(builder: (_) => const MainShell())
-                    );
-                  }
-                } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Lỗi đăng nhập Google: $e')),
-                  );
-                } finally {
-                  if (mounted) setState(() => isLoading = false);
-                }
-              },
-            ),
+
+            // ========================================
+            // PHẦN: Thông tin hệ thống đóng
+            // ========================================
             const SizedBox(height: 16),
-            
-            // Switch to register
-            TextButton(
-              onPressed: widget.onSwitchToRegister,
-              child: const Text('Chưa có tài khoản? Đăng ký'),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    color: Colors.grey.shade600,
+                    size: 20,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Hệ thống đóng - Chỉ đăng nhập bằng tài khoản được cấp',
+                    style: TextStyle(
+                      color: Colors.grey.shade700,
+                      fontSize: 12,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -173,5 +213,3 @@ class _LoginFormState extends State<LoginForm> {
     );
   }
 }
-
-

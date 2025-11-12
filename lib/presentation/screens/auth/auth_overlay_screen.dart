@@ -1,13 +1,11 @@
 // ========================================
 // FILE: auth_overlay_screen.dart
-// MÔ TẢ: Màn hình đăng nhập/đăng ký với hiệu ứng overlay
+// MÔ TẢ: Màn hình đăng nhập với hiệu ứng overlay - HỆ THỐNG ĐÓNG
 // ========================================
 
 import 'package:flutter/material.dart';
 import 'package:elearning_management_app/core/config/users-role.dart';
 import 'package:elearning_management_app/presentation/widgets/auth/login_form.dart';
-import 'package:elearning_management_app/presentation/screens/auth/register_form.dart';
-
 
 // ========================================
 // CLASS: AuthOverlayScreen
@@ -16,7 +14,8 @@ import 'package:elearning_management_app/presentation/screens/auth/register_form
 class AuthOverlayScreen extends StatefulWidget {
   final UserRole initialRole;
 
-  const AuthOverlayScreen({Key? key, this.initialRole = UserRole.student}) : super(key: key);
+  const AuthOverlayScreen({Key? key, this.initialRole = UserRole.student})
+      : super(key: key);
 
   @override
   State<AuthOverlayScreen> createState() => _AuthOverlayScreenState();
@@ -28,22 +27,8 @@ class AuthOverlayScreen extends StatefulWidget {
 // ========================================
 class _AuthOverlayScreenState extends State<AuthOverlayScreen> {
   // ========================================
-  // BIẾN: isLogin
-  // MÔ TẢ: Trạng thái hiện tại (đăng nhập hoặc đăng ký)
+  // MÔ TẢ: Hệ thống đóng - CHỈ có đăng nhập, KHÔNG có đăng ký công khai
   // ========================================
-  bool isLogin = true; 
-
-  // ========================================
-  // HÀM: _toRegister()
-  // MÔ TẢ: Chuyển sang form đăng ký
-  // ========================================
-  void _toRegister() => setState(() => isLogin = false);
-  
-  // ========================================
-  // HÀM: _toLogin()
-  // MÔ TẢ: Chuyển sang form đăng nhập
-  // ========================================
-  void _toLogin() => setState(() => isLogin = true);
 
   // ========================================
   // HÀM: build()
@@ -58,73 +43,40 @@ class _AuthOverlayScreenState extends State<AuthOverlayScreen> {
       body: Stack(
         children: [
           LayoutBuilder(
-        builder: (context, constraints) {
-          final isWide = constraints.maxWidth >= 720;
-          return Center(
-            child: Container(
-              width: isWide ? 900 : constraints.maxWidth,
-              height: isWide ? 520 : constraints.maxHeight,
-              margin: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: Stack(
-                children: [
-                  // ========================================
-                  // PHẦN: Sliding Form Container
-                  // MÔ TẢ: Container chứa form với hiệu ứng slide
-                  // ========================================
-                  AnimatedAlign(
-                    alignment: isLogin ? Alignment.centerRight : Alignment.centerLeft,
-                    duration: const Duration(milliseconds: 600),
-                    curve: Curves.easeInOut,
-                    child: FractionallySizedBox(
-                      widthFactor: 0.5,
-                      heightFactor: 1,
-                      child: isLogin
-                          ? Container(
-                              key: const ValueKey('login'),
-                              child: LoginForm(
-                                role: role,
-                                onSwitchToRegister: _toRegister,
-                              ),
-                            )
-                          : Container(
-                              key: const ValueKey('register'),
-                              child: RegisterForm(
-                                initialRole: role,
-                                onSwitchToLogin: _toLogin,
-                              ),
-                            ),
-                    ),
+            builder: (context, constraints) {
+              final isWide = constraints.maxWidth >= 720;
+              return Center(
+                child: Container(
+                  width: isWide ? 700 : constraints.maxWidth,
+                  height: isWide ? 500 : constraints.maxHeight,
+                  margin: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
                   ),
-
-                  // ========================================
-                  // PHẦN: Overlay Container
-                  // MÔ TẢ: Container thông tin với hiệu ứng slide
-                  // ========================================
-                  AnimatedAlign(
-                    alignment: isLogin ? Alignment.centerLeft : Alignment.centerRight,
-                    duration: const Duration(milliseconds: 600),
-                    curve: Curves.easeInOut,
-                    child: FractionallySizedBox(
-                      widthFactor: 0.5,
-                      heightFactor: 1,
-                      child: _InfoPanel(
-                        role: role,
-                        isLogin: isLogin,
-                        onPrimary: isLogin ? _toRegister : _toLogin,
+                  clipBehavior: Clip.antiAlias,
+                  child: Row(
+                    children: [
+                      // ========================================
+                      // PHẦN: Info Panel (Bên trái)
+                      // ========================================
+                      Expanded(
+                        flex: 1,
+                        child: _InfoPanel(role: role),
                       ),
-                    ),
+                      // ========================================
+                      // PHẦN: Login Form (Bên phải)
+                      // ========================================
+                      Expanded(
+                        flex: 1,
+                        child: LoginForm(role: role),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
+                ),
+              );
+            },
+          ),
         ],
       ),
     );
@@ -133,83 +85,84 @@ class _AuthOverlayScreenState extends State<AuthOverlayScreen> {
 
 // ========================================
 // CLASS: _InfoPanel
-// MÔ TẢ: Panel thông tin bên trái/phải với text và button
+// MÔ TẢ: Panel thông tin bên trái - HỆ THỐNG ĐÓNG
 // ========================================
 class _InfoPanel extends StatelessWidget {
   final UserRole role;
-  final bool isLogin;
-  final VoidCallback onPrimary;
 
-  const _InfoPanel({required this.role, required this.isLogin, required this.onPrimary});
+  const _InfoPanel({required this.role});
 
   @override
   Widget build(BuildContext context) {
-        return Container(
+    return Container(
       decoration: const BoxDecoration(
-         image: DecorationImage(
+        image: DecorationImage(
           image: AssetImage('assets/icons/background-roler.png'),
           fit: BoxFit.cover,
         ),
       ),
       child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Align(
-            alignment: Alignment.center,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  // ========================================
-                  // PHẦN: Tiêu đề chính
-                  // MÔ TẢ: Text tiêu đề thay đổi theo trạng thái
-                  // ========================================
-                  Text(
-                    isLogin ? 'Hello,\nfriends' : 'Start your\n new experience now',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 45,
-                      fontWeight: FontWeight.w800,
-                      height: 1.05,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  // ========================================
-                  // PHẦN: Mô tả
-                  // MÔ TẢ: Text mô tả thay đổi theo trạng thái
-                  // ========================================
-                  Text(
-                    isLogin
-                        ? 'if you already have an account, login here and have fun'
-                        : "If you don't have an account yet, join us and start your journey.",
-                    style: TextStyle(color: Colors.white.withOpacity(0.95), fontSize: 16),
-                  ),
-                  const SizedBox(height: 24),
-                  // ========================================
-                  // PHẦN: Nút chuyển đổi
-                  // MÔ TẢ: Nút để chuyển đổi giữa đăng nhập và đăng ký
-                  // ========================================
-                  OutlinedButton(
-                    onPressed: onPrimary,
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Colors.white, width: 2),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
-                      shape: const StadiumBorder(),
-                    ),
-                    child: Text(isLogin ? 'Register' : 'Login'),
-                  ),
-                ],
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // ========================================
+            // PHẦN: Tiêu đề chính
+            // ========================================
+            const Text(
+              'Chào mừng đến với\nHệ thống E-Learning',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 32,
+                fontWeight: FontWeight.w800,
+                height: 1.1,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            // ========================================
+            // PHẦN: Mô tả hệ thống
+            // ========================================
+            Text(
+              'Đăng nhập với tài khoản được cấp để truy cập hệ thống quản lý học tập trực tuyến',
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.95),
+                fontSize: 16,
+                height: 1.4,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 32),
+            // ========================================
+            // PHẦN: Icon vai trò
+            // ========================================
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                role.icon,
+                color: Colors.white,
+                size: 48,
               ),
             ),
-          ),
+            const SizedBox(height: 16),
+            Text(
+              role.displayName,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ),
-      );
+      ),
+    );
   }
 }
 
 // Inline form widgets removed; now using dedicated files: login_form.dart and register_form.dart.
-
-
-
