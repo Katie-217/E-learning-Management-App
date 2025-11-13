@@ -47,7 +47,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
       print('DEBUG: 🧹 Force clearing all sessions for testing...');
       await UserSessionService.clearUserSession();
       await _authRepository.signOut();
-      
+
       // Kiểm tra session trong SharedPreferences (sẽ false sau khi clear)
       final hasSession = await UserSessionService.hasValidSession();
       print('DEBUG: 📋 Session check after clear: $hasSession');

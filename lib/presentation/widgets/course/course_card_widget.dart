@@ -5,7 +5,8 @@ class CourseCardWidget extends StatefulWidget {
   final CourseModel course;
   final VoidCallback onTap;
 
-  const CourseCardWidget({super.key, required this.course, required this.onTap});
+  const CourseCardWidget(
+      {super.key, required this.course, required this.onTap});
 
   @override
   State<CourseCardWidget> createState() => _CourseCardWidgetState();
@@ -34,8 +35,10 @@ class _CourseCardWidgetState extends State<CourseCardWidget> {
             Container(
               height: 100,
               decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [Colors.blue, Colors.cyan]),
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+                gradient:
+                    const LinearGradient(colors: [Colors.blue, Colors.cyan]),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(14)),
               ),
               padding: const EdgeInsets.all(12),
               child: Column(
@@ -65,21 +68,25 @@ class _CourseCardWidgetState extends State<CourseCardWidget> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(children: [
-                      const Icon(Icons.person_outline, size: 16, color: Colors.grey),
+                      const Icon(Icons.person_outline,
+                          size: 16, color: Colors.grey),
                       const SizedBox(width: 6),
                       Expanded(
                           child: Text(c.instructor,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(color: Colors.grey, fontSize: 13))),
+                              style: const TextStyle(
+                                  color: Colors.grey, fontSize: 13))),
                     ]),
                     const SizedBox(height: 8),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text('${c.sessions} sessions',
-                            style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                            style: const TextStyle(
+                                color: Colors.grey, fontSize: 12)),
                         Text('${c.students} students',
-                            style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                            style: const TextStyle(
+                                color: Colors.grey, fontSize: 12)),
                       ],
                     ),
                     const Spacer(),
@@ -95,7 +102,9 @@ class _CourseCardWidgetState extends State<CourseCardWidget> {
                       AnimatedContainer(
                         duration: const Duration(milliseconds: 300),
                         height: 6,
-                        width: MediaQuery.of(context).size.width * (c.progress / 100) / 3,
+                        width: MediaQuery.of(context).size.width *
+                            (c.progress / 100) /
+                            3,
                         decoration: BoxDecoration(
                             color: Colors.indigo[500],
                             borderRadius: BorderRadius.circular(8)),

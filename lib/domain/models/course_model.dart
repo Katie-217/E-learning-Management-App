@@ -9,7 +9,7 @@ class CourseModel {
   final int sessions;
   final int students;
   final int progress;
-  
+
   // Additional properties for compatibility
   final String description;
   final int credits;
@@ -35,8 +35,8 @@ class CourseModel {
     DateTime? startDate,
     DateTime? endDate,
     this.status = 'active',
-  }) : startDate = startDate ?? DateTime.now(),
-       endDate = endDate ?? DateTime.now().add(const Duration(days: 90));
+  })  : startDate = startDate ?? DateTime.now(),
+        endDate = endDate ?? DateTime.now().add(const Duration(days: 90));
 
   // Factory constructor để tạo từ JSON (cho API calls)
   factory CourseModel.fromJson(Map<String, dynamic> json) {
@@ -53,11 +53,11 @@ class CourseModel {
       credits: json['credits'] ?? 3,
       imageUrl: json['imageUrl'] ?? '',
       totalStudents: json['totalStudents'] ?? 0,
-      startDate: json['startDate'] != null 
-          ? DateTime.parse(json['startDate']) 
+      startDate: json['startDate'] != null
+          ? DateTime.parse(json['startDate'])
           : DateTime.now(),
-      endDate: json['endDate'] != null 
-          ? DateTime.parse(json['endDate']) 
+      endDate: json['endDate'] != null
+          ? DateTime.parse(json['endDate'])
           : DateTime.now().add(const Duration(days: 90)),
       status: json['status'] ?? 'active',
     );
@@ -66,7 +66,7 @@ class CourseModel {
   // Factory constructor để tạo từ Firestore DocumentSnapshot
   factory CourseModel.fromFirestore(DocumentSnapshot doc) {
     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-    
+
     return CourseModel(
       id: doc.id,
       code: data['code'] ?? '',
@@ -80,11 +80,11 @@ class CourseModel {
       credits: data['credits'] ?? 0,
       imageUrl: data['imageUrl'] ?? '',
       totalStudents: (data['students'] as List<dynamic>?)?.length ?? 0,
-      startDate: data['startDate'] != null 
-          ? (data['startDate'] as Timestamp).toDate() 
+      startDate: data['startDate'] != null
+          ? (data['startDate'] as Timestamp).toDate()
           : DateTime.now(),
-      endDate: data['endDate'] != null 
-          ? (data['endDate'] as Timestamp).toDate() 
+      endDate: data['endDate'] != null
+          ? (data['endDate'] as Timestamp).toDate()
           : DateTime.now(),
       status: data['status'] ?? '',
     );
@@ -130,7 +130,6 @@ class CourseModel {
       'status': status,
     };
   }
-
 
   // Helper method để parse progress từ string hoặc number
   static int _parseProgress(dynamic progressData) {
@@ -180,5 +179,4 @@ class CourseModel {
       status: status ?? this.status,
     );
   }
-
 }
