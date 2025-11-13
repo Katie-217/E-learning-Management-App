@@ -43,7 +43,7 @@ class CourseDetailHeader extends StatelessWidget {
             spacing: 8,
             children: [
               _tag(Icons.person, course.instructor),
-              _tag(Icons.people, course.group),
+              // Group info will be loaded separately from GroupRepository
             ],
           ),
         ],

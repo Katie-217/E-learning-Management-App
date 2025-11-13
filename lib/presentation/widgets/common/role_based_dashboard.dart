@@ -13,24 +13,25 @@ class RoleBasedDashboard extends StatelessWidget {
     if (user == null) {
       return const StudentDashboardPage();
     }
-    return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-      future: FirebaseFirestore.instance.collection('users').doc(user.uid).get(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
-        }
-        if (snapshot.hasError) {
+    return Scaffold(
+      body: FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+        future:
+            FirebaseFirestore.instance.collection('users').doc(user.uid).get(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return const StudentDashboardPage();
+          }
+          final data = snapshot.data?.data();
+          final role = (data?['role'] ?? '').toString().toLowerCase();
+          if (role == 'teacher' || role == 'instructor') {
+            return const InstructorDashboard();
+          }
           return const StudentDashboardPage();
-        }
-        final data = snapshot.data?.data();
-        final role = (data?['role'] ?? '').toString().toLowerCase();
-        if (role == 'teacher' || role == 'instructor') {
-          return const InstructorDashboard();
-        }
-        return const StudentDashboardPage();
-      },
+        },
+      ),
     );
   }
 }
-
-

@@ -217,15 +217,13 @@ class UserSettings {
   final String language;
   final String theme;
   final String status;
-  final bool emailNotifications;
-  final bool pushNotifications;
+  
 
   const UserSettings({
     this.language = 'vi',
     this.theme = 'light',
     this.status = 'active',
-    this.emailNotifications = true,
-    this.pushNotifications = true,
+    
   });
 
   factory UserSettings.fromMap(Map<String, dynamic> map) {
@@ -233,8 +231,7 @@ class UserSettings {
       language: map['language'] ?? 'vi',
       theme: map['theme'] ?? 'light',
       status: map['status'] ?? 'active',
-      emailNotifications: map['emailNotifications'] ?? true,
-      pushNotifications: map['pushNotifications'] ?? true,
+      
     );
   }
 
@@ -243,8 +240,7 @@ class UserSettings {
       'language': language,
       'theme': theme,
       'status': status,
-      'emailNotifications': emailNotifications,
-      'pushNotifications': pushNotifications,
+      
     };
   }
 
@@ -252,15 +248,13 @@ class UserSettings {
     String? language,
     String? theme,
     String? status,
-    bool? emailNotifications,
-    bool? pushNotifications,
+    
   }) {
     return UserSettings(
       language: language ?? this.language,
       theme: theme ?? this.theme,
       status: status ?? this.status,
-      emailNotifications: emailNotifications ?? this.emailNotifications,
-      pushNotifications: pushNotifications ?? this.pushNotifications,
+      
     );
   }
 }

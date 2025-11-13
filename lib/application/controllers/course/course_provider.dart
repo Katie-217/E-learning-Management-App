@@ -5,7 +5,26 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:elearning_management_app/domain/models/course_model.dart';
-import 'package:elearning_management_app/data/repositories/course/firestore_course_service.dart';
+import 'package:elearning_management_app/data/repositories/course/course_repository.dart';
+import 'package:elearning_management_app/data/repositories/auth/auth_repository.dart';
+import 'course_controller.dart';
+
+// Repository Providers
+final authRepositoryProvider = Provider<AuthRepository>((ref) {
+  return AuthRepository.defaultClient();
+});
+
+final courseRepositoryProvider = Provider<CourseRepository>((ref) {
+  return CourseRepository();
+});
+
+// Controller Provider
+final courseControllerProvider = Provider<CourseController>((ref) {
+  return CourseController(
+    authRepository: ref.read(authRepositoryProvider),
+    courseRepository: ref.read(courseRepositoryProvider),
+  );
+});
 
 // Course state management
 
@@ -52,9 +71,12 @@ class CourseState {
 // MÔ TẢ: StateNotifier quản lý logic nghiệp vụ cho khóa học
 // ========================================
 class CourseNotifier extends StateNotifier<CourseState> {
-  // Loại bỏ unused services để tuân thủ Clean Architecture
+  final CourseController _courseController;
 
-  CourseNotifier() : super(CourseState());
+  CourseNotifier({
+    required CourseController courseController,
+  })  : _courseController = courseController,
+        super(CourseState());
 
 //  Tải danh sách khóa học từ cache hoặc API
 
@@ -68,10 +90,11 @@ class CourseNotifier extends StateNotifier<CourseState> {
 
       // Đã loại bỏ cache logic để tuân thủ Clean Architecture
 
-      // Gọi dữ liệu từ Firestore
+      // Gọi dữ liệu từ CourseController theo Clean Architecture
       print('DEBUG: ========== COURSE PROVIDER LOADING ==========');
       try {
-        courses = await FirestoreCourseService.getCourses();
+        // Sử dụng CourseController để lấy my courses (bao gồm auth + business logic)
+        courses = await _courseController.getMyCourses();
         print('DEBUG: ✅ Provider received ${courses.length} courses');
 
         if (courses.isNotEmpty) {
@@ -166,5 +189,7 @@ class CourseNotifier extends StateNotifier<CourseState> {
 // ========================================
 final courseProvider =
     StateNotifierProvider<CourseNotifier, CourseState>((ref) {
-  return CourseNotifier();
+  return CourseNotifier(
+    courseController: ref.read(courseControllerProvider),
+  );
 });

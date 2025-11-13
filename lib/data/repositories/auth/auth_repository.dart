@@ -251,4 +251,12 @@ class AuthRepository {
   // MÔ TẢ: Kiểm tra nhanh có user đang đăng nhập không
   // ========================================
   bool get isUserLoggedIn => _auth.currentUser != null;
+
+  // ========================================
+  // METHOD: getCurrentUserId
+  // MÔ TẢ: Lấy user ID hiện tại (cho CourseRepository)
+  // ========================================
+  Future<String?> getCurrentUserId() async {
+    return _auth.currentUser?.uid;
+  }
 }

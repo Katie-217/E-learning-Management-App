@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class CourseModel {
@@ -9,7 +8,6 @@ class CourseModel {
   final String semester;
   final int sessions;
   final int students;
-  final String group;
   final int progress;
   
   // Additional properties for compatibility
@@ -29,7 +27,6 @@ class CourseModel {
     required this.semester,
     required this.sessions,
     required this.students,
-    required this.group,
     required this.progress,
     this.description = '',
     this.credits = 3,
@@ -51,7 +48,6 @@ class CourseModel {
       semester: json['semester'] ?? '',
       sessions: json['session'] ?? 0,
       students: json['students'] ?? 0,
-      group: json['group'] ?? '',
       progress: json['progress'] ?? 0,
       description: json['description'] ?? '',
       credits: json['credits'] ?? 3,
@@ -79,7 +75,6 @@ class CourseModel {
       semester: data['semester'] ?? '',
       sessions: data['session'] ?? 0,
       students: (data['students'] as List<dynamic>?)?.length ?? 0,
-      group: data['group'] ?? '',
       progress: _parseProgress(data['progress']),
       description: data['description'] ?? '',
       credits: data['credits'] ?? 0,
@@ -105,7 +100,6 @@ class CourseModel {
       'semester': semester,
       'sessions': sessions,
       'students': students,
-      'group': group,
       'progress': progress,
       'description': description,
       'credits': credits,
@@ -126,7 +120,6 @@ class CourseModel {
       'semester': semester,
       'sessions': sessions,
       'students': students,
-      'group': group,
       'progress': progress,
       'description': description,
       'credits': credits,
@@ -161,7 +154,6 @@ class CourseModel {
     String? semester,
     int? sessions,
     int? students,
-    String? group,
     int? progress,
     String? description,
     int? credits,
@@ -179,7 +171,6 @@ class CourseModel {
       semester: semester ?? this.semester,
       sessions: sessions ?? this.sessions,
       students: students ?? this.students,
-      group: group ?? this.group,
       progress: progress ?? this.progress,
       description: description ?? this.description,
       credits: credits ?? this.credits,

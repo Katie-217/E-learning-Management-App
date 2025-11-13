@@ -36,16 +36,21 @@ class _AuthWrapperState extends State<AuthWrapper> {
   void initState() {
     super.initState();
     _checkAuthStatus();
-  }
+  } // ========================================
 
-  // ========================================
   // HÀM: _checkAuthStatus - Clean Architecture
   // MÔ TẢ: Kiểm tra auth status qua AuthRepository
   // ========================================
   Future<void> _checkAuthStatus() async {
     try {
-      // Kiểm tra session trong SharedPreferences
+      // FORCE CLEAR SESSION để test authentication triệt để
+      print('DEBUG: 🧹 Force clearing all sessions for testing...');
+      await UserSessionService.clearUserSession();
+      await _authRepository.signOut();
+      
+      // Kiểm tra session trong SharedPreferences (sẽ false sau khi clear)
       final hasSession = await UserSessionService.hasValidSession();
+      print('DEBUG: 📋 Session check after clear: $hasSession');
 
       if (hasSession) {
         // Verify với AuthRepository
@@ -60,7 +65,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
         }
       }
 
-      // Không có session hợp lệ
+      // Không có session hợp lệ - hiển thị login
       await UserSessionService.clearUserSession();
       setState(() {
         _isAuthenticated = false;
@@ -79,6 +84,8 @@ class _AuthWrapperState extends State<AuthWrapper> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return const MaterialApp(
+        title: 'E-Learning Management',
+        debugShowCheckedModeBanner: false,
         home: Scaffold(
           body: Center(
             child: CircularProgressIndicator(),
@@ -88,10 +95,16 @@ class _AuthWrapperState extends State<AuthWrapper> {
     }
 
     if (_isAuthenticated && _currentUser != null) {
-      return RoleBasedDashboard();
+      return const MaterialApp(
+        title: 'E-Learning Management',
+        debugShowCheckedModeBanner: false,
+        home: RoleBasedDashboard(),
+      );
     }
 
     return const MaterialApp(
+      title: 'E-Learning Management',
+      debugShowCheckedModeBanner: false,
       home: AuthOverlayScreen(initialRole: UserRole.student),
     );
   }

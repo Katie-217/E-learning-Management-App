@@ -45,7 +45,7 @@ class _CourseCardWidgetState extends State<CourseCardWidget> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         _chip(c.code),
-                        _chip(c.group),
+                        // Group info will be loaded separately from GroupRepository
                       ]),
                   const Spacer(),
                   Text(c.name,

@@ -1,17 +1,16 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:elearning_management_app/domain/models/course_model.dart';
-import '../common/firebase_connection_service.dart';
 
 class FirestoreCourseService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  static const String _collectionName = 'courses';
+  static const String _collectionName = 'course_of_study';
 
   // Lấy danh sách khóa học của user hiện tại
   static Future<List<CourseModel>> getCourses() async {
     try {
       print('DEBUG: ========== FIRESTORE COURSE SERVICE ==========');
-      
+
       // Kiểm tra user đăng nhập
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
@@ -25,9 +24,8 @@ class FirestoreCourseService {
 
       // Lấy tất cả khóa học từ Firestore
       print('DEBUG: 📥 Fetching courses from Firestore...');
-      final QuerySnapshot snapshot = await _firestore
-          .collection(_collectionName)
-          .get();
+      final QuerySnapshot snapshot =
+          await _firestore.collection(_collectionName).get();
 
       print('DEBUG: 📊 Found ${snapshot.docs.length} total courses');
 
@@ -39,19 +37,19 @@ class FirestoreCourseService {
       // Lọc khóa học mà user tham gia
       final userCourses = <CourseModel>[];
       print('DEBUG: 🔍 Filtering courses for user ${user.uid}...');
-      
+
       for (int i = 0; i < snapshot.docs.length; i++) {
         final doc = snapshot.docs[i];
         final data = doc.data() as Map<String, dynamic>;
         final students = data['students'] as List<dynamic>? ?? [];
         final courseName = data['name'] ?? 'Unknown';
         final courseCode = data['code'] ?? 'Unknown';
-        
+
         print('DEBUG: 📚 Course ${i + 1}: $courseName ($courseCode)');
         print('DEBUG:   👥 Students: ${students.length} students');
         print('DEBUG:   🆔 Student IDs: ${students.join(', ')}');
         print('DEBUG:   🔍 Looking for: ${user.uid}');
-        
+
         // Kiểm tra user ID có trong danh sách students không
         if (students.contains(user.uid)) {
           userCourses.add(CourseModel.fromFirestore(doc));
@@ -65,7 +63,6 @@ class FirestoreCourseService {
       print('DEBUG: 🎯 Result: User enrolled in ${userCourses.length} courses');
       print('DEBUG: ================================================');
       return userCourses;
-      
     } catch (e) {
       print('DEBUG: ❌ Error fetching courses: $e');
       return [];
@@ -75,10 +72,8 @@ class FirestoreCourseService {
   // Lấy khóa học theo ID
   static Future<CourseModel?> getCourseById(String id) async {
     try {
-      final DocumentSnapshot doc = await _firestore
-          .collection(_collectionName)
-          .doc(id)
-          .get();
+      final DocumentSnapshot doc =
+          await _firestore.collection(_collectionName).doc(id).get();
 
       if (doc.exists) {
         return CourseModel.fromFirestore(doc);
@@ -99,7 +94,9 @@ class FirestoreCourseService {
           .orderBy('createdAt', descending: true)
           .get();
 
-      return snapshot.docs.map((doc) => CourseModel.fromFirestore(doc)).toList();
+      return snapshot.docs
+          .map((doc) => CourseModel.fromFirestore(doc))
+          .toList();
     } catch (e) {
       print('Error fetching courses by semester from Firestore: $e');
       // Trả về danh sách trống nếu có lỗi
@@ -116,7 +113,9 @@ class FirestoreCourseService {
           .orderBy('createdAt', descending: true)
           .get();
 
-      return snapshot.docs.map((doc) => CourseModel.fromFirestore(doc)).toList();
+      return snapshot.docs
+          .map((doc) => CourseModel.fromFirestore(doc))
+          .toList();
     } catch (e) {
       print('Error fetching courses by status from Firestore: $e');
       // Trả về danh sách trống nếu có lỗi
@@ -143,7 +142,8 @@ class FirestoreCourseService {
   }
 
   // Cập nhật khóa học
-  static Future<CourseModel?> updateCourse(String id, CourseModel course) async {
+  static Future<CourseModel?> updateCourse(
+      String id, CourseModel course) async {
     try {
       await _firestore.collection(_collectionName).doc(id).update({
         ...course.toFirestore(),

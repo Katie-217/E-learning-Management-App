@@ -24,8 +24,6 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
 
   @override
   Widget build(BuildContext context) {
-    final sideWidth = 260.0;
-
     return Scaffold(
       backgroundColor: const Color(0xFF0F1720),
       appBar: widget.showSidebar
@@ -42,13 +40,15 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
                   child: const Icon(Icons.menu_book),
                 ),
                 const SizedBox(width: 12),
-                const Text('E-Learning', style: TextStyle(fontWeight: FontWeight.w600)),
+                const Text('E-Learning',
+                    style: TextStyle(fontWeight: FontWeight.w600)),
               ]),
               actions: [
                 SizedBox(
                   width: 300,
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12),
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 8.0, horizontal: 12),
                     child: TextField(
                       style: const TextStyle(color: Colors.white),
                       decoration: InputDecoration(
@@ -56,8 +56,8 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
                         hintStyle: TextStyle(color: Colors.grey[400]),
                         filled: true,
                         fillColor: const Color(0xFF111827),
-                        contentPadding:
-                            const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 10),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                           borderSide: BorderSide.none,
@@ -66,7 +66,9 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
                     ),
                   ),
                 ),
-                IconButton(onPressed: () {}, icon: const Icon(Icons.notifications_none)),
+                IconButton(
+                    onPressed: () {},
+                    icon: const Icon(Icons.notifications_none)),
                 Padding(
                   padding: const EdgeInsets.only(right: 12),
                   child: Row(children: [
@@ -74,7 +76,8 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
                       width: 40,
                       height: 40,
                       decoration: const BoxDecoration(
-                        gradient: LinearGradient(colors: [Colors.indigo, Colors.purple]),
+                        gradient: LinearGradient(
+                            colors: [Colors.indigo, Colors.purple]),
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -98,7 +101,10 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text('Hello Jara',
-                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
+                      style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white)),
                   const SizedBox(height: 4),
                   Text("Let's learn something new today!",
                       style: TextStyle(color: Colors.grey[400])),
@@ -106,7 +112,8 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
 
                   // === Stats Grid ===
                   LayoutBuilder(builder: (context, cons) {
-                    final cross = cons.maxWidth > 900 ? 4 : (cons.maxWidth > 600 ? 2 : 1);
+                    final cross =
+                        cons.maxWidth > 900 ? 4 : (cons.maxWidth > 600 ? 2 : 1);
                     return GridView.count(
                       crossAxisCount: cross,
                       crossAxisSpacing: 12,
@@ -115,10 +122,34 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       children: const [
-                        StatsCard(icon: Icons.schedule, title: 'In Progress', value: '5', bgStart: Colors.orange, bgEnd: Colors.orangeAccent, iconColor: Colors.orange),
-                        StatsCard(icon: Icons.check_circle, title: 'Completed', value: '12', bgStart: Colors.green, bgEnd: Colors.greenAccent, iconColor: Colors.green),
-                        StatsCard(icon: Icons.emoji_events, title: 'Certificates', value: '8', bgStart: Colors.blue, bgEnd: Colors.blueAccent, iconColor: Colors.blue),
-                        StatsCard(icon: Icons.trending_up, title: 'Avg Score', value: '85%', bgStart: Colors.purple, bgEnd: Colors.purpleAccent, iconColor: Colors.purple),
+                        StatsCard(
+                            icon: Icons.schedule,
+                            title: 'In Progress',
+                            value: '5',
+                            bgStart: Colors.orange,
+                            bgEnd: Colors.orangeAccent,
+                            iconColor: Colors.orange),
+                        StatsCard(
+                            icon: Icons.check_circle,
+                            title: 'Completed',
+                            value: '12',
+                            bgStart: Colors.green,
+                            bgEnd: Colors.greenAccent,
+                            iconColor: Colors.green),
+                        StatsCard(
+                            icon: Icons.emoji_events,
+                            title: 'Certificates',
+                            value: '8',
+                            bgStart: Colors.blue,
+                            bgEnd: Colors.blueAccent,
+                            iconColor: Colors.blue),
+                        StatsCard(
+                            icon: Icons.trending_up,
+                            title: 'Avg Score',
+                            value: '85%',
+                            bgStart: Colors.purple,
+                            bgEnd: Colors.purpleAccent,
+                            iconColor: Colors.purple),
                       ],
                     );
                   }),
@@ -143,18 +174,24 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
                                   // Active Hours Card
                                   Expanded(
                                     child: Container(
-                                      height: 400, // Increased height to prevent overflow
+                                      height:
+                                          400, // Increased height to prevent overflow
                                       padding: const EdgeInsets.all(14),
                                       decoration: BoxDecoration(
                                         color: const Color(0xFF111827),
                                         borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(color: Colors.grey[800]!),
+                                        border: Border.all(
+                                            color: Colors.grey[800]!),
                                       ),
                                       child: SingleChildScrollView(
                                         child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
                                           children: [
-                                            const Text('Active Hours', style: TextStyle(fontWeight: FontWeight.w600)),
+                                            const Text('Active Hours',
+                                                style: TextStyle(
+                                                    fontWeight:
+                                                        FontWeight.w600)),
                                             const SizedBox(height: 12),
                                             SimpleBarChart(data: const [
                                               {'day': 'M', 'height': 90.0},
@@ -174,21 +211,33 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
                                   // Performance Card
                                   Expanded(
                                     child: Container(
-                                      height: 400, // Increased height to match Active Hours
+                                      height:
+                                          400, // Increased height to match Active Hours
                                       padding: const EdgeInsets.all(14),
                                       decoration: BoxDecoration(
                                         color: const Color(0xFF111827),
                                         borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(color: Colors.grey[800]!),
+                                        border: Border.all(
+                                            color: Colors.grey[800]!),
                                       ),
                                       child: SingleChildScrollView(
                                         child: const Column(
                                           children: [
-                                            Text('Performance', style: TextStyle(fontWeight: FontWeight.w600)),
+                                            Text('Performance',
+                                                style: TextStyle(
+                                                    fontWeight:
+                                                        FontWeight.w600)),
                                             SizedBox(height: 10),
-                                            CircularPercentWidget(percent: 0.40, label: 'Productivity'),
+                                            CircularPercentWidget(
+                                                percent: 0.40,
+                                                label: 'Productivity'),
                                             SizedBox(height: 8),
-                                            Text('Your productivity is 40% higher compared to last month', style: TextStyle(color: Colors.grey, fontSize: 12), textAlign: TextAlign.center)
+                                            Text(
+                                                'Your productivity is 40% higher compared to last month',
+                                                style: TextStyle(
+                                                    color: Colors.grey,
+                                                    fontSize: 12),
+                                                textAlign: TextAlign.center)
                                           ],
                                         ),
                                       ),
@@ -211,11 +260,30 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text('My Assignments', style: TextStyle(fontWeight: FontWeight.w600)),
+                                    const Text('My Assignments',
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.w600)),
                                     const SizedBox(height: 8),
                                     // Gắn Firestore hoặc mock data trong AssignmentCard
                                     AssignmentCard(
-                                      assignment: const Assignment(id: '1', title: 'Mobile App Development', dueDate: 'Today, 11:59 PM', grade: '85/100', status: 'completed'),
+                                      assignment: Assignment(
+                                        id: '1',
+                                        title: 'Mobile App Development',
+                                        description:
+                                            'Create a mobile application using Flutter framework with proper architecture patterns.',
+                                        startDate: DateTime.now()
+                                            .subtract(const Duration(days: 7)),
+                                        deadline: DateTime.now()
+                                            .add(const Duration(hours: 12)),
+                                        allowLateSubmissions: true,
+                                        maxSubmissionAttempts: 3,
+                                        allowedFileFormats: const [
+                                          'pdf',
+                                          'zip',
+                                          'apk'
+                                        ],
+                                        maxFileSizeMB: 50,
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -235,10 +303,18 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text('Quizzes & Exams', style: TextStyle(fontWeight: FontWeight.w600)),
+                                    const Text('Quizzes & Exams',
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.w600)),
                                     const SizedBox(height: 8),
                                     QuizCard(
-                                      quiz: const Quiz(id: '1', title: 'Database Management Quiz', dueDate: 'Tomorrow, 2:00 PM', duration: '45 min', questions: 20, status: 'upcoming'),
+                                      quiz: const Quiz(
+                                          id: '1',
+                                          title: 'Database Management Quiz',
+                                          dueDate: 'Tomorrow, 2:00 PM',
+                                          duration: '45 min',
+                                          questions: 20,
+                                          status: 'upcoming'),
                                     ),
                                   ],
                                 ),
@@ -257,14 +333,16 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
                               Container(
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF111827),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: Colors.grey[800]!)
-                                ),
+                                    color: const Color(0xFF111827),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border:
+                                        Border.all(color: Colors.grey[800]!)),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
-                                    const Text('February 2025', style: TextStyle(fontWeight: FontWeight.w600)),
+                                    const Text('February 2025',
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.w600)),
                                     const SizedBox(height: 12),
                                     SimpleCalendar(
                                       currentDate: DateTime.now(),
@@ -291,12 +369,3 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
     );
   }
 }
-
-
-
-
-
-
-
-
-
