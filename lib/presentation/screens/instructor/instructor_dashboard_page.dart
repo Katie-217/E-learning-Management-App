@@ -1,23 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:fl_chart/fl_chart.dart';
-import 'package:go_router/go_router.dart';
-import 'package:elearning_management_app/presentation/screens/course/course_page.dart';
-import 'package:elearning_management_app/presentation/screens/instructor/instructor_students_page.dart';
-import 'package:elearning_management_app/presentation/screens/assignment/assignments_page.dart';
-import 'package:elearning_management_app/presentation/screens/instructor/instructor_grades_page.dart';
-import 'package:elearning_management_app/application/controllers/instructor/instructor_profile_provider.dart';
-import 'package:elearning_management_app/presentation/widgets/instructor/calendar_widget.dart';
-import 'package:elearning_management_app/presentation/widgets/instructor/task_list_widget.dart';
-
-class InstructorDashboard extends ConsumerStatefulWidget {
-  const InstructorDashboard({super.key});
-
+class NewTeacherDashboardPrototype extends ConsumerStatefulWidget {
+  const NewTeacherDashboardPrototype({super.key});
   @override
-  ConsumerState<InstructorDashboard> createState() => _InstructorDashboardState();
+  ConsumerState<NewTeacherDashboardPrototype> createState() =>
+      _NewTeacherDashboardPrototypeState();
 }
-
-class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
+class _NewTeacherDashboardPrototypeState
+    extends ConsumerState<NewTeacherDashboardPrototype> {
   String _activeTab = 'dashboard';
   @override
   Widget build(BuildContext context) {
