@@ -1,11 +1,16 @@
+// ========================================
+// FILE: login_form.dart
+// MÔ TẢ: Login Form sử dụng AuthRepository - Clean Architecture
+// ========================================
+
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../../../../core/config/users-role.dart';
+import '../../../../data/repositories/auth/auth_repository.dart';
+import '../../../../data/repositories/auth/user_session_service.dart';
+
 import 'auth_form_widgets.dart';
+import '../common/main_shell.dart';
 import '../../screens/instructor/instructor_dashboard.dart';
-import '../../widgets/common/main_shell.dart';
-import 'package:elearning_management_app/data/repositories/auth/auth_session_manager.dart';
 
 class LoginForm extends StatefulWidget {
   final UserRole role;
@@ -29,101 +34,53 @@ class _LoginFormState extends State<LoginForm> {
     super.dispose();
   }
 
+  // ========================================
+  // HÀM: _handleLogin - Sử dụng AuthRepository Clean Architecture
+  // ========================================
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => isLoading = true);
     try {
-      final usernameInput = _emailController.text.trim();
-      final password = _passwordController.text.trim();
+      final authRepository = AuthRepository.defaultClient();
 
-      final userDoc = await _findUserByUsername(usernameInput);
-      if (userDoc == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Không tìm thấy username trong hệ thống.')), 
-        );
-        return;
-      }
-
-      final credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: userDoc['email'] as String,
-        password: password,
+      // Đăng nhập và nhận UserModel
+      final userModel = await authRepository.signInWithEmailAndPassword(
+        _emailController.text.trim(),
+        _passwordController.text.trim(),
       );
 
-      final user = credential.user;
-      if (user == null) {
-        throw FirebaseAuthException(code: 'user-not-found', message: 'Không tìm thấy người dùng');
-      }
+      // Lưu session
+      await UserSessionService.saveUserSession(userModel);
 
-      final role = (userDoc['role'] as String?)?.toLowerCase();
-      if (role == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Tài khoản chưa được gán role.')), 
-        );
-        return;
-      }
+      print("🎯 Điều hướng với role: ${userModel.role.name}");
 
-      await AuthSessionManager.saveSession(role: role);
-
-      if (!mounted) return;
-      if (role == 'instructor') {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const InstructorDashboard()),
-        );
+      // Navigation dựa trên UserModel role
+      if (userModel.role == UserRole.instructor) {
+        if (mounted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const InstructorDashboard()),
+          );
+        }
       } else {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const MainShell()),
+        if (mounted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const MainShell()),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                'Lỗi đăng nhập: ${e.toString().replaceAll("Exception: ", "")}'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
-    } on FirebaseAuthException catch (e) {
-      String message = 'Lỗi đăng nhập';
-      if (e.code == 'user-not-found') {
-        message = 'Không tìm thấy tài khoản trong hệ thống';
-      } else if (e.code == 'wrong-password') {
-        message = 'Sai mật khẩu';
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lỗi đăng nhập: $e')),
-      );
     } finally {
       if (mounted) setState(() => isLoading = false);
-    }
-  }
-
-  Future<Map<String, dynamic>?> _findUserByUsername(String username) async {
-    try {
-      final trimmed = username.trim().toLowerCase();
-      final query = await FirebaseFirestore.instance
-          .collection('users')
-          .get();
-
-      final match = query.docs.firstWhere(
-        (doc) {
-          final data = doc.data();
-          final uname = (data['username'] ?? '')
-              .toString()
-              .trim()
-              .toLowerCase();
-          final email = (data['email'] ?? '')
-              .toString()
-              .trim()
-              .toLowerCase();
-          return uname == trimmed || email == trimmed;
-        },
-        orElse: () => null,
-      );
-
-      if (match == null) {
-        return null;
-      }
-
-      return {...match.data(), 'uid': match.id};
-    } catch (_) {
-      return null;
     }
   }
 
@@ -148,21 +105,21 @@ class _LoginFormState extends State<LoginForm> {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 32),
-            
+
             // Email field
             AuthTextField(
               controller: _emailController,
-              hintText: 'Username',
-              keyboardType: TextInputType.text,
+              hintText: 'Email',
+              keyboardType: TextInputType.emailAddress,
               validator: (value) {
                 if (value == null || value.isEmpty) {
-                  return 'Vui lòng nhập username';
+                  return 'Vui lòng nhập email';
                 }
                 return null;
               },
             ),
             const SizedBox(height: 16),
-            
+
             // Password field
             AuthTextField(
               controller: _passwordController,
@@ -176,7 +133,7 @@ class _LoginFormState extends State<LoginForm> {
               },
             ),
             const SizedBox(height: 24),
-            
+
             // Login button
             SizedBox(
               width: double.infinity,
@@ -189,24 +146,70 @@ class _LoginFormState extends State<LoginForm> {
                     borderRadius: BorderRadius.circular(25),
                   ),
                 ),
-                child: isLoading 
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text(
-                      'Đăng nhập',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+                child: isLoading
+                    ? Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: const [
+                          SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          ),
+                          SizedBox(width: 8),
+                          Text(
+                            'Đang đăng nhập...',
+                            style: TextStyle(color: Colors.white, fontSize: 14),
+                          ),
+                        ],
+                      )
+                    : const Text(
+                        'Đăng nhập',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
               ),
             ),
             const SizedBox(height: 16),
+
+            // ========================================
+            // PHẦN: Thông tin hệ thống đóng
+            // ========================================
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    color: Colors.grey.shade600,
+                    size: 20,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Hệ thống đóng - Chỉ đăng nhập bằng tài khoản được cấp',
+                    style: TextStyle(
+                      color: Colors.grey.shade700,
+                      fontSize: 12,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 }
-
-

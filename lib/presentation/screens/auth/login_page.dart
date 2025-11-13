@@ -58,7 +58,8 @@ class _LoginPageState extends State<LoginPage> {
                             children: [
                               IconButton(
                                 onPressed: () => Navigator.pop(context),
-                                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                                icon: const Icon(Icons.arrow_back,
+                                    color: Colors.white),
                               ),
                             ],
                           ),
@@ -151,8 +152,11 @@ class _LoginPageState extends State<LoginPage> {
                                   child: TextButton(
                                     onPressed: () {
                                       // _controller.resetPassword(context, ref);
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(content: Text('Reset password feature coming soon')),
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        const SnackBar(
+                                            content: Text(
+                                                'Reset password feature coming soon')),
                                       );
                                     },
                                     child: Text(
@@ -171,12 +175,16 @@ class _LoginPageState extends State<LoginPage> {
                                   child: ElevatedButton(
                                     onPressed: () {
                                       // _controller.signIn(context, ref, _formKey);
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(content: Text('Login feature coming soon')),
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        const SnackBar(
+                                            content: Text(
+                                                'Login feature coming soon')),
                                       );
                                     },
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: widget.userRole.primaryColor,
+                                      backgroundColor:
+                                          widget.userRole.primaryColor,
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(25),
                                       ),
@@ -197,25 +205,7 @@ class _LoginPageState extends State<LoginPage> {
                                   child: Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      Text(
-                                        "Don't have an account? ",
-                                        style: TextStyle(color: Colors.grey[600]),
-                                      ),
-                                      TextButton(
-                                        onPressed: () {
-                                          // _controller.navigateToRegister(context, widget.userRole);
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(content: Text('Register feature coming soon')),
-                                          );
-                                        },
-                                        child: Text(
-                                          'Register',
-                                          style: TextStyle(
-                                            color: widget.userRole.primaryColor,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ),
+                                      // REMOVED: "Don't have an account?" text - Hệ thống đóng
                                     ],
                                   ),
                                 ),
@@ -234,7 +224,6 @@ class _LoginPageState extends State<LoginPage> {
       ),
     );
   }
-
 
   Widget _buildInputField({
     required String label,
@@ -286,5 +275,3 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 }
-
-

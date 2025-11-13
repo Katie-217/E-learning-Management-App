@@ -1,46 +1,115 @@
+// ========================================
+// FILE: auth_provider.dart
+// MÔ TẢ: AuthProvider sử dụng AuthRepository duy nhất - Clean Architecture
+// ========================================
 
-// import 'package:flutter/material.dart';
-// import 'package:hooks_riverpod/hooks_riverpod.dart';
-// import '../repositories/auth_repository.dart';
-// import '../repositories/google_auth_repository.dart';
+import 'package:flutter/material.dart';
+import '../../../data/repositories/auth/auth_repository.dart';
+import '../../../data/repositories/auth/user_session_service.dart';
+import '../../../domain/models/user_model.dart';
+import '../../../../core/config/users-role.dart';
 
-// final authProvider = Provider<AuthProvider>((ref) {
-//   final authRepo = ref.watch(authRepositoryProvider);
-//   final googleRepo = ref.watch(googleAuthRepositoryProvider);
-//   return AuthProvider(authRepo, googleRepo);
-// });
+// ========================================
+// CLASS: AuthProvider
+// MÔ TẢ: Provider cho authentication state - Clean Architecture
+// ========================================
+class AuthProvider extends ChangeNotifier {
+  final AuthRepository _authRepository = AuthRepository.defaultClient();
 
-class AuthProvider {
-  // final AuthRepository _authRepo;
-  // final GoogleAuthRepository _googleRepo;
+  UserModel? _currentUser;
+  bool _isLoading = false;
+  String? _errorMessage;
 
-  // AuthProvider(this._authRepo, this._googleRepo);
+  UserModel? get currentUser => _currentUser;
+  bool get isLoading => _isLoading;
+  String? get errorMessage => _errorMessage;
+  bool get isAuthenticated => _currentUser != null;
 
-  // Future<void> signIn(String email, String password, BuildContext context) async {
-  //   await _authRepo.signIn(email, password);
-  //   ScaffoldMessenger.of(context).showSnackBar(
-  //     const SnackBar(content: Text('Login successful')),
-  //   );
-  // }
+  // ========================================
+  // HÀM: signIn - Đăng nhập và cập nhật state
+  // ========================================
+  Future<UserModel?> signIn(String email, String password) async {
+    _setLoading(true);
+    try {
+      final user =
+          await _authRepository.signInWithEmailAndPassword(email, password);
+      await UserSessionService.saveUserSession(user);
+      _setCurrentUser(user);
+      return user;
+    } catch (e) {
+      _setError(e.toString());
+      return null;
+    } finally {
+      _setLoading(false);
+    }
+  }
 
-  // Future<void> signInWithGoogle(BuildContext context) async {
-  //   await _googleRepo.signInWithGoogle();
-  //   ScaffoldMessenger.of(context).showSnackBar(
-  //     const SnackBar(content: Text('Google login successful')),
-  //   );
-  // }
+  // ========================================
+  // HÀM: signOut - Đăng xuất và clear state
+  // ========================================
+  Future<void> signOut() async {
+    _setLoading(true);
+    try {
+      await _authRepository.signOut();
+      await UserSessionService.clearUserSession();
+      _setCurrentUser(null);
+    } catch (e) {
+      _setError(e.toString());
+    } finally {
+      _setLoading(false);
+    }
+  }
 
-  // Future<void> resetPassword(String email, BuildContext context) async {
-  //   await _authRepo.sendPasswordReset(email);
-  //   ScaffoldMessenger.of(context).showSnackBar(
-  //     SnackBar(content: Text('Reset email sent to $email')),
-  //   );
-  // }
+  // ========================================
+  // HÀM: createAccount - Tạo tài khoản mới
+  // ========================================
+  Future<UserModel?> createAccount(
+      String name, String email, String password, UserRole role) async {
+    _setLoading(true);
+    try {
+      final user =
+          await _authRepository.createUserAccount(name, email, password, role);
+      await UserSessionService.saveUserSession(user);
+      _setCurrentUser(user);
+      return user;
+    } catch (e) {
+      _setError(e.toString());
+      return null;
+    } finally {
+      _setLoading(false);
+    }
+  }
 
-  // Future<void> signOut(BuildContext context) async {
-  //   await _authRepo.signOut();
-  //   ScaffoldMessenger.of(context).showSnackBar(
-  //     const SnackBar(content: Text('Signed out')),
-  //   );
-  // }
+  // ========================================
+  // HÀM: checkAuthState - Kiểm tra auth state
+  // ========================================
+  Future<void> checkAuthState() async {
+    _setLoading(true);
+    try {
+      final user = await _authRepository.checkUserSession();
+      _setCurrentUser(user);
+    } catch (e) {
+      _setError(e.toString());
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // ========================================
+  // PRIVATE METHODS
+  // ========================================
+  void _setLoading(bool loading) {
+    _isLoading = loading;
+    notifyListeners();
+  }
+
+  void _setCurrentUser(UserModel? user) {
+    _currentUser = user;
+    notifyListeners();
+  }
+
+  void _setError(String? error) {
+    _errorMessage = error;
+    notifyListeners();
+  }
 }

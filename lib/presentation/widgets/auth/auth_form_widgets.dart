@@ -3,7 +3,7 @@ import '../../../../core/config/users-role.dart';
 
 // ========================================
 // CLASS: AuthFormContainer
-// MÔ TẢ: Container chứa form đăng nhập/đăng ký
+// MÔ TẢ: Container chứa form đăng nhập - HỆ THỐNG ĐÓNG
 // ========================================
 class AuthFormContainer extends StatelessWidget {
   final String title;
@@ -57,18 +57,18 @@ class AuthFormContainer extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 32),
-          
+
           // ========================================
           // PHẦN: Các trường input
           // MÔ TẢ: Danh sách các trường nhập liệu
           // ========================================
           ...fields.map((field) => Padding(
-            padding: const EdgeInsets.only(bottom: 16),
-            child: field,
-          )),
-          
+                padding: const EdgeInsets.only(bottom: 16),
+                child: field,
+              )),
+
           const SizedBox(height: 24),
-          
+
           // ========================================
           // PHẦN: Nút chính
           // MÔ TẢ: Nút thực hiện hành động chính
@@ -94,7 +94,7 @@ class AuthFormContainer extends StatelessWidget {
               ),
             ),
           ),
-          
+
           // ========================================
           // PHẦN: Các tùy chọn phụ
           // MÔ TẢ: Checkbox, link quên mật khẩu, etc.
@@ -103,7 +103,7 @@ class AuthFormContainer extends StatelessWidget {
             const SizedBox(height: 16),
             secondary!,
           ],
-          
+
           // ========================================
           // PHẦN: Footer
           // MÔ TẢ: Google login, divider, etc.
@@ -169,7 +169,8 @@ class _AuthTextFieldState extends State<AuthTextField> {
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         suffixIcon: widget.obscureText
             ? IconButton(
                 icon: Icon(
@@ -189,9 +190,10 @@ class _AuthTextFieldState extends State<AuthTextField> {
 }
 
 // ========================================
-// CLASS: GoogleLoginButton
-// MÔ TẢ: Nút đăng nhập bằng Google
+// CLASS: GoogleLoginButton - DEPRECATED
+// MÔ TẢ: KHÔNG SỬ DỤNG - Hệ thống chỉ hỗ trợ email/password
 // ========================================
+/*
 class GoogleLoginButton extends StatelessWidget {
   final VoidCallback? onPressed;
 
@@ -227,3 +229,4 @@ class GoogleLoginButton extends StatelessWidget {
     );
   }
 }
+*/

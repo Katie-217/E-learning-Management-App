@@ -1,12 +1,11 @@
+// ========================================
+// FILE: course_provider.dart
+// MÔ TẢ: Course Provider - Clean Architecture Compliant
+// ========================================
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:elearning_management_app/domain/models/course_model.dart';
-import 'package:elearning_management_app/data/repositories/common/api_service.dart';
-import 'package:elearning_management_app/data/repositories/common/cache_service.dart';
-import 'package:elearning_management_app/data/repositories/course/course_api_service.dart';
 import 'package:elearning_management_app/data/repositories/course/firestore_course_service.dart';
-import 'package:elearning_management_app/data/repositories/auth/user_session_service.dart';
 
 // Course state management
 
@@ -26,7 +25,7 @@ class CourseState {
     this.selectedSemester = 'All',
     this.selectedStatus = 'All',
   });
- 
+
   CourseState copyWith({
     List<CourseModel>? courses,
     List<CourseModel>? filteredCourses,
@@ -46,16 +45,16 @@ class CourseState {
   }
 }
 
-
 // StateNotifier quản lý logic nghiệp vụ cho khóa học
 
+// ========================================
+// CLASS: CourseNotifier
+// MÔ TẢ: StateNotifier quản lý logic nghiệp vụ cho khóa học
+// ========================================
 class CourseNotifier extends StateNotifier<CourseState> {
-  final ApiService _apiService;
-  final CacheService _cacheService;
+  // Loại bỏ unused services để tuân thủ Clean Architecture
 
-  //  Khởi tạo notifier với các service cần thiết
-
-  CourseNotifier(this._apiService, this._cacheService) : super(CourseState());
+  CourseNotifier() : super(CourseState());
 
 //  Tải danh sách khóa học từ cache hoặc API
 
@@ -66,40 +65,21 @@ class CourseNotifier extends StateNotifier<CourseState> {
 
     try {
       List<CourseModel> courses;
-      
-      // 
-      // Kiểm tra cache trước khi gọi API
-      // Ưu tiên sử dụng dữ liệu cache nếu có
-      // 
-      // if (!forceRefresh) {
-      //   final cachedCourses = await _cacheService.getCourses();
-      //   if (cachedCourses.isNotEmpty) {
-      //     state = state.copyWith(courses: cachedCourses, isLoading: false);
-      //     _loadFreshData(); // refresh background
-      //     return;
-      //   }
-      // }
 
-
+      // Đã loại bỏ cache logic để tuân thủ Clean Architecture
 
       // Gọi dữ liệu từ Firestore
       print('DEBUG: ========== COURSE PROVIDER LOADING ==========');
       try {
         courses = await FirestoreCourseService.getCourses();
         print('DEBUG: ✅ Provider received ${courses.length} courses');
-        
+
         if (courses.isNotEmpty) {
           print('DEBUG: 📚 Courses loaded:');
           for (int i = 0; i < courses.length; i++) {
             final course = courses[i];
-            print('DEBUG:   ${i + 1}. ${course.name} (${course.code}) - ${course.semester}');
-          }
-          
-          // Lưu session nếu load courses thành công
-          final user = FirebaseAuth.instance.currentUser;
-          if (user != null) {
-            await UserSessionService.saveUserSession(user);
-            print('DEBUG: ✅ User session saved after successful course loading');
+            print(
+                'DEBUG:   ${i + 1}. ${course.name} (${course.code}) - ${course.semester}');
           }
         } else {
           print('DEBUG: ⚠️ No courses found for current user');
@@ -109,28 +89,20 @@ class CourseNotifier extends StateNotifier<CourseState> {
         courses = [];
       }
       print('DEBUG: ===========================================');
-      
+
       // Áp dụng bộ lọc hiện tại
       final filteredCourses = _applyFilters(courses);
       state = state.copyWith(
-        courses: courses, 
-        filteredCourses: filteredCourses,
-        isLoading: false
-      );
+          courses: courses, filteredCourses: filteredCourses, isLoading: false);
     } catch (e) {
       state = state.copyWith(error: e.toString(), isLoading: false);
     }
   }
 
-
-  // Tải dữ liệu mới trong background 
-  // Future<void> _loadFreshData() async {
-  //   try {
-  //     final freshCourses = await _apiService.getCourses();
-  //     await _cacheService.saveCourses(freshCourses);
-  //     state = state.copyWith(courses: freshCourses);
-  //   } catch (_) {}
-  // }
+  // ========================================
+  // HÀM: refreshCourses
+  // MÔ TẢ: Làm mới danh sách khóa học
+  // ========================================
 
   Future<void> refreshCourses() async {
     await loadCourses(forceRefresh: true);
@@ -157,16 +129,16 @@ class CourseNotifier extends StateNotifier<CourseState> {
 
     // Lọc theo học kì
     if (state.selectedSemester != 'All') {
-      filtered = filtered.where((course) => 
-        course.semester == state.selectedSemester
-      ).toList();
+      filtered = filtered
+          .where((course) => course.semester == state.selectedSemester)
+          .toList();
     }
 
     // Lọc theo trạng thái
     if (state.selectedStatus != 'All') {
-      filtered = filtered.where((course) => 
-        course.status == state.selectedStatus
-      ).toList();
+      filtered = filtered
+          .where((course) => course.status == state.selectedStatus)
+          .toList();
     }
 
     return filtered;
@@ -174,7 +146,8 @@ class CourseNotifier extends StateNotifier<CourseState> {
 
   // Lấy danh sách học kì có sẵn
   List<String> getAvailableSemesters() {
-    final semesters = state.courses.map((course) => course.semester).toSet().toList();
+    final semesters =
+        state.courses.map((course) => course.semester).toSet().toList();
     semesters.sort();
     return ['All', ...semesters];
   }
@@ -187,8 +160,11 @@ class CourseNotifier extends StateNotifier<CourseState> {
 
 // Provider chính cho việc quản lý khóa học
 
-final courseProvider = StateNotifierProvider<CourseNotifier, CourseState>((ref) {
-  final apiService = ref.watch(apiServiceProvider);
-  final cacheService = ref.watch(cacheServiceProvider);
-  return CourseNotifier(apiService, cacheService);
+// ========================================
+// PROVIDER: courseProvider
+// MÔ TẢ: Provider chính cho việc quản lý khóa học - Clean Architecture
+// ========================================
+final courseProvider =
+    StateNotifierProvider<CourseNotifier, CourseState>((ref) {
+  return CourseNotifier();
 });
