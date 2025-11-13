@@ -30,13 +30,6 @@ class AuthProvider {
   //   );
   // }
 
-  // Future<void> register(String name, String email, String password, BuildContext context, {required UserRole role}) async {
-  //   await _authRepo.signUp(name, email, password, role);
-  //   ScaffoldMessenger.of(context).showSnackBar(
-  //     const SnackBar(content: Text('Account created')),
-  //   );
-  // }
-
   // Future<void> resetPassword(String email, BuildContext context) async {
   //   await _authRepo.sendPasswordReset(email);
   //   ScaffoldMessenger.of(context).showSnackBar(

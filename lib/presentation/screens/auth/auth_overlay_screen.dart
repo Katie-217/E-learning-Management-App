@@ -6,7 +6,6 @@
 import 'package:flutter/material.dart';
 import 'package:elearning_management_app/core/config/users-role.dart';
 import 'package:elearning_management_app/presentation/widgets/auth/login_form.dart';
-import 'package:elearning_management_app/presentation/screens/auth/register_form.dart';
 
 
 // ========================================
@@ -27,105 +26,41 @@ class AuthOverlayScreen extends StatefulWidget {
 // MÔ TẢ: State quản lý animation và logic cho màn hình xác thực
 // ========================================
 class _AuthOverlayScreenState extends State<AuthOverlayScreen> {
-  // ========================================
-  // BIẾN: isLogin
-  // MÔ TẢ: Trạng thái hiện tại (đăng nhập hoặc đăng ký)
-  // ========================================
-  bool isLogin = true; 
-
-  // ========================================
-  // HÀM: _toRegister()
-  // MÔ TẢ: Chuyển sang form đăng ký
-  // ========================================
-  void _toRegister() => setState(() => isLogin = false);
-  
-  // ========================================
-  // HÀM: _toLogin()
-  // MÔ TẢ: Chuyển sang form đăng nhập
-  // ========================================
-  void _toLogin() => setState(() => isLogin = true);
-
-  // ========================================
-  // HÀM: build()
-  // MÔ TẢ: Xây dựng giao diện màn hình xác thực
-  // ========================================
   @override
   Widget build(BuildContext context) {
     final role = widget.initialRole;
 
     return Scaffold(
       backgroundColor: const Color(0xFF003300).withOpacity(0.9),
-      body: Stack(
-        children: [
-          LayoutBuilder(
+      body: LayoutBuilder(
         builder: (context, constraints) {
           final isWide = constraints.maxWidth >= 720;
+          final containerWidth = isWide ? 900.0 : constraints.maxWidth;
+          final containerHeight = isWide ? 520.0 : constraints.maxHeight;
+
           return Center(
             child: Container(
-              width: isWide ? 900 : constraints.maxWidth,
-              height: isWide ? 520 : constraints.maxHeight,
+              width: containerWidth,
+              height: containerHeight,
               margin: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(20),
               ),
               clipBehavior: Clip.antiAlias,
-              child: Stack(
+              child: Row(
                 children: [
-                  // ========================================
-                  // PHẦN: Sliding Form Container
-                  // MÔ TẢ: Container chứa form với hiệu ứng slide
-                  // ========================================
-                  AnimatedAlign(
-                    alignment: isLogin ? Alignment.centerRight : Alignment.centerLeft,
-                    duration: const Duration(milliseconds: 600),
-                    curve: Curves.easeInOut,
-                    child: FractionallySizedBox(
-                      widthFactor: 0.5,
-                      heightFactor: 1,
-                      child: isLogin
-                          ? Container(
-                              key: const ValueKey('login'),
-                              child: LoginForm(
-                                role: role,
-                                onSwitchToRegister: _toRegister,
-                              ),
-                            )
-                          : Container(
-                              key: const ValueKey('register'),
-                              child: RegisterForm(
-                                initialRole: role,
-                                onSwitchToLogin: _toLogin,
-                              ),
-                            ),
-                    ),
+                  Expanded(
+                    child: _InfoPanel(role: role),
                   ),
-
-                  // ========================================
-                  // PHẦN: Overlay Container
-                  // MÔ TẢ: Container thông tin với hiệu ứng slide
-                  // ========================================
-                  AnimatedAlign(
-                    alignment: isLogin ? Alignment.centerLeft : Alignment.centerRight,
-                    duration: const Duration(milliseconds: 600),
-                    curve: Curves.easeInOut,
-                    child: FractionallySizedBox(
-                      widthFactor: 0.5,
-                      heightFactor: 1,
-                      child: _InfoPanel(
-                        role: role,
-                        isLogin: isLogin,
-                        onPrimary: isLogin ? _toRegister : _toLogin,
-                      ),
-                    ),
+                  Expanded(
+                    child: LoginForm(role: role),
                   ),
                 ],
               ),
             ),
           );
         },
-      ),
-        ],
       ),
     );
   }
@@ -137,10 +72,8 @@ class _AuthOverlayScreenState extends State<AuthOverlayScreen> {
 // ========================================
 class _InfoPanel extends StatelessWidget {
   final UserRole role;
-  final bool isLogin;
-  final VoidCallback onPrimary;
 
-  const _InfoPanel({required this.role, required this.isLogin, required this.onPrimary});
+  const _InfoPanel({required this.role});
 
   @override
   Widget build(BuildContext context) {
@@ -165,8 +98,8 @@ class _InfoPanel extends StatelessWidget {
                   // PHẦN: Tiêu đề chính
                   // MÔ TẢ: Text tiêu đề thay đổi theo trạng thái
                   // ========================================
-                  Text(
-                    isLogin ? 'Hello,\nfriends' : 'Start your\n new experience now',
+                  const Text(
+                    'Welcome back!',
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 45,
@@ -180,25 +113,15 @@ class _InfoPanel extends StatelessWidget {
                   // MÔ TẢ: Text mô tả thay đổi theo trạng thái
                   // ========================================
                   Text(
-                    isLogin
-                        ? 'if you already have an account, login here and have fun'
-                        : "If you don't have an account yet, join us and start your journey.",
+                    'Đăng nhập bằng tài khoản quản trị để truy cập bảng điều khiển giảng viên.',
                     style: TextStyle(color: Colors.white.withOpacity(0.95), fontSize: 16),
+                    textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 24),
-                  // ========================================
-                  // PHẦN: Nút chuyển đổi
-                  // MÔ TẢ: Nút để chuyển đổi giữa đăng nhập và đăng ký
-                  // ========================================
-                  OutlinedButton(
-                    onPressed: onPrimary,
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Colors.white, width: 2),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
-                      shape: const StadiumBorder(),
-                    ),
-                    child: Text(isLogin ? 'Register' : 'Login'),
+                  const Icon(
+                    Icons.lock_outline,
+                    color: Colors.white,
+                    size: 40,
                   ),
                 ],
               ),
@@ -209,7 +132,7 @@ class _InfoPanel extends StatelessWidget {
   }
 }
 
-// Inline form widgets removed; now using dedicated files: login_form.dart and register_form.dart.
+// Inline form widgets removed; now using dedicated login form file.
 
 
 

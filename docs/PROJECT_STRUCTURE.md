@@ -118,8 +118,7 @@ lib/
 │   │   │   ├── auth_overlay_screen.dart         # Màn hình overlay đăng nhập/đăng ký
 │   │   │   ├── forgot_password_page.dart        # Màn hình quên mật khẩu
 │   │   │   ├── login_page.dart                  # Màn hình đăng nhập
-│   │   │   ├── register_form.dart               # Form đăng ký
-│   │   │   └── register_page.dart               # Màn hình đăng ký
+│   │   │   └── login_form.dart                  # Form đăng nhập
 │   │   │
 │   │   ├── course/                               # Course Screens
 │   │   │   ├── course_detail_page.dart          # Chi tiết khóa học

@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../../../core/config/users-role.dart';
-import '../../../../data/repositories/auth/auth_service.dart';
 import 'auth_form_widgets.dart';
-import '../common/main_shell.dart';
 import '../../screens/instructor/instructor_dashboard.dart';
+import '../../widgets/common/main_shell.dart';
+import 'package:elearning_management_app/data/repositories/auth/auth_session_manager.dart';
 
 class LoginForm extends StatefulWidget {
   final UserRole role;
-  final VoidCallback onSwitchToRegister;
 
-   const LoginForm({super.key, required this.role, required this.onSwitchToRegister});
+  const LoginForm({super.key, required this.role});
 
   @override
   State<LoginForm> createState() => _LoginFormState();
@@ -33,32 +34,96 @@ class _LoginFormState extends State<LoginForm> {
 
     setState(() => isLoading = true);
     try {
-      final authService = AuthService.defaultClient();
-      final user = await authService.signIn(_emailController.text.trim(), _passwordController.text.trim());
-      
-       if (user != null) {
-        final role = await authService.fetchUserRole(user.uid);
-        final norm = (role ?? '').toString().trim().toLowerCase();
-        if (norm == 'teacher' || norm == 'instructor') {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const InstructorDashboard()),
-          );
-        } else {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const MainShell()),
-          );
-        }
-      }  else {
+      final usernameInput = _emailController.text.trim();
+      final password = _passwordController.text.trim();
+
+      final userDoc = await _findUserByUsername(usernameInput);
+      if (userDoc == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Đăng nhập thất bại')),
+          const SnackBar(content: Text('Không tìm thấy username trong hệ thống.')), 
+        );
+        return;
+      }
+
+      final credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: userDoc['email'] as String,
+        password: password,
+      );
+
+      final user = credential.user;
+      if (user == null) {
+        throw FirebaseAuthException(code: 'user-not-found', message: 'Không tìm thấy người dùng');
+      }
+
+      final role = (userDoc['role'] as String?)?.toLowerCase();
+      if (role == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Tài khoản chưa được gán role.')), 
+        );
+        return;
+      }
+
+      await AuthSessionManager.saveSession(role: role);
+
+      if (!mounted) return;
+      if (role == 'instructor') {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const InstructorDashboard()),
+        );
+      } else {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const MainShell()),
         );
       }
+    } on FirebaseAuthException catch (e) {
+      String message = 'Lỗi đăng nhập';
+      if (e.code == 'user-not-found') {
+        message = 'Không tìm thấy tài khoản trong hệ thống';
+      } else if (e.code == 'wrong-password') {
+        message = 'Sai mật khẩu';
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Lỗi đăng nhập: $e')),
       );
     } finally {
       if (mounted) setState(() => isLoading = false);
+    }
+  }
+
+  Future<Map<String, dynamic>?> _findUserByUsername(String username) async {
+    try {
+      final trimmed = username.trim().toLowerCase();
+      final query = await FirebaseFirestore.instance
+          .collection('users')
+          .get();
+
+      final match = query.docs.firstWhere(
+        (doc) {
+          final data = doc.data();
+          final uname = (data['username'] ?? '')
+              .toString()
+              .trim()
+              .toLowerCase();
+          final email = (data['email'] ?? '')
+              .toString()
+              .trim()
+              .toLowerCase();
+          return uname == trimmed || email == trimmed;
+        },
+        orElse: () => null,
+      );
+
+      if (match == null) {
+        return null;
+      }
+
+      return {...match.data(), 'uid': match.id};
+    } catch (_) {
+      return null;
     }
   }
 
@@ -87,11 +152,11 @@ class _LoginFormState extends State<LoginForm> {
             // Email field
             AuthTextField(
               controller: _emailController,
-              hintText: 'Email',
-              keyboardType: TextInputType.emailAddress,
+              hintText: 'Username',
+              keyboardType: TextInputType.text,
               validator: (value) {
                 if (value == null || value.isEmpty) {
-                  return 'Vui lòng nhập email';
+                  return 'Vui lòng nhập username';
                 }
                 return null;
               },
@@ -137,36 +202,6 @@ class _LoginFormState extends State<LoginForm> {
               ),
             ),
             const SizedBox(height: 16),
-            
-            // Google login button
-            GoogleLoginButton(
-              onPressed: () async {
-                setState(() => isLoading = true);
-                try {
-                  final authService = AuthService.defaultClient();
-                  final user = await authService.signInWithGoogle();
-                  
-                  if (user != null) {
-                    Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(builder: (_) => const MainShell())
-                    );
-                  }
-                } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Lỗi đăng nhập Google: $e')),
-                  );
-                } finally {
-                  if (mounted) setState(() => isLoading = false);
-                }
-              },
-            ),
-            const SizedBox(height: 16),
-            
-            // Switch to register
-            TextButton(
-              onPressed: widget.onSwitchToRegister,
-              child: const Text('Chưa có tài khoản? Đăng ký'),
-            ),
           ],
         ),
       ),
