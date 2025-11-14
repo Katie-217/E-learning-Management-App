@@ -88,6 +88,9 @@ class UserSessionService {
       await prefs.remove(_userUidKey);
       await prefs.remove(_userRoleKey);
       await prefs.remove(_userNameKey);
+
+      // Also clear all SharedPreferences to be sure
+      await prefs.clear();
     } catch (e) {
       // Handle error silently
     }

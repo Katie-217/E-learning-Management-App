@@ -33,30 +33,11 @@ class GroupsPage extends StatelessWidget {
           children: [
             Icon(Icons.groups, size: 64, color: Colors.grey),
             SizedBox(height: 16),
-            Text('Groups feature coming soon', style: TextStyle(fontSize: 18, color: Colors.grey)),
+            Text('Groups feature coming soon',
+                style: TextStyle(fontSize: 18, color: Colors.grey)),
           ],
         ),
       ),
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

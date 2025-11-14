@@ -14,29 +14,11 @@ class NotificationPage extends StatelessWidget {
           children: [
             Icon(Icons.notifications, size: 64, color: Colors.grey),
             SizedBox(height: 16),
-            Text('Notifications feature coming soon', style: TextStyle(fontSize: 18, color: Colors.grey)),
+            Text('Notifications feature coming soon',
+                style: TextStyle(fontSize: 18, color: Colors.grey)),
           ],
         ),
       ),
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

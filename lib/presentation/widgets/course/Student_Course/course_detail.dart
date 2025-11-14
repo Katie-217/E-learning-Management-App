@@ -34,16 +34,19 @@ class CourseDetailHeader extends StatelessWidget {
           const SizedBox(height: 12),
           Text(course.name,
               style: const TextStyle(
-                  fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white)),
           const SizedBox(height: 6),
-          Text('${course.code} • ${course.semester} • ${course.sessions} Sessions',
+          Text(
+              '${course.code} • ${course.semester} • ${course.sessions} Sessions',
               style: const TextStyle(color: Colors.white70)),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
             children: [
               _tag(Icons.person, course.instructor),
-              _tag(Icons.people, course.group),
+              // Group info will be loaded separately from GroupRepository
             ],
           ),
         ],

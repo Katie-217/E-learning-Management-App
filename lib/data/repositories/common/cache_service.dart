@@ -18,13 +18,13 @@ class CacheService {
   // ========================================
   static const String coursesBoxName = 'courses';
   static const String appCacheBoxName = 'app_cache';
-  
+
   // ========================================
   // GETTER: _coursesBox
   // MÔ TẢ: Truy cập box lưu trữ khóa học
   // ========================================
   Box<CourseModel> get _coursesBox => Hive.box<CourseModel>(coursesBoxName);
-  
+
   // ========================================
   // GETTER: _appCacheBox
   // MÔ TẢ: Truy cập box lưu trữ cache chung
@@ -35,7 +35,7 @@ class CacheService {
   // PHẦN: Course Caching Methods
   // MÔ TẢ: Các phương thức xử lý cache cho khóa học
   // ========================================
-  
+
   // ========================================
   // HÀM: saveCourses()
   // MÔ TẢ: Lưu danh sách khóa học vào cache
@@ -45,7 +45,8 @@ class CacheService {
     for (final course in courses) {
       await _coursesBox.put(course.id.toString(), course);
     }
-    await _appCacheBox.put('courses_last_updated', DateTime.now().toIso8601String());
+    await _appCacheBox.put(
+        'courses_last_updated', DateTime.now().toIso8601String());
   }
 
   // ========================================
@@ -77,7 +78,7 @@ class CacheService {
   // PHẦN: General App Cache Methods
   // MÔ TẢ: Các phương thức xử lý cache chung cho ứng dụng
   // ========================================
-  
+
   // ========================================
   // HÀM: cacheData()
   // MÔ TẢ: Lưu dữ liệu tùy ý vào cache
@@ -110,7 +111,7 @@ class CacheService {
   bool isCacheValid({Duration maxAge = const Duration(hours: 1)}) {
     final lastUpdated = _appCacheBox.get('courses_last_updated');
     if (lastUpdated == null) return false;
-    
+
     final lastUpdatedDateTime = DateTime.parse(lastUpdated);
     final now = DateTime.now();
     return now.difference(lastUpdatedDateTime) < maxAge;

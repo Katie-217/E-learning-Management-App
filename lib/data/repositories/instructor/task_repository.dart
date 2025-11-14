@@ -22,11 +22,12 @@ class TaskRepository {
         final List<dynamic> data = response.data['data'] ?? [];
         final tasks = data
             .map((item) => TaskModel.fromMap(
-                  item['id']?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString(),
+                  item['id']?.toString() ??
+                      DateTime.now().millisecondsSinceEpoch.toString(),
                   item,
                 ))
             .toList();
-        
+
         // Filter tasks to only include those on the selected date
         final selectedDate = DateTime(date.year, date.month, date.day);
         return tasks.where((task) {
@@ -61,7 +62,8 @@ class TaskRepository {
         final List<dynamic> data = response.data['data'] ?? [];
         return data
             .map((item) => TaskModel.fromMap(
-                  item['id']?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString(),
+                  item['id']?.toString() ??
+                      DateTime.now().millisecondsSinceEpoch.toString(),
                   item,
                 ))
             .toList();
@@ -130,7 +132,8 @@ class TaskRepository {
         TaskModel(
           id: '1',
           title: 'Select an app or website and conduct an accessibility audit',
-          description: 'Select an app or website and conduct an accessibility audit',
+          description:
+              'Select an app or website and conduct an accessibility audit',
           dateTime: DateTime(now.year, now.month, now.day, 11, 30),
           isPriority: true,
           type: TaskType.assignment,
@@ -145,16 +148,20 @@ class TaskRepository {
         ),
         TaskModel(
           id: '3',
-          title: 'Choose a real-world app that you use regularly and redesign it',
-          description: 'Choose a real-world app that you use regularly and redesign it',
+          title:
+              'Choose a real-world app that you use regularly and redesign it',
+          description:
+              'Choose a real-world app that you use regularly and redesign it',
           dateTime: DateTime(now.year, now.month, now.day, 10, 0),
           isPriority: false,
           type: TaskType.assignment,
         ),
         TaskModel(
           id: '4',
-          title: 'Address usability issues, improve the user interface, and enhance the overall user experience',
-          description: 'Address usability issues, improve the user interface, and enhance the overall user experience',
+          title:
+              'Address usability issues, improve the user interface, and enhance the overall user experience',
+          description:
+              'Address usability issues, improve the user interface, and enhance the overall user experience',
           dateTime: DateTime(now.year, now.month, now.day, 12, 0),
           isPriority: false,
           type: TaskType.assignment,
@@ -169,4 +176,3 @@ class TaskRepository {
     return _getMockTasksForDate(date);
   }
 }
-

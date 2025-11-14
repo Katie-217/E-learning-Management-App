@@ -25,4 +25,3 @@ class InstructorCalendarTasksPage extends StatelessWidget {
     );
   }
 }
-

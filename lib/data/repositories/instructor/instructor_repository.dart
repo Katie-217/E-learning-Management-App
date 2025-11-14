@@ -30,7 +30,8 @@ class DashboardRepository {
   // TRẢ VỀ: Future<DashboardStats>
   // ========================================
   Future<Map<String, dynamic>> fetchStats(String semesterId) async {
-    final r = await dio.get('/api/instructor/dashboard', queryParameters: {'semesterId': semesterId});
+    final r = await dio.get('/api/instructor/dashboard',
+        queryParameters: {'semesterId': semesterId});
     return Map<String, dynamic>.from(r.data);
   }
 }

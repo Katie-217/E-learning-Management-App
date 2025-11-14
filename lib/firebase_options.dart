@@ -2,7 +2,8 @@
 // Replace the placeholder values with your actual Firebase Web app config
 
 import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
-import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform, kIsWeb;
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, TargetPlatform, kIsWeb;
 
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
@@ -28,13 +29,12 @@ class DefaultFirebaseOptions {
   // Fill these with your real values or re-generate using `flutterfire configure`
   static const FirebaseOptions web = FirebaseOptions(
       apiKey: "AIzaSyADyohRSDQ7XDoGnF4qLzeR4g32oLrbwbc",
-  authDomain: "e-learning-management-79797.firebaseapp.com",
-  projectId: "e-learning-management-79797",
-  storageBucket: "e-learning-management-79797.firebasestorage.app",
-  messagingSenderId: "601468166401",
-  appId: "1:601468166401:web:9c3d5dab0eb2f988c7bb00",
-  measurementId: "G-JQBLRCVK5K"
-  );
+      authDomain: "e-learning-management-79797.firebaseapp.com",
+      projectId: "e-learning-management-79797",
+      storageBucket: "e-learning-management-79797.firebasestorage.app",
+      messagingSenderId: "601468166401",
+      appId: "1:601468166401:web:9c3d5dab0eb2f988c7bb00",
+      measurementId: "G-JQBLRCVK5K");
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyADyohRSDQ7XDoGnF4qLzeR4g32oLrbwbc',
@@ -57,5 +57,3 @@ class DefaultFirebaseOptions {
   static const FirebaseOptions windows = web;
   static const FirebaseOptions linux = web;
 }
-
-

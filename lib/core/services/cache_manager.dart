@@ -31,22 +31,11 @@ class CacheManager {
   // HÀM: getJson()
   // MÔ TẢ: Lấy dữ liệu JSON từ Hive box
   // ========================================
-  static Future<Map<String, dynamic>?> getJson(String boxName, String key) async {
+  static Future<Map<String, dynamic>?> getJson(
+      String boxName, String key) async {
     final box = await Hive.openBox<String>(boxName);
     final str = box.get(key);
     if (str == null) return null;
     return jsonDecode(str) as Map<String, dynamic>;
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-

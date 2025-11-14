@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 class NewTeacherDashboardPrototype extends ConsumerStatefulWidget {
   const NewTeacherDashboardPrototype({super.key});
   @override
   ConsumerState<NewTeacherDashboardPrototype> createState() =>
       _NewTeacherDashboardPrototypeState();
 }
+
 class _NewTeacherDashboardPrototypeState
     extends ConsumerState<NewTeacherDashboardPrototype> {
   String _activeTab = 'dashboard';
@@ -109,9 +111,8 @@ class _NewTeacherDashboardPrototypeState
                   const SizedBox(height: 20),
                   // Stats Grid
                   LayoutBuilder(builder: (context, cons) {
-                    final cross = cons.maxWidth > 900
-                        ? 4
-                        : (cons.maxWidth > 600 ? 2 : 1);
+                    final cross =
+                        cons.maxWidth > 900 ? 4 : (cons.maxWidth > 600 ? 2 : 1);
                     return GridView.count(
                       crossAxisCount: cross,
                       crossAxisSpacing: 12,
@@ -124,10 +125,18 @@ class _NewTeacherDashboardPrototypeState
                             Colors.blue, Colors.blueAccent),
                         _buildStatCard('Active Courses', '5', Icons.book,
                             Colors.green, Colors.greenAccent),
-                        _buildStatCard('Pending Assignments', '23',
-                            Icons.assignment, Colors.orange, Colors.orangeAccent),
-                        _buildStatCard('Avg. Class Score', '85%', Icons.trending_up,
-                            Colors.purple, Colors.purpleAccent),
+                        _buildStatCard(
+                            'Pending Assignments',
+                            '23',
+                            Icons.assignment,
+                            Colors.orange,
+                            Colors.orangeAccent),
+                        _buildStatCard(
+                            'Avg. Class Score',
+                            '85%',
+                            Icons.trending_up,
+                            Colors.purple,
+                            Colors.purpleAccent),
                       ],
                     );
                   }),
@@ -184,6 +193,7 @@ class _NewTeacherDashboardPrototypeState
       ),
     );
   }
+
   Widget _buildSidebar() {
     return ListView(
       padding: const EdgeInsets.symmetric(vertical: 12),
@@ -221,6 +231,7 @@ class _NewTeacherDashboardPrototypeState
       ],
     );
   }
+
   Widget _buildSidebarItem(String label, IconData icon, String tabKey) {
     final isActive = _activeTab == tabKey;
     return Container(
@@ -230,14 +241,12 @@ class _NewTeacherDashboardPrototypeState
             ? Colors.indigo[600]?.withOpacity(0.3)
             : Colors.transparent,
         borderRadius: BorderRadius.circular(8),
-        border: isActive
-            ? Border.all(color: Colors.indigo[600]!, width: 1)
-            : null,
+        border:
+            isActive ? Border.all(color: Colors.indigo[600]!, width: 1) : null,
       ),
       child: ListTile(
         leading: Icon(icon,
-            color: isActive ? Colors.indigo[400] : Colors.grey[400],
-            size: 20),
+            color: isActive ? Colors.indigo[400] : Colors.grey[400], size: 20),
         title: Text(
           label,
           style: TextStyle(
@@ -252,6 +261,7 @@ class _NewTeacherDashboardPrototypeState
       ),
     );
   }
+
   Widget _buildStatCard(String title, String value, IconData icon,
       Color gradientStart, Color gradientEnd) {
     return Container(
@@ -303,6 +313,7 @@ class _NewTeacherDashboardPrototypeState
       ),
     );
   }
+
   Widget _buildProgressOverview() {
     return Container(
       width: double.infinity,
@@ -351,6 +362,7 @@ class _NewTeacherDashboardPrototypeState
       ),
     );
   }
+
   Widget _buildProgressItem(String label, String current, String total,
       double percentage, Color color) {
     return Column(
@@ -385,6 +397,7 @@ class _NewTeacherDashboardPrototypeState
       ],
     );
   }
+
   Widget _buildMyCoursesSection() {
     return Container(
       width: double.infinity,
@@ -406,7 +419,8 @@ class _NewTeacherDashboardPrototypeState
             ),
           ),
           const SizedBox(height: 12),
-          _buildCourseCard('CS450', 'Advanced Web Development', 45, Colors.blue),
+          _buildCourseCard(
+              'CS450', 'Advanced Web Development', 45, Colors.blue),
           const SizedBox(height: 8),
           _buildCourseCard('CS380', 'Database Systems', 38, Colors.green),
           const SizedBox(height: 8),
@@ -415,7 +429,9 @@ class _NewTeacherDashboardPrototypeState
       ),
     );
   }
-  Widget _buildCourseCard(String code, String title, int students, Color color) {
+
+  Widget _buildCourseCard(
+      String code, String title, int students, Color color) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -478,6 +494,7 @@ class _NewTeacherDashboardPrototypeState
       ),
     );
   }
+
   Widget _buildCalendarSection() {
     return Container(
       width: double.infinity,
@@ -510,9 +527,7 @@ class _NewTeacherDashboardPrototypeState
               28,
               (index) => Container(
                 decoration: BoxDecoration(
-                  color: index == 14
-                      ? Colors.indigo[600]
-                      : Colors.grey[800],
+                  color: index == 14 ? Colors.indigo[600] : Colors.grey[800],
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Center(
@@ -531,6 +546,7 @@ class _NewTeacherDashboardPrototypeState
       ),
     );
   }
+
   Widget _buildUpcomingTasksSection() {
     return Container(
       width: double.infinity,
@@ -556,11 +572,13 @@ class _NewTeacherDashboardPrototypeState
           const SizedBox(height: 8),
           _buildTaskItem('Prepare Lecture Notes', 'CS380', Colors.green, false),
           const SizedBox(height: 8),
-          _buildTaskItem('Review Student Submissions', 'CS420', Colors.purple, false),
+          _buildTaskItem(
+              'Review Student Submissions', 'CS420', Colors.purple, false),
         ],
       ),
     );
   }
+
   Widget _buildTaskItem(
       String title, String course, Color color, bool isUrgent) {
     return Container(

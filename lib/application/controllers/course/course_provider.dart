@@ -5,7 +5,38 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:elearning_management_app/domain/models/course_model.dart';
-import 'package:elearning_management_app/data/repositories/course/firestore_course_service.dart';
+import 'package:elearning_management_app/data/repositories/auth/auth_repository.dart';
+import 'course_student_controller.dart';
+import 'course_instructor_controller.dart';
+import '../../../core/config/users-role.dart';
+
+// Repository Providers
+final authRepositoryProvider = Provider<AuthRepository>((ref) {
+  return AuthRepository.defaultClient();
+});
+
+// Controller Providers - Role-based
+final courseStudentControllerProvider =
+    Provider<CourseStudentController>((ref) {
+  return CourseStudentController(
+    authRepository: ref.read(authRepositoryProvider),
+  );
+});
+
+final courseInstructorControllerProvider =
+    Provider<CourseInstructorController>((ref) {
+  return CourseInstructorController(
+    authRepository: ref.read(authRepositoryProvider),
+  );
+});
+
+// Role-based Controller Provider
+final courseControllerProvider = Provider<dynamic>((ref) {
+  // This provider will be determined by user role at runtime
+  // UI should use specific student/instructor providers instead
+  throw UnimplementedError(
+      'Use courseStudentControllerProvider or courseInstructorControllerProvider directly');
+});
 
 // Course state management
 
@@ -48,13 +79,16 @@ class CourseState {
 // StateNotifier quản lý logic nghiệp vụ cho khóa học
 
 // ========================================
-// CLASS: CourseNotifier
-// MÔ TẢ: StateNotifier quản lý logic nghiệp vụ cho khóa học
+// CLASS: CourseStudentNotifier
+// MÔ TẢ: StateNotifier quản lý logic nghiệp vụ cho Student courses
 // ========================================
-class CourseNotifier extends StateNotifier<CourseState> {
-  // Loại bỏ unused services để tuân thủ Clean Architecture
+class CourseStudentNotifier extends StateNotifier<CourseState> {
+  final CourseStudentController _courseController;
 
-  CourseNotifier() : super(CourseState());
+  CourseStudentNotifier({
+    required CourseStudentController courseController,
+  })  : _courseController = courseController,
+        super(CourseState());
 
 //  Tải danh sách khóa học từ cache hoặc API
 
@@ -68,10 +102,11 @@ class CourseNotifier extends StateNotifier<CourseState> {
 
       // Đã loại bỏ cache logic để tuân thủ Clean Architecture
 
-      // Gọi dữ liệu từ Firestore
+      // Gọi dữ liệu từ CourseController theo Clean Architecture
       print('DEBUG: ========== COURSE PROVIDER LOADING ==========');
       try {
-        courses = await FirestoreCourseService.getCourses();
+        // Sử dụng CourseController để lấy my courses (bao gồm auth + business logic)
+        courses = await _courseController.getMyCourses();
         print('DEBUG: ✅ Provider received ${courses.length} courses');
 
         if (courses.isNotEmpty) {
@@ -161,10 +196,24 @@ class CourseNotifier extends StateNotifier<CourseState> {
 // Provider chính cho việc quản lý khóa học
 
 // ========================================
-// PROVIDER: courseProvider
-// MÔ TẢ: Provider chính cho việc quản lý khóa học - Clean Architecture
+// PROVIDERS: Role-based Course Providers
+// MÔ TẢ: Providers theo role cho việc quản lý khóa học - Clean Architecture
 // ========================================
-final courseProvider =
-    StateNotifierProvider<CourseNotifier, CourseState>((ref) {
-  return CourseNotifier();
+
+// Student Course Provider
+final courseStudentProvider =
+    StateNotifierProvider<CourseStudentNotifier, CourseState>((ref) {
+  return CourseStudentNotifier(
+    courseController: ref.read(courseStudentControllerProvider),
+  );
 });
+
+// Instructor Course Provider - will be implemented separately
+// final courseInstructorProvider = StateNotifierProvider<CourseInstructorNotifier, CourseState>((ref) {
+//   return CourseInstructorNotifier(
+//     courseController: ref.read(courseInstructorControllerProvider),
+//   );
+// });
+
+// Legacy provider for backward compatibility - delegates to student provider
+final courseProvider = courseStudentProvider;

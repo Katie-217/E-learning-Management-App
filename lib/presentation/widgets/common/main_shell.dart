@@ -38,7 +38,7 @@ class _MainShellState extends State<MainShell> {
             .collection('users')
             .doc(user.uid)
             .get();
-        
+
         if (doc.exists) {
           final data = doc.data()!;
           setState(() {
@@ -106,7 +106,8 @@ class _MainShellState extends State<MainShell> {
   }
 
   Widget _buildCurrentPage() {
-    print('DEBUG: _buildCurrentPage called with activeKey = $activeKey'); // Debug log
+    print(
+        'DEBUG: _buildCurrentPage called with activeKey = $activeKey'); // Debug log
     switch (activeKey) {
       case 'dashboard':
         print('DEBUG: Building StudentDashboardPage'); // Debug log
@@ -137,13 +138,15 @@ class _MainShellState extends State<MainShell> {
             child: const Icon(Icons.menu_book),
           ),
           const SizedBox(width: 12),
-          const Text('E-Learning', style: TextStyle(fontWeight: FontWeight.w600)),
+          const Text('E-Learning',
+              style: TextStyle(fontWeight: FontWeight.w600)),
         ]),
         actions: [
           SizedBox(
             width: 300,
             child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12),
+              padding:
+                  const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12),
               child: TextField(
                 style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
@@ -161,7 +164,8 @@ class _MainShellState extends State<MainShell> {
               ),
             ),
           ),
-          IconButton(onPressed: () {}, icon: const Icon(Icons.notifications_none)),
+          IconButton(
+              onPressed: () {}, icon: const Icon(Icons.notifications_none)),
           Padding(
             padding: const EdgeInsets.only(right: 12),
             child: Row(children: [
@@ -185,5 +189,3 @@ class _MainShellState extends State<MainShell> {
     );
   }
 }
-
-

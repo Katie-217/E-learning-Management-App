@@ -55,14 +55,15 @@ class CourseFilterWidget extends ConsumerWidget {
                       isExpanded: true,
                       dropdownColor: AppColors.bgInput,
                       style: const TextStyle(color: Colors.white),
-                      icon: const Icon(Icons.arrow_drop_down, color: Colors.white),
-                      items: courseNotifier.getAvailableSemesters().map((semester) {
+                      icon: const Icon(Icons.arrow_drop_down,
+                          color: Colors.white),
+                      items: courseNotifier
+                          .getAvailableSemesters()
+                          .map((semester) {
                         return DropdownMenuItem<String>(
                           value: semester,
                           child: Text(
-                            semester == 'All' 
-                                ? 'Tất cả học kì' 
-                                : semester,
+                            semester == 'All' ? 'Tất cả học kì' : semester,
                             style: const TextStyle(color: Colors.white),
                           ),
                         );
@@ -78,7 +79,7 @@ class CourseFilterWidget extends ConsumerWidget {
               ],
             ),
           ),
-          
+
           // Hiển thị thống kê - bên phải
           SizedBox(
             width: 200,

@@ -12,4 +12,3 @@ final instructorProfileProvider =
   final repository = ref.watch(instructorProfileRepositoryProvider);
   return repository.fetchInstructorProfile();
 });
-

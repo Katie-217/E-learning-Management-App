@@ -1,77 +1,155 @@
-// import 'package:your_app/core/services/firestore_service.dart';
+// ========================================
+// FILE: group_repository.dart
+// MÔ TẢ: Repository cho Group - Sub-collection trong course_of_study
+// ========================================
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../../../domain/models/group_model.dart';
 
 class GroupRepository {
-  // final _firestore = FirestoreService.instance;
+  static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  static const String _courseCollectionName = 'course_of_study';
+  static const String _groupSubCollectionName = 'groups';
 
-  // Mock data cho UI test
-  final List<Map<String, dynamic>> _mockGroups = [
-    {
-      "id": "G1",
-      "name": "Group 1",
-      "course": "IT4409 - Web Programming",
-      "members": [
-        {"id": "S1", "name": "Nguyen Van A"},
-        {"id": "S2", "name": "Tran Thi B"},
-      ],
-      "teacher": "Dr. Nguyen Van A",
-    },
-    {
-      "id": "G2",
-      "name": "Group 2",
-      "course": "IT4409 - Web Programming",
-      "members": [
-        {"id": "S3", "name": "Le Van C"},
-        {"id": "S4", "name": "Pham Thi D"},
-      ],
-      "teacher": "Dr. Nguyen Van A",
+  // ========================================
+  // HÀM: getGroupsByCourse
+  // MÔ TẢ: Lấy groups từ sub-collection trong course_of_study
+  // ========================================
+  static Future<List<GroupModel>> getGroupsByCourse(String courseId) async {
+    try {
+      print('DEBUG: Fetching groups for course: $courseId');
+
+      final QuerySnapshot snapshot = await _firestore
+          .collection(_courseCollectionName)
+          .doc(courseId)
+          .collection(_groupSubCollectionName)
+          .orderBy('name')
+          .get();
+
+      print('DEBUG: Found ${snapshot.docs.length} groups');
+
+      return snapshot.docs
+          .map((doc) => GroupModel.fromMap({
+                ...doc.data() as Map<String, dynamic>,
+                'id': doc.id,
+              }))
+          .toList();
+    } catch (e) {
+      print('DEBUG: Error fetching groups: $e');
+      return [];
     }
-  ];
-
-  Future<List<Map<String, dynamic>>> getGroups({bool useMock = true}) async {
-    if (useMock) {
-      await Future.delayed(const Duration(milliseconds: 300));
-      return _mockGroups;
-    }
-
-    // 🔥 Real Firebase
-    // final docs = await _firestore.getCollection(collectionPath: 'groups');
-    // return docs.map((d) => d.data() as Map<String, dynamic>).toList();
-    return [];
   }
 
-  Future<void> addGroup(Map<String, dynamic> data, {bool useMock = true}) async {
-    if (useMock) {
-      _mockGroups.add(data);
-      return;
-    }
+  // ========================================
+  // HÀM: getAllGroupsForUser
+  // MÔ TẢ: Lấy tất cả groups của user từ các course đã enroll
+  // ========================================
+  static Future<List<GroupModel>> getAllGroupsForUser() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        print('DEBUG: No user logged in for groups');
+        return [];
+      }
 
-    // 🔥 Firestore
-    // await _firestore.addDocument(collectionPath: 'groups', data: data);
+      // Lấy danh sách courses mà user đã enroll
+      final userCoursesSnapshot = await _firestore
+          .collection(_courseCollectionName)
+          .where('students', arrayContains: user.uid)
+          .get();
+
+      List<GroupModel> allGroups = [];
+
+      for (var courseDoc in userCoursesSnapshot.docs) {
+        final courseGroups = await getGroupsByCourse(courseDoc.id);
+        // Lọc chỉ groups mà user tham gia
+        final userGroups = courseGroups
+            .where((group) => group.studentIds.contains(user.uid))
+            .toList();
+        allGroups.addAll(userGroups);
+      }
+
+      print('DEBUG: Total groups for user: ${allGroups.length}');
+      return allGroups;
+    } catch (e) {
+      print('DEBUG: Error fetching user groups: $e');
+      return [];
+    }
   }
 
-  Future<void> addMember(String groupId, Map<String, dynamic> member, {bool useMock = true}) async {
-    if (useMock) {
-      final g = _mockGroups.firstWhere((g) => g["id"] == groupId);
-      (g["members"] as List).add(member);
-      return;
-    }
+  // ========================================
+  // HÀM: getGroupById
+  // MÔ TẢ: Lấy group cụ thể từ course và group ID
+  // ========================================
+  static Future<GroupModel?> getGroupById(
+      String courseId, String groupId) async {
+    try {
+      final DocumentSnapshot doc = await _firestore
+          .collection(_courseCollectionName)
+          .doc(courseId)
+          .collection(_groupSubCollectionName)
+          .doc(groupId)
+          .get();
 
-    // 🔥 Firestore
-    // await _firestore.updateDocument(collectionPath: 'groups', docId: groupId, data: {
-    //   "members": FieldValue.arrayUnion([member])
-    // });
+      if (doc.exists) {
+        return GroupModel.fromMap({
+          ...doc.data() as Map<String, dynamic>,
+          'id': doc.id,
+        });
+      }
+      return null;
+    } catch (e) {
+      print('DEBUG: Error fetching group by ID: $e');
+      return null;
+    }
   }
 
-  Future<void> removeMember(String groupId, String memberId, {bool useMock = true}) async {
-    if (useMock) {
-      final g = _mockGroups.firstWhere((g) => g["id"] == groupId);
-      (g["members"] as List).removeWhere((m) => m["id"] == memberId);
-      return;
-    }
+  // ========================================
+  // HÀM: addMemberToGroup
+  // MÔ TẢ: Thêm student vào group
+  // ========================================
+  static Future<bool> addMemberToGroup(
+      String courseId, String groupId, String studentId) async {
+    try {
+      await _firestore
+          .collection(_courseCollectionName)
+          .doc(courseId)
+          .collection(_groupSubCollectionName)
+          .doc(groupId)
+          .update({
+        'studentIds': FieldValue.arrayUnion([studentId])
+      });
 
-    // 🔥 Firestore
-    // await _firestore.updateDocument(collectionPath: 'groups', docId: groupId, data: {
-    //   "members": FieldValue.arrayRemove([...])
-    // });
+      print('DEBUG: Student added to group successfully');
+      return true;
+    } catch (e) {
+      print('DEBUG: Error adding student to group: $e');
+      return false;
+    }
+  }
+
+  // ========================================
+  // HÀM: removeMemberFromGroup
+  // MÔ TẢ: Xóa student khỏi group
+  // ========================================
+  static Future<bool> removeMemberFromGroup(
+      String courseId, String groupId, String studentId) async {
+    try {
+      await _firestore
+          .collection(_courseCollectionName)
+          .doc(courseId)
+          .collection(_groupSubCollectionName)
+          .doc(groupId)
+          .update({
+        'studentIds': FieldValue.arrayRemove([studentId])
+      });
+
+      print('DEBUG: Student removed from group successfully');
+      return true;
+    } catch (e) {
+      print('DEBUG: Error removing student from group: $e');
+      return false;
+    }
   }
 }

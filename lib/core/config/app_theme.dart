@@ -39,7 +39,3 @@ class AppTheme {
         visualDensity: VisualDensity.adaptivePlatformDensity,
       );
 }
-
-
-
-

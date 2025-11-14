@@ -177,7 +177,8 @@ class TaskListWidget extends ConsumerWidget {
     }
   }
 
-  Widget _buildTaskCard(BuildContext context, TaskModel task, {required bool isPriority}) {
+  Widget _buildTaskCard(BuildContext context, TaskModel task,
+      {required bool isPriority}) {
     final timeFormat = DateFormat('h:mm a').format(task.dateTime);
     final dateFormat = DateFormat('EEEE').format(task.dateTime);
     final isToday = _isToday(task.dateTime);
@@ -247,4 +248,3 @@ class TaskListWidget extends ConsumerWidget {
         date.day == now.day;
   }
 }
-
