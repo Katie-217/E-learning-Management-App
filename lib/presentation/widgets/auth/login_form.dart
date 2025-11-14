@@ -8,7 +8,6 @@ import '../../../../core/config/users-role.dart';
 import '../../../../data/repositories/auth/auth_repository.dart';
 import '../../../../data/repositories/auth/user_session_service.dart';
 
-import 'auth_form_widgets.dart';
 import '../common/main_shell.dart';
 import '../../screens/instructor/instructor_dashboard.dart';
 
@@ -25,12 +24,29 @@ class _LoginFormState extends State<LoginForm> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _emailFocusNode = FocusNode();
+  final _passwordFocusNode = FocusNode();
   bool isLoading = false;
+  bool rememberMe = false;
+  bool _obscurePassword = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _emailFocusNode.addListener(() {
+      setState(() {});
+    });
+    _passwordFocusNode.addListener(() {
+      setState(() {});
+    });
+  }
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _emailFocusNode.dispose();
+    _passwordFocusNode.dispose();
     super.dispose();
   }
 
@@ -53,28 +69,25 @@ class _LoginFormState extends State<LoginForm> {
       // Lưu session
       await UserSessionService.saveUserSession(userModel);
 
-      print("🎯 Điều hướng với role: ${userModel.role.name}");
+      if (!mounted) return;
 
       // Navigation dựa trên UserModel role
       if (userModel.role == UserRole.instructor) {
-        if (mounted) {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const InstructorDashboard()),
-          );
-        }
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const InstructorDashboard()),
+        );
       } else {
-        if (mounted) {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const MainShell()),
-          );
-        }
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const MainShell()),
+        );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-                'Lỗi đăng nhập: ${e.toString().replaceAll("Exception: ", "")}'),
+              'Login error: ${e.toString().replaceAll("Exception: ", "")}',
+            ),
             backgroundColor: Colors.red,
           ),
         );
@@ -84,131 +97,228 @@ class _LoginFormState extends State<LoginForm> {
     }
   }
 
+  InputDecoration _inputDecoration({
+    required String hint,
+    IconData? icon,
+    bool isFocused = false,
+  }) {
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: TextStyle(
+        color: Colors.white.withOpacity(0.6),
+      ),
+      filled: true,
+      fillColor: Colors.white.withOpacity(0.12),
+      prefixIcon: icon != null
+          ? Icon(
+              icon,
+              color: Colors.white.withOpacity(0.8),
+              size: 24,
+            )
+          : null,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide(
+          color: Colors.white.withOpacity(0.25),
+        ),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide(
+          color: Colors.white.withOpacity(0.2),
+        ),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide(
+          color: Colors.white.withOpacity(0.5),
+          width: 1.5,
+        ),
+      ),
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: 16,
+        vertical: 16,
+      ),
+    );
+  }
+
+  TextStyle get _labelStyle => TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+        color: Colors.white.withOpacity(0.8),
+      );
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(32),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Tiêu đề
-            Text(
-              'Đăng nhập',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: widget.role.primaryColor,
-              ),
-              textAlign: TextAlign.center,
+    return Form(
+      key: _formKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('Email', style: _labelStyle),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _emailController,
+            focusNode: _emailFocusNode,
+            keyboardType: TextInputType.emailAddress,
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Please enter your email';
+              }
+              if (!value.contains('@')) {
+                return 'Invalid email';
+              }
+              return null;
+            },
+            style: const TextStyle(color: Colors.white),
+            cursorColor: Colors.white,
+            decoration: _inputDecoration(
+              hint: 'Email ID',
+              icon: Icons.alternate_email_rounded,
+              isFocused: _emailFocusNode.hasFocus,
             ),
-            const SizedBox(height: 32),
-
-            // Email field
-            AuthTextField(
-              controller: _emailController,
-              hintText: 'Email',
-              keyboardType: TextInputType.emailAddress,
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Vui lòng nhập email';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-
-            // Password field
-            AuthTextField(
-              controller: _passwordController,
-              hintText: 'Mật khẩu',
-              obscureText: true,
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Vui lòng nhập mật khẩu';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 24),
-
-            // Login button
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                onPressed: isLoading ? null : _handleLogin,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: widget.role.primaryColor,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(25),
-                  ),
+          ),
+          const SizedBox(height: 20),
+          Text('Password', style: _labelStyle),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _passwordController,
+            focusNode: _passwordFocusNode,
+            obscureText: _obscurePassword,
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Please enter your password';
+              }
+              if (value.length < 6) {
+                return 'Password must be at least 6 characters';
+              }
+              return null;
+            },
+            style: const TextStyle(color: Colors.white),
+            cursorColor: Colors.white,
+            decoration: _inputDecoration(
+              hint: 'Password',
+              icon: Icons.lock_outline_rounded,
+              isFocused: _passwordFocusNode.hasFocus,
+            ).copyWith(
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _obscurePassword
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
+                  color: Colors.white.withOpacity(0.7),
                 ),
-                child: isLoading
-                    ? Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: const [
-                          SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
-                            ),
-                          ),
-                          SizedBox(width: 8),
-                          Text(
-                            'Đang đăng nhập...',
-                            style: TextStyle(color: Colors.white, fontSize: 14),
-                          ),
-                        ],
-                      )
-                    : const Text(
-                        'Đăng nhập',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                onPressed: () {
+                  setState(() {
+                    _obscurePassword = !_obscurePassword;
+                  });
+                },
               ),
             ),
-            const SizedBox(height: 16),
-
-            // ========================================
-            // PHẦN: Thông tin hệ thống đóng
-            // ========================================
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey.shade300),
-              ),
-              child: Column(
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
                 children: [
-                  Icon(
-                    Icons.info_outline,
-                    color: Colors.grey.shade600,
-                    size: 20,
+                  SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: Checkbox(
+                      value: rememberMe,
+                      onChanged: (value) {
+                        setState(() {
+                          rememberMe = value ?? false;
+                        });
+                      },
+                      activeColor: Colors.white,
+                      checkColor: widget.role.primaryColor,
+                      side: BorderSide(
+                        color: Colors.white.withOpacity(0.7),
+                        width: 1.1,
+                      ),
+                      fillColor: MaterialStateProperty.resolveWith(
+                        (states) => states.contains(MaterialState.selected)
+                            ? Colors.white.withOpacity(0.9)
+                            : Colors.transparent,
+                      ),
+                    ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(width: 8),
                   Text(
-                    'Hệ thống đóng - Chỉ đăng nhập bằng tài khoản được cấp',
+                    'Remember me',
                     style: TextStyle(
-                      color: Colors.grey.shade700,
+                      color: Colors.white.withOpacity(0.7),
                       fontSize: 12,
                     ),
-                    textAlign: TextAlign.center,
                   ),
                 ],
               ),
+              TextButton(
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Reset password feature coming soon!'),
+                    ),
+                  );
+                },
+                child: Text(
+                  'Forgot password?',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.85),
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 28),
+          SizedBox(
+            height: 50,
+            child: ElevatedButton(
+              onPressed: isLoading ? null : _handleLogin,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: widget.role.primaryColor,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                elevation: 0,
+              ),
+              child: isLoading
+                  ? Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: const [
+                        SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.black87),
+                          ),
+                        ),
+                        SizedBox(width: 10),
+                        Text(
+                          'Logging in...',
+                          style: TextStyle(
+                            color: Colors.black87,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    )
+                  : const Text(
+                      'Login',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 // import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:elearning_management_app/core/config/users-role.dart';
@@ -15,212 +16,230 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   late final LoginController _controller;
   final _formKey = GlobalKey<FormState>();
+  final _emailFocusNode = FocusNode();
+  final _passwordFocusNode = FocusNode();
 
   @override
   void initState() {
     super.initState();
     _controller = LoginController();
+    _emailFocusNode.addListener(() {
+      setState(() {});
+    });
+    _passwordFocusNode.addListener(() {
+      setState(() {});
+    });
     // _controller = ref.read(loginControllerProvider);
   }
 
+  @override
+  void dispose() {
+    _emailFocusNode.dispose();
+    _passwordFocusNode.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-
     return Scaffold(
-      resizeToAvoidBottomInset: true, // Cho phép scroll khi bàn phím bật
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              widget.userRole.primaryColor,
-              widget.userRole.primaryColor.withOpacity(0.7),
-            ],
+      backgroundColor: Colors.black,
+      resizeToAvoidBottomInset: true,
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.asset(
+            'assets/icons/background-roler.png',
+            fit: BoxFit.cover,
           ),
-        ),
-        child: SafeArea(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              return SingleChildScrollView(
-                physics: const ClampingScrollPhysics(),
+          Container(
+            color: Colors.black.withOpacity(0.55),
+          ),
+          SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                physics: const BouncingScrollPhysics(),
                 child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    minHeight: constraints.maxHeight,
-                  ),
-                  child: IntrinsicHeight(
-                    child: Column(
-                      children: [
-                        // Top header
-                        Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Row(
-                            children: [
-                              IconButton(
-                                onPressed: () => Navigator.pop(context),
-                                icon: const Icon(Icons.arrow_back,
-                                    color: Colors.white),
-                              ),
-                            ],
-                          ),
+                  constraints: const BoxConstraints(maxWidth: 420),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(28),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 32,
+                          vertical: 36,
                         ),
-                        const SizedBox(height: 20),
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            shape: BoxShape.circle,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(28),
+                          color: Colors.white.withOpacity(0.12),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.25),
                           ),
-                          child: const Icon(
-                            Icons.school,
-                            color: Colors.white,
-                            size: 40,
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        const Text(
-                          'Welcome to',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 24,
-                            fontWeight: FontWeight.w300,
-                          ),
-                        ),
-                        const Text(
-                          'E-learning App',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 30),
-
-                        // FORM
-                        Container(
-                          width: double.infinity,
-                          margin: const EdgeInsets.only(top: 20),
-                          padding: const EdgeInsets.all(24),
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.only(
-                              topLeft: Radius.circular(30),
-                              topRight: Radius.circular(30),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.35),
+                              blurRadius: 30,
+                              offset: const Offset(0, 20),
                             ),
-                          ),
-                          child: Form(
-                            key: _formKey,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Icon(
-                                      widget.userRole.icon,
-                                      color: widget.userRole.primaryColor,
-                                      size: 24,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      widget.userRole.displayName,
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w600,
-                                        color: widget.userRole.primaryColor,
+                          ],
+                        ),
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  IconButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    icon: const Icon(Icons.arrow_back_ios_new),
+                                    color: Colors.white.withOpacity(0.9),
+                                  ),
+                                  Icon(
+                                    widget.userRole.icon,
+                                    color: Colors.white.withOpacity(0.9),
+                                    size: 32,
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Login',
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.95),
+                                  fontSize: 30,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Log in to continue experiencing the E-learning system',
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.75),
+                                  fontSize: 14,
+                                ),
+                              ),
+                              const SizedBox(height: 32),
+                              _buildInputField(
+                                label: 'Email',
+                                hint: 'Email ID',
+                                controller: _controller.emailController,
+                                validator: _controller.validateEmail,
+                                icon: Icons.alternate_email_rounded,
+                                focusNode: _emailFocusNode,
+                              ),
+                              const SizedBox(height: 20),
+                              _buildInputField(
+                                label: 'Password',
+                                hint: 'Password',
+                                controller: _controller.passwordController,
+                                isPassword: true,
+                                validator: _controller.validatePassword,
+                                icon: Icons.lock_outline_rounded,
+                                focusNode: _passwordFocusNode,
+                              ),
+                              const SizedBox(height: 16),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Container(
+                                        width: 16,
+                                        height: 16,
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(4),
+                                          border: Border.all(
+                                            color: Colors.white.withOpacity(0.7),
+                                          ),
+                                        ),
                                       ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 24),
-                                _buildInputField(
-                                  label: 'Email',
-                                  hint: 'Enter your email',
-                                  controller: _controller.emailController,
-                                  validator: _controller.validateEmail,
-                                ),
-                                const SizedBox(height: 20),
-                                _buildInputField(
-                                  label: 'Password',
-                                  hint: 'Enter your password',
-                                  controller: _controller.passwordController,
-                                  isPassword: true,
-                                  validator: _controller.validatePassword,
-                                ),
-                                const SizedBox(height: 10),
-                                Align(
-                                  alignment: Alignment.centerRight,
-                                  child: TextButton(
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'Remember me',
+                                        style: TextStyle(
+                                          color: Colors.white.withOpacity(0.7),
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  TextButton(
                                     onPressed: () {
                                       // _controller.resetPassword(context, ref);
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
+                                      ScaffoldMessenger.of(context).showSnackBar(
                                         const SnackBar(
-                                            content: Text(
-                                                'Reset password feature coming soon')),
+                                          content: Text(
+                                            'Reset password feature coming soon',
+                                          ),
+                                        ),
                                       );
                                     },
                                     child: Text(
                                       'Forgot password?',
                                       style: TextStyle(
-                                        color: Colors.grey[600],
-                                        fontSize: 14,
+                                        color: Colors.white.withOpacity(0.85),
+                                        fontSize: 12,
                                       ),
                                     ),
                                   ),
-                                ),
-                                const SizedBox(height: 24),
-                                SizedBox(
-                                  width: double.infinity,
-                                  height: 50,
-                                  child: ElevatedButton(
-                                    onPressed: () {
-                                      // _controller.signIn(context, ref, _formKey);
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        const SnackBar(
-                                            content: Text(
-                                                'Login feature coming soon')),
-                                      );
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor:
-                                          widget.userRole.primaryColor,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(25),
+                                ],
+                              ),
+                              const SizedBox(height: 28),
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton(
+                                  onPressed: () {
+                                    // _controller.signIn(context, ref, _formKey);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Login feature coming soon'),
                                       ),
-                                      elevation: 2,
+                                    );
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.white,
+                                    foregroundColor: widget.userRole.primaryColor,
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 16,
                                     ),
-                                    child: const Text(
-                                      'Login',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                      ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(30),
+                                    ),
+                                    elevation: 0,
+                                  ),
+                                  child: const Text(
+                                    'Login',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
                                     ),
                                   ),
                                 ),
-                                const SizedBox(height: 20),
-                                Center(
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      // REMOVED: "Don't have an account?" text - Hệ thống đóng
-                                    ],
+                              ),
+                              const SizedBox(height: 18),
+                              Center(
+                                child: Text(
+                                  'Don’t have an account? Contact admin',
+                                  style: TextStyle(
+                                    color: Colors.white.withOpacity(0.7),
+                                    fontSize: 12,
                                   ),
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
                         ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
-              );
-            },
+              ),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -229,46 +248,71 @@ class _LoginPageState extends State<LoginPage> {
     required String label,
     required String hint,
     required TextEditingController controller,
+    IconData? icon,
     bool isPassword = false,
     String? Function(String?)? validator,
+    FocusNode? focusNode,
   }) {
+    final isFocused = focusNode?.hasFocus ?? false;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: Colors.black87,
+            fontWeight: FontWeight.w600,
+            color: Colors.white.withOpacity(0.8),
           ),
         ),
         const SizedBox(height: 8),
         TextFormField(
           controller: controller,
+          focusNode: focusNode,
           obscureText: isPassword,
           validator: validator,
+          cursorColor: Colors.white,
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: TextStyle(color: Colors.grey[400]),
+            hintStyle: TextStyle(
+              color: Colors.white.withOpacity(0.6),
+            ),
             filled: true,
-            fillColor: Colors.grey[50],
+            fillColor: Colors.white.withOpacity(0.12),
+            prefixIcon: icon != null
+                ? Icon(
+                    icon,
+                    color: Colors.white.withOpacity(0.8),
+                    size: 24,
+                  )
+                : null,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide(color: Colors.grey[200]!),
+              borderSide: BorderSide(
+                color: Colors.white.withOpacity(0.25),
+              ),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide(color: Colors.grey[200]!),
+              borderSide: BorderSide(
+                color: Colors.white.withOpacity(0.2),
+              ),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide(color: widget.userRole.primaryColor),
+              borderSide: BorderSide(
+                color: Colors.white.withOpacity(0.5),
+                width: 1.5,
+              ),
             ),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
               vertical: 16,
             ),
+          ),
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 14,
           ),
         ),
       ],

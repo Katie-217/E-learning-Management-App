@@ -3,6 +3,7 @@
 // MÔ TẢ: Màn hình đăng nhập với hiệu ứng overlay - HỆ THỐNG ĐÓNG
 // ========================================
 
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:elearning_management_app/core/config/users-role.dart';
 import 'package:elearning_management_app/presentation/widgets/auth/login_form.dart';
@@ -26,143 +27,106 @@ class AuthOverlayScreen extends StatefulWidget {
 // MÔ TẢ: State quản lý animation và logic cho màn hình xác thực
 // ========================================
 class _AuthOverlayScreenState extends State<AuthOverlayScreen> {
-  // ========================================
-  // MÔ TẢ: Hệ thống đóng - CHỈ có đăng nhập, KHÔNG có đăng ký công khai
-  // ========================================
-
-  // ========================================
-  // HÀM: build()
-  // MÔ TẢ: Xây dựng giao diện màn hình xác thực
-  // ========================================
   @override
   Widget build(BuildContext context) {
     final role = widget.initialRole;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF003300).withOpacity(0.9),
+      backgroundColor: Colors.black,
       body: Stack(
+        fit: StackFit.expand,
         children: [
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final isWide = constraints.maxWidth >= 720;
-              return Center(
-                child: Container(
-                  width: isWide ? 700 : constraints.maxWidth,
-                  height: isWide ? 500 : constraints.maxHeight,
-                  margin: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  clipBehavior: Clip.antiAlias,
-                  child: Row(
-                    children: [
-                      // ========================================
-                      // PHẦN: Info Panel (Bên trái)
-                      // ========================================
-                      Expanded(
-                        flex: 1,
-                        child: _InfoPanel(role: role),
+          Image.asset(
+            'assets/icons/background-roler.png',
+            fit: BoxFit.cover,
+          ),
+          Container(
+            color: Colors.black.withOpacity(0.55),
+          ),
+          SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                physics: const BouncingScrollPhysics(),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 420),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(28),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 32,
+                          vertical: 36,
+                        ),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(28),
+                          color: Colors.white.withOpacity(0.12),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.25),
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.35),
+                              blurRadius: 30,
+                              offset: const Offset(0, 20),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Align(
+                              alignment: Alignment.center,
+                              child: Icon(
+                                role.icon,
+                                color: Colors.white.withOpacity(0.9),
+                                size: 32,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Login',
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.95),
+                                fontSize: 30,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Log in to continue experiencing the E-learning system',
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.75),
+                                fontSize: 14,
+                              ),
+                            ),
+                            const SizedBox(height: 32),
+                            LoginForm(role: role),
+                            const SizedBox(height: 18),
+                            Center(
+                              child: Text(
+                                'Closed system - only for granted accounts',
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.7),
+                                  fontSize: 12,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      // ========================================
-                      // PHẦN: Login Form (Bên phải)
-                      // ========================================
-                      Expanded(
-                        flex: 1,
-                        child: LoginForm(role: role),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
-              );
-            },
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 }
-
-// ========================================
-// CLASS: _InfoPanel
-// MÔ TẢ: Panel thông tin bên trái - HỆ THỐNG ĐÓNG
-// ========================================
-class _InfoPanel extends StatelessWidget {
-  final UserRole role;
-
-  const _InfoPanel({required this.role});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        image: DecorationImage(
-          image: AssetImage('assets/icons/background-roler.png'),
-          fit: BoxFit.cover,
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            // ========================================
-            // PHẦN: Tiêu đề chính
-            // ========================================
-            const Text(
-              'Chào mừng đến với\nHệ thống E-Learning',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 32,
-                fontWeight: FontWeight.w800,
-                height: 1.1,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            // ========================================
-            // PHẦN: Mô tả hệ thống
-            // ========================================
-            Text(
-              'Đăng nhập với tài khoản được cấp để truy cập hệ thống quản lý học tập trực tuyến',
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.95),
-                fontSize: 16,
-                height: 1.4,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 32),
-            // ========================================
-            // PHẦN: Icon vai trò
-            // ========================================
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                role.icon,
-                color: Colors.white,
-                size: 48,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              role.displayName,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// Inline form widgets removed; now using dedicated files: login_form.dart and register_form.dart.
