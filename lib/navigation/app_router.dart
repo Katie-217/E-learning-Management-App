@@ -11,6 +11,8 @@ import '../presentation/screens/instructor/instructor_students_page.dart';
 import '../presentation/screens/instructor/instructor_grades_page.dart';
 import '../presentation/screens/profile/profile_view.dart';
 import '../presentation/screens/course/course_page.dart';
+import '../presentation/screens/instructor/instructor_courses/instructor_courses_page.dart';
+import '../presentation/screens/instructor/instructor_courses/instructor_course_detail_page.dart';
 import '../presentation/screens/assignment/assignments_page.dart';
 // import '../../presentation/screens/semester_page.dart';
 // import '../../presentation/screens/course/course_page.dart';
@@ -37,7 +39,7 @@ class AppRouter {
     initialLocation: '/auth',
     redirect: (context, state) async {
       final isLoggingIn = state.matchedLocation == '/auth';
-      
+
       // Kiểm tra Firebase Auth trước
       final firebaseUser = FirebaseAuth.instance.currentUser;
       if (firebaseUser != null) {
@@ -45,28 +47,29 @@ class AppRouter {
         if (isLoggingIn) return '/dashboard';
         return null;
       }
-      
+
       // Nếu không có Firebase user, kiểm tra SharedPreferences
       final hasSession = await UserSessionService.isUserLoggedIn();
       print('DEBUG: 🔍 SharedPreferences session: $hasSession');
-      
+
       if (!hasSession && !isLoggingIn) {
         print('DEBUG: ❌ No session found, redirecting to auth');
         return '/auth';
       }
-      
+
       if (hasSession && isLoggingIn) {
         print('DEBUG: ✅ Session found, redirecting to dashboard');
         return '/dashboard';
       }
-      
+
       return null;
     },
     routes: <RouteBase>[
       GoRoute(
         path: '/auth',
         name: 'auth',
-        builder: (context, state) => const AuthOverlayScreen(initialRole: UserRole.student),
+        builder: (context, state) =>
+            const AuthOverlayScreen(initialRole: UserRole.student),
       ),
       GoRoute(
         path: '/dashboard',
@@ -101,7 +104,15 @@ class AppRouter {
       GoRoute(
         path: '/instructor/courses',
         name: 'instructor-courses',
-        builder: (context, state) => const CoursePage(),
+        builder: (context, state) => const InstructorCoursesPage(),
+      ),
+      GoRoute(
+        path: '/instructor/courses/:courseId',
+        name: 'instructor-course-detail',
+        builder: (context, state) {
+          final courseId = state.pathParameters['courseId']!;
+          return InstructorCourseDetailPage(courseId: courseId);
+        },
       ),
       GoRoute(
         path: '/instructor/assignments',
@@ -112,6 +123,14 @@ class AppRouter {
         path: '/instructor/grades',
         name: 'instructor-grades',
         builder: (context, state) => const InstructorGradesPage(),
+      ),
+      GoRoute(
+        path: '/instructor/courses/:courseId',
+        name: 'instructor-course-detail',
+        builder: (context, state) {
+          final courseId = state.pathParameters['courseId']!;
+          return InstructorCourseDetailPage(courseId: courseId);
+        },
       ),
       // GoRoute(path: '/semesters', builder: (c, s) => const SemesterPage()),
       // GoRoute(path: '/groups', builder: (c, s) => const GroupPage()),
@@ -125,14 +144,12 @@ class AppRouter {
       // GoRoute(path: '/notifications', builder: (c, s) => const NotificationsView()),
       // GoRoute(path: '/analytics', builder: (c, s) => const AnalyticsPage()),
     ],
-  // static const String auth = '/auth';
-  // static const String dashboard = '/dashboard';
-  // static const String profile = '/profile';
-  // static const String content = '/content';
-  // static const String forum = '/forum';
-  // static const String notifications = '/notifications';
-  // static const String analytics = '/analytics';
+    // static const String auth = '/auth';
+    // static const String dashboard = '/dashboard';
+    // static const String profile = '/profile';
+    // static const String content = '/content';
+    // static const String forum = '/forum';
+    // static const String notifications = '/notifications';
+    // static const String analytics = '/analytics';
   );
 }
-
-

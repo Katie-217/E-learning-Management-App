@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../assignment/assignment_card.dart';
-import '../quiz/quiz_card.dart';
-import '../material/material_card.dart';
+import '../../assignment/assignment_card.dart';
+import '../../quiz/quiz_card.dart';
+import '../../material/material_card.dart';
 
 class ClassworkTab extends StatelessWidget {
   const ClassworkTab({super.key});
@@ -13,14 +13,18 @@ class ClassworkTab extends StatelessWidget {
       children: [
         Text('Assignments & Quizzes',
             style: TextStyle(
-                fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                color: Colors.white)),
         SizedBox(height: 8),
         // AssignmentCard(assignment: null),
         // QuizCard(quiz: null),
         SizedBox(height: 24),
         Text('Course Materials',
             style: TextStyle(
-                fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                color: Colors.white)),
         SizedBox(height: 8),
         // MaterialCard(),
       ],

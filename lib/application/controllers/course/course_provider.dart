@@ -5,25 +5,37 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:elearning_management_app/domain/models/course_model.dart';
-import 'package:elearning_management_app/data/repositories/course/course_repository.dart';
 import 'package:elearning_management_app/data/repositories/auth/auth_repository.dart';
-import 'course_controller.dart';
+import 'course_student_controller.dart';
+import 'course_instructor_controller.dart';
+import '../../../core/config/users-role.dart';
 
 // Repository Providers
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return AuthRepository.defaultClient();
 });
 
-final courseRepositoryProvider = Provider<CourseRepository>((ref) {
-  return CourseRepository();
+// Controller Providers - Role-based
+final courseStudentControllerProvider =
+    Provider<CourseStudentController>((ref) {
+  return CourseStudentController(
+    authRepository: ref.read(authRepositoryProvider),
+  );
 });
 
-// Controller Provider
-final courseControllerProvider = Provider<CourseController>((ref) {
-  return CourseController(
+final courseInstructorControllerProvider =
+    Provider<CourseInstructorController>((ref) {
+  return CourseInstructorController(
     authRepository: ref.read(authRepositoryProvider),
-    courseRepository: ref.read(courseRepositoryProvider),
   );
+});
+
+// Role-based Controller Provider
+final courseControllerProvider = Provider<dynamic>((ref) {
+  // This provider will be determined by user role at runtime
+  // UI should use specific student/instructor providers instead
+  throw UnimplementedError(
+      'Use courseStudentControllerProvider or courseInstructorControllerProvider directly');
 });
 
 // Course state management
@@ -67,14 +79,14 @@ class CourseState {
 // StateNotifier quản lý logic nghiệp vụ cho khóa học
 
 // ========================================
-// CLASS: CourseNotifier
-// MÔ TẢ: StateNotifier quản lý logic nghiệp vụ cho khóa học
+// CLASS: CourseStudentNotifier
+// MÔ TẢ: StateNotifier quản lý logic nghiệp vụ cho Student courses
 // ========================================
-class CourseNotifier extends StateNotifier<CourseState> {
-  final CourseController _courseController;
+class CourseStudentNotifier extends StateNotifier<CourseState> {
+  final CourseStudentController _courseController;
 
-  CourseNotifier({
-    required CourseController courseController,
+  CourseStudentNotifier({
+    required CourseStudentController courseController,
   })  : _courseController = courseController,
         super(CourseState());
 
@@ -184,12 +196,24 @@ class CourseNotifier extends StateNotifier<CourseState> {
 // Provider chính cho việc quản lý khóa học
 
 // ========================================
-// PROVIDER: courseProvider
-// MÔ TẢ: Provider chính cho việc quản lý khóa học - Clean Architecture
+// PROVIDERS: Role-based Course Providers
+// MÔ TẢ: Providers theo role cho việc quản lý khóa học - Clean Architecture
 // ========================================
-final courseProvider =
-    StateNotifierProvider<CourseNotifier, CourseState>((ref) {
-  return CourseNotifier(
-    courseController: ref.read(courseControllerProvider),
+
+// Student Course Provider
+final courseStudentProvider =
+    StateNotifierProvider<CourseStudentNotifier, CourseState>((ref) {
+  return CourseStudentNotifier(
+    courseController: ref.read(courseStudentControllerProvider),
   );
 });
+
+// Instructor Course Provider - will be implemented separately
+// final courseInstructorProvider = StateNotifierProvider<CourseInstructorNotifier, CourseState>((ref) {
+//   return CourseInstructorNotifier(
+//     courseController: ref.read(courseInstructorControllerProvider),
+//   );
+// });
+
+// Legacy provider for backward compatibility - delegates to student provider
+final courseProvider = courseStudentProvider;

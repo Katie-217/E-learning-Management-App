@@ -11,11 +11,11 @@ class FirebaseConnectionService {
       // Kiểm tra Firebase Auth
       final user = _auth.currentUser;
       print('DEBUG: Firebase Auth - User: ${user?.email ?? "Not logged in"}');
-      
+
       // Kiểm tra Firestore connection
       await _firestore.collection('test').limit(1).get();
       print('DEBUG: Firestore connection successful');
-      
+
       return true;
     } catch (e) {
       print('DEBUG: Firebase connection failed: $e');
@@ -62,11 +62,11 @@ class FirebaseConnectionService {
   static Future<void> testFirestoreRules() async {
     try {
       print('DEBUG: Testing Firestore rules...');
-      
+
       // Test read permission
       final snapshot = await _firestore.collection('courses').limit(1).get();
       print('DEBUG: Read test - Found ${snapshot.docs.length} documents');
-      
+
       // Test write permission (nếu có user đăng nhập)
       final user = _auth.currentUser;
       if (user != null) {
@@ -76,7 +76,7 @@ class FirebaseConnectionService {
             'userId': user.uid,
           });
           print('DEBUG: Write test - Success');
-          
+
           // Clean up test document
           await _firestore.collection('test').doc('permission_test').delete();
           print('DEBUG: Cleanup - Success');
@@ -86,7 +86,6 @@ class FirebaseConnectionService {
       } else {
         print('DEBUG: No user logged in, skipping write test');
       }
-      
     } catch (e) {
       print('DEBUG: Firestore rules test failed: $e');
     }

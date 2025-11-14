@@ -18,7 +18,8 @@ class _AvatarUploaderState extends State<AvatarUploader> {
         if (_fileName != null) Text('Selected: $_fileName'),
         FilledButton(
           onPressed: () async {
-            final result = await FilePicker.platform.pickFiles(type: FileType.image);
+            final result =
+                await FilePicker.platform.pickFiles(type: FileType.image);
             if (result != null && result.files.isNotEmpty) {
               setState(() => _fileName = result.files.single.name);
             }
@@ -29,22 +30,3 @@ class _AvatarUploaderState extends State<AvatarUploader> {
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

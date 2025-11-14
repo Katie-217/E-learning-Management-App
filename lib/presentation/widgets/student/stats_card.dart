@@ -23,7 +23,6 @@ class StatsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final borderColor = bgStart.withOpacity(0.3);
     return Container(
-
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -48,13 +47,15 @@ class StatsCard extends StatelessWidget {
               child: Icon(icon, color: iconColor),
             ),
             const SizedBox(width: 10),
-            Text(title, style: TextStyle(color: Colors.grey[300], fontSize: 23)),
+            Text(title,
+                style: TextStyle(color: Colors.grey[300], fontSize: 23)),
           ]),
           const SizedBox(height: 12),
-          Text(value, style: const TextStyle(fontSize: 33, fontWeight: FontWeight.bold)),
+          Text(value,
+              style:
+                  const TextStyle(fontSize: 33, fontWeight: FontWeight.bold)),
         ],
       ),
     );
   }
 }
-

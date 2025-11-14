@@ -43,7 +43,7 @@ class ApiService {
       responseBody: true,
       logPrint: (obj) => print(obj),
     ));
-    
+
     // ========================================
     // PHẦN: Thêm Custom Interceptors
     // MÔ TẢ: Xử lý request và error handling
@@ -95,7 +95,8 @@ class ApiService {
         return 'Server response timeout. Please try again.';
       case DioExceptionType.badResponse:
         final statusCode = error.response?.statusCode;
-        if (statusCode == 401) return 'Authentication failed. Please login again.';
+        if (statusCode == 401)
+          return 'Authentication failed. Please login again.';
         if (statusCode == 403) return 'Access denied.';
         if (statusCode == 404) return 'Resource not found.';
         if (statusCode == 500) return 'Server error. Please try again later.';

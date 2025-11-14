@@ -11,7 +11,8 @@ class Assignment {
   final int maxSubmissionAttempts;
   final List<String> allowedFileFormats;
   final int maxFileSizeMB;
-  final List<Map<String, dynamic>> attachments; // e.g., [{'fileName': 'name', 'url': '...'}]
+  final List<Map<String, dynamic>>
+      attachments; // e.g., [{'fileName': 'name', 'url': '...'}]
   final List<String> groupIds; // IDs của các nhóm được giao
 
   Assignment({
@@ -32,19 +33,24 @@ class Assignment {
   // "Phiên dịch" từ Firebase (Firestore Document) về đối tượng Dart
   factory Assignment.fromFirestore(DocumentSnapshot doc) {
     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-    
+
     // Xử lý Attachments và GroupIDs (phải convert từ List<dynamic>)
-    List<Map<String, dynamic>> attachments = (data['attachments'] as List<dynamic>?)
-        ?.map((item) => Map<String, dynamic>.from(item as Map))
-        .toList() ?? [];
+    List<Map<String, dynamic>> attachments =
+        (data['attachments'] as List<dynamic>?)
+                ?.map((item) => Map<String, dynamic>.from(item as Map))
+                .toList() ??
+            [];
 
     List<String> groupIds = (data['groupIds'] as List<dynamic>?)
-        ?.map((item) => item.toString())
-        .toList() ?? [];
+            ?.map((item) => item.toString())
+            .toList() ??
+        [];
 
-    List<String> allowedFileFormats = (data['allowedFileFormats'] as List<dynamic>?)
-        ?.map((item) => item.toString())
-        .toList() ?? [];
+    List<String> allowedFileFormats =
+        (data['allowedFileFormats'] as List<dynamic>?)
+                ?.map((item) => item.toString())
+                .toList() ??
+            [];
 
     return Assignment(
       id: doc.id,
@@ -53,7 +59,8 @@ class Assignment {
       startDate: (data['startDate'] as Timestamp).toDate(),
       deadline: (data['deadline'] as Timestamp).toDate(),
       allowLateSubmissions: data['allowLateSubmissions'] ?? false,
-      lateDeadline: (data['lateDeadline'] as Timestamp?)?.toDate(), // Xử lý nullable
+      lateDeadline:
+          (data['lateDeadline'] as Timestamp?)?.toDate(), // Xử lý nullable
       maxSubmissionAttempts: data['maxSubmissionAttempts'] ?? 1,
       allowedFileFormats: allowedFileFormats,
       maxFileSizeMB: data['maxFileSizeMB'] ?? 10,
@@ -70,7 +77,8 @@ class Assignment {
       'startDate': Timestamp.fromDate(startDate),
       'deadline': Timestamp.fromDate(deadline),
       'allowLateSubmissions': allowLateSubmissions,
-      'lateDeadline': lateDeadline != null ? Timestamp.fromDate(lateDeadline!) : null,
+      'lateDeadline':
+          lateDeadline != null ? Timestamp.fromDate(lateDeadline!) : null,
       'maxSubmissionAttempts': maxSubmissionAttempts,
       'allowedFileFormats': allowedFileFormats,
       'maxFileSizeMB': maxFileSizeMB,

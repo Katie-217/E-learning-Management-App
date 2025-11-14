@@ -10,6 +10,3 @@ class AnalyticsView extends StatelessWidget {
     );
   }
 }
-
-
-

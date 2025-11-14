@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:elearning_management_app/domain/models/course_model.dart';
-import 'upcoming_widget.dart';
+import '../Student_Course/upcoming_widget.dart';
 
-class StreamTab extends StatelessWidget {
+class InstructorStreamTab extends StatelessWidget {
   final CourseModel course;
-  const StreamTab({super.key, required this.course});
+  const InstructorStreamTab({super.key, required this.course});
 
   @override
   Widget build(BuildContext context) {
@@ -24,7 +24,7 @@ class StreamTab extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _AnnouncementComposer(),
+                        _InstructorAnnouncementComposer(),
                         const SizedBox(height: 12),
                         _PostItem(
                           title: 'Welcome to ${course.name}',
@@ -34,7 +34,8 @@ class StreamTab extends StatelessWidget {
                         const SizedBox(height: 10),
                         const _PostItem(
                           title: 'Project 1 Guidelines',
-                          subtitle: 'Please read the instructions before starting.',
+                          subtitle:
+                              'Please read the instructions before starting.',
                           meta: 'Teacher • 2 days ago',
                         ),
                       ],
@@ -55,7 +56,7 @@ class StreamTab extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _AnnouncementComposer(),
+                  _InstructorAnnouncementComposer(),
                   const SizedBox(height: 12),
                   _PostItem(
                     title: 'Welcome to ${course.name}',
@@ -77,7 +78,7 @@ class StreamTab extends StatelessWidget {
   }
 }
 
-class _AnnouncementComposer extends StatelessWidget {
+class _InstructorAnnouncementComposer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -131,7 +132,8 @@ class _PostItem extends StatelessWidget {
   final String title;
   final String subtitle;
   final String meta;
-  const _PostItem({required this.title, required this.subtitle, required this.meta});
+  const _PostItem(
+      {required this.title, required this.subtitle, required this.meta});
 
   @override
   Widget build(BuildContext context) {
@@ -152,7 +154,8 @@ class _PostItem extends StatelessWidget {
                 width: 36,
                 height: 36,
                 decoration: const BoxDecoration(
-                  gradient: LinearGradient(colors: [Colors.indigo, Colors.purple]),
+                  gradient:
+                      LinearGradient(colors: [Colors.indigo, Colors.purple]),
                   shape: BoxShape.circle,
                 ),
               ),
@@ -161,8 +164,11 @@ class _PostItem extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-                    Text(meta, style: TextStyle(color: Colors.grey[500], fontSize: 12)),
+                    Text(title,
+                        style: const TextStyle(fontWeight: FontWeight.w600)),
+                    Text(meta,
+                        style:
+                            TextStyle(color: Colors.grey[500], fontSize: 12)),
                   ],
                 ),
               ),
@@ -192,41 +198,13 @@ class _PostItem extends StatelessWidget {
           ),
 
           const SizedBox(height: 8),
-          // Add comment input
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Container(
-                width: 32,
-                height: 32,
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(colors: [Colors.indigo, Colors.purple]),
-                  shape: BoxShape.circle,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF111827),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.grey[800]!),
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  child: const TextField(
-                    decoration: InputDecoration(
-                      hintText: 'Add class comment...',
-                      border: InputBorder.none,
-                    ),
-                    style: TextStyle(color: Colors.white),
-                  ),
-                ),
-              ),
-              IconButton(
-                onPressed: () {},
-                icon: const Icon(Icons.send, color: Colors.white70, size: 20),
-              ),
-            ],
+          // View all comments button for instructor
+          TextButton(
+            onPressed: () {},
+            child: Text(
+              'View all comments (15)',
+              style: TextStyle(color: Colors.indigo[400]),
+            ),
           ),
         ],
       ),
@@ -238,7 +216,8 @@ class _CommentItem extends StatelessWidget {
   final String name;
   final String time;
   final String content;
-  const _CommentItem({required this.name, required this.time, required this.content});
+  const _CommentItem(
+      {required this.name, required this.time, required this.content});
 
   @override
   Widget build(BuildContext context) {
@@ -261,9 +240,11 @@ class _CommentItem extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Text(name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                  Text(name,
+                      style: const TextStyle(fontWeight: FontWeight.w600)),
                   const SizedBox(width: 8),
-                  Text(time, style: TextStyle(color: Colors.grey[500], fontSize: 12)),
+                  Text(time,
+                      style: TextStyle(color: Colors.grey[500], fontSize: 12)),
                 ],
               ),
               const SizedBox(height: 4),
@@ -275,5 +256,3 @@ class _CommentItem extends StatelessWidget {
     );
   }
 }
-
-

@@ -217,13 +217,11 @@ class UserSettings {
   final String language;
   final String theme;
   final String status;
-  
 
   const UserSettings({
     this.language = 'vi',
     this.theme = 'light',
     this.status = 'active',
-    
   });
 
   factory UserSettings.fromMap(Map<String, dynamic> map) {
@@ -231,7 +229,6 @@ class UserSettings {
       language: map['language'] ?? 'vi',
       theme: map['theme'] ?? 'light',
       status: map['status'] ?? 'active',
-      
     );
   }
 
@@ -240,7 +237,6 @@ class UserSettings {
       'language': language,
       'theme': theme,
       'status': status,
-      
     };
   }
 
@@ -248,13 +244,11 @@ class UserSettings {
     String? language,
     String? theme,
     String? status,
-    
   }) {
     return UserSettings(
       language: language ?? this.language,
       theme: theme ?? this.theme,
       status: status ?? this.status,
-      
     );
   }
 }

@@ -17,7 +17,8 @@ class _ManageGroupPageState extends State<ManageGroupPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Create New Group"), backgroundColor: Colors.black),
+      appBar: AppBar(
+          title: const Text("Create New Group"), backgroundColor: Colors.black),
       backgroundColor: Colors.black,
       body: Padding(
         padding: const EdgeInsets.all(20),
@@ -45,7 +46,9 @@ class _ManageGroupPageState extends State<ManageGroupPage> {
                     //   "teacher": "Dr. Nguyen Van A",
                     // });
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Group management feature coming soon')),
+                      const SnackBar(
+                          content:
+                              Text('Group management feature coming soon')),
                     );
                     Navigator.pop(context);
                   }

@@ -4,11 +4,14 @@ class NotificationProvider {
   NotificationProvider._internal();
   static final NotificationProvider instance = NotificationProvider._internal();
 
-  final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _plugin =
+      FlutterLocalNotificationsPlugin();
 
   Future<void> init() async {
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const initializationSettings = InitializationSettings(android: androidSettings);
+    const androidSettings =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+    const initializationSettings =
+        InitializationSettings(android: androidSettings);
     await _plugin.initialize(initializationSettings);
   }
 
@@ -23,22 +26,3 @@ class NotificationProvider {
     await _plugin.show(0, title, body, notificationDetails);
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

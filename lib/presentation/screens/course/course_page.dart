@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:elearning_management_app/domain/models/course_model.dart';
-import 'package:elearning_management_app/presentation/widgets/course/course_card_widget.dart';
-import 'package:elearning_management_app/presentation/widgets/course/course_detail.dart';
-import 'package:elearning_management_app/presentation/widgets/course/course_tabs_widget.dart';
-import 'package:elearning_management_app/presentation/widgets/course/course_filter_widget.dart';
+import 'package:elearning_management_app/presentation/widgets/course/Student_Course/course_card_widget.dart';
+import 'package:elearning_management_app/presentation/widgets/course/Student_Course/course_detail.dart';
+import 'package:elearning_management_app/presentation/widgets/course/Student_Course/course_tabs_widget.dart';
+import 'package:elearning_management_app/presentation/widgets/course/Student_Course/course_filter_widget.dart';
 import 'package:elearning_management_app/core/theme/app_colors.dart';
 import 'package:elearning_management_app/presentation/widgets/common/sidebar_model.dart';
 import 'package:elearning_management_app/application/controllers/course/course_provider.dart';
@@ -56,73 +56,74 @@ class _CoursePageState extends ConsumerState<CoursePage>
   @override
   Widget build(BuildContext context) {
     final courseState = ref.watch(courseProvider);
-    final courses = courseState.filteredCourses.isNotEmpty 
-        ? courseState.filteredCourses 
+    final courses = courseState.filteredCourses.isNotEmpty
+        ? courseState.filteredCourses
         : courseState.courses;
 
     return Scaffold(
       backgroundColor: AppColors.bgDark,
       appBar: widget.showSidebar
           ? AppBar(
-        backgroundColor: AppColors.bgAppbar,
-        title: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: Colors.indigo[600],
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(Icons.menu_book, color: Colors.white),
-            ),
-            const SizedBox(width: 12),
-            const Text('E-Learning',
-                style: TextStyle(fontWeight: FontWeight.w600)),
-          ],
-        ),
-        actions: [
-          SizedBox(
-            width: 280,
-            child: Padding(
-              padding:
-                  const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12),
-              child: TextField(
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  hintText: 'Search courses, materials...',
-                  hintStyle: TextStyle(color: Colors.grey),
-                  filled: true,
-                  fillColor: AppColors.bgInput,
-                  contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 10),
-                  border: OutlineInputBorder(
+              backgroundColor: AppColors.bgAppbar,
+              title: Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: Colors.indigo[600],
                       borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide.none),
-                ),
+                    ),
+                    child: const Icon(Icons.menu_book, color: Colors.white),
+                  ),
+                  const SizedBox(width: 12),
+                  const Text('E-Learning',
+                      style: TextStyle(fontWeight: FontWeight.w600)),
+                ],
               ),
-            ),
-          ),
-          IconButton(
-              onPressed: () {},
-              icon: const Icon(Icons.notifications_none,
-                  color: Colors.white)),
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: Row(children: [
-              Container(
-                  width: 40,
-                  height: 40,
-                  decoration: const BoxDecoration(
-                      gradient: LinearGradient(
-                          colors: [Colors.indigo, Colors.purple]),
-                      shape: BoxShape.circle)),
-              const SizedBox(width: 8),
-              const Text('Jara Khan'),
-            ]),
-          )
-        ],
-      ) : null,
+              actions: [
+                SizedBox(
+                  width: 280,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 8.0, horizontal: 12),
+                    child: TextField(
+                      style: const TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+                        hintText: 'Search courses, materials...',
+                        hintStyle: TextStyle(color: Colors.grey),
+                        filled: true,
+                        fillColor: AppColors.bgInput,
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 10),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide.none),
+                      ),
+                    ),
+                  ),
+                ),
+                IconButton(
+                    onPressed: () {},
+                    icon: const Icon(Icons.notifications_none,
+                        color: Colors.white)),
+                Padding(
+                  padding: const EdgeInsets.only(right: 12),
+                  child: Row(children: [
+                    Container(
+                        width: 40,
+                        height: 40,
+                        decoration: const BoxDecoration(
+                            gradient: LinearGradient(
+                                colors: [Colors.indigo, Colors.purple]),
+                            shape: BoxShape.circle)),
+                    const SizedBox(width: 8),
+                    const Text('Jara Khan'),
+                  ]),
+                )
+              ],
+            )
+          : null,
       body: Row(
         children: [
           // Sidebar
@@ -279,5 +280,3 @@ class CourseDetailView extends StatelessWidget {
     );
   }
 }
-
-

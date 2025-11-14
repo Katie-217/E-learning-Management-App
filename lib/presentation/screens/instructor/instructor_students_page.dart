@@ -29,11 +29,13 @@ class InstructorStudentsPage extends StatelessWidget {
             Expanded(
               child: ListView(
                 children: [
-                  _buildStudentCard('Nguyen Van A', 'Student ID: SV001', 'CS450'),
+                  _buildStudentCard(
+                      'Nguyen Van A', 'Student ID: SV001', 'CS450'),
                   _buildStudentCard('Tran Thi B', 'Student ID: SV002', 'CS450'),
                   _buildStudentCard('Le Van C', 'Student ID: SV003', 'CS380'),
                   _buildStudentCard('Pham Thi D', 'Student ID: SV004', 'CS380'),
-                  _buildStudentCard('Hoang Van E', 'Student ID: SV005', 'CS420'),
+                  _buildStudentCard(
+                      'Hoang Van E', 'Student ID: SV005', 'CS420'),
                 ],
               ),
             ),
@@ -52,7 +54,8 @@ class InstructorStudentsPage extends StatelessWidget {
           backgroundColor: Colors.blue[100],
           child: Text(
             name[0].toUpperCase(),
-            style: TextStyle(color: Colors.blue[800], fontWeight: FontWeight.bold),
+            style:
+                TextStyle(color: Colors.blue[800], fontWeight: FontWeight.bold),
           ),
         ),
         title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -71,4 +74,3 @@ class InstructorStudentsPage extends StatelessWidget {
     );
   }
 }
-

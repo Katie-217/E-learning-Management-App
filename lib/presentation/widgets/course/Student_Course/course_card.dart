@@ -96,7 +96,10 @@ class CourseCard extends StatelessWidget {
                   SizedBox(width: 4),
                   Text(
                     _getStatusText(),
-                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.white),
+                    style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white),
                   ),
                 ],
               ),
@@ -113,16 +116,27 @@ class CourseCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(course.name, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold), maxLines: 2, overflow: TextOverflow.ellipsis),
+          Text(course.name,
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis),
           SizedBox(height: 8),
           Row(
             children: [
-              Icon(Icons.person, size: 14, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
+              Icon(Icons.person,
+                  size: 14,
+                  color:
+                      Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
               SizedBox(width: 4),
               Expanded(
                 child: Text(
                   course.instructor,
-                  style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
+                  style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withOpacity(0.6)),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -131,15 +145,31 @@ class CourseCard extends StatelessWidget {
           SizedBox(height: 4),
           Row(
             children: [
-              Icon(Icons.group, size: 14, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
+              Icon(Icons.group,
+                  size: 14,
+                  color:
+                      Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
               SizedBox(width: 4),
               Text('${course.totalStudents} students',
-                  style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6))),
+                  style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withOpacity(0.6))),
               Spacer(),
-              Icon(Icons.credit_card, size: 14, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
+              Icon(Icons.credit_card,
+                  size: 14,
+                  color:
+                      Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
               SizedBox(width: 4),
               Text('${course.credits} credits',
-                  style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6))),
+                  style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withOpacity(0.6))),
             ],
           ),
           Spacer(),
@@ -148,10 +178,18 @@ class CourseCard extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                  Text('Progress', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
-                  Text('${course.progress.toInt()}%', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: _getProgressColor())),
-                ]),
+                Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Progress',
+                          style: TextStyle(
+                              fontSize: 12, fontWeight: FontWeight.w500)),
+                      Text('${course.progress.toInt()}%',
+                          style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: _getProgressColor())),
+                    ]),
                 SizedBox(height: 4),
                 LinearProgressIndicator(
                   value: course.progress / 100,
@@ -176,11 +214,21 @@ class CourseCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(Icons.calendar_today, size: 14, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
+          Icon(Icons.calendar_today,
+              size: 14,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
           SizedBox(width: 4),
-          Text(course.semester, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6))),
+          Text(course.semester,
+              style: TextStyle(
+                  fontSize: 12,
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withOpacity(0.6))),
           Spacer(),
-          Icon(Icons.arrow_forward_ios, size: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4)),
+          Icon(Icons.arrow_forward_ios,
+              size: 12,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4)),
         ],
       ),
     );

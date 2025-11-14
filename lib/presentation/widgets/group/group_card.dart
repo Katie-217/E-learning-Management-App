@@ -15,7 +15,9 @@ class GroupCard extends StatelessWidget {
       color: Colors.grey[900],
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ExpansionTile(
-        title: Text(group["name"], style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: Text(group["name"],
+            style: const TextStyle(
+                color: Colors.white, fontWeight: FontWeight.bold)),
         subtitle: Text(
           "${group["course"]} • ${members.length} members",
           style: const TextStyle(color: Colors.grey),
@@ -24,14 +26,18 @@ class GroupCard extends StatelessWidget {
           for (var member in members)
             ListTile(
               leading: const Icon(Icons.person, color: Colors.cyanAccent),
-              title: Text(member["name"], style: const TextStyle(color: Colors.white)),
+              title: Text(member["name"],
+                  style: const TextStyle(color: Colors.white)),
               trailing: isTeacher
                   ? IconButton(
-                      icon: const Icon(Icons.remove_circle, color: Colors.redAccent),
+                      icon: const Icon(Icons.remove_circle,
+                          color: Colors.redAccent),
                       onPressed: () {
                         // ref.read(groupProvider.notifier).removeMember(group["id"], member["id"]);
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Remove member feature coming soon')),
+                          const SnackBar(
+                              content:
+                                  Text('Remove member feature coming soon')),
                         );
                       },
                     )

@@ -6,7 +6,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../domain/models/course_model.dart';
 
-class CourseRepository {
+class CourseStudentRepository {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   static const String _collectionName = 'course_of_study';
 

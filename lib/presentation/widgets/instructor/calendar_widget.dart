@@ -87,7 +87,8 @@ class SimpleCalendar extends StatelessWidget {
     final lastDay = DateTime(currentDate.year, currentDate.month + 1, 0);
     final daysInMonth = lastDay.day;
     final firstWeekday = firstDay.weekday % 7; // Convert to 0-6 (Sunday = 0)
-    final isCurrentMonth = currentDate.year == now.year && currentDate.month == now.month;
+    final isCurrentMonth =
+        currentDate.year == now.year && currentDate.month == now.month;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -142,7 +143,8 @@ class SimpleCalendar extends StatelessWidget {
               child: TextButton(
                 onPressed: onGoToToday,
                 style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
@@ -177,8 +179,9 @@ class SimpleCalendar extends StatelessWidget {
               child: Row(
                 children: List.generate(7, (dayIndex) {
                   final dayNumber = week * 7 + dayIndex - firstWeekday + 1;
-                  final isCurrentMonthDay = dayNumber > 0 && dayNumber <= daysInMonth;
-                  
+                  final isCurrentMonthDay =
+                      dayNumber > 0 && dayNumber <= daysInMonth;
+
                   if (!isCurrentMonthDay) {
                     return Expanded(
                       child: Container(
@@ -188,14 +191,15 @@ class SimpleCalendar extends StatelessWidget {
                     );
                   }
 
-                  final date = DateTime(currentDate.year, currentDate.month, dayNumber);
-                  final isToday = date.year == now.year && 
-                                  date.month == now.month && 
-                                  date.day == now.day;
-                  final isSelected = date.year == selectedDate.year && 
-                                    date.month == selectedDate.month && 
-                                    date.day == selectedDate.day;
-                  
+                  final date =
+                      DateTime(currentDate.year, currentDate.month, dayNumber);
+                  final isToday = date.year == now.year &&
+                      date.month == now.month &&
+                      date.day == now.day;
+                  final isSelected = date.year == selectedDate.year &&
+                      date.month == selectedDate.month &&
+                      date.day == selectedDate.day;
+
                   // Check if this date has tasks
                   final hasTasks = tasksForMonth.any((task) {
                     final taskDate = DateTime(
@@ -204,8 +208,8 @@ class SimpleCalendar extends StatelessWidget {
                       task.dateTime.day,
                     );
                     return taskDate.year == date.year &&
-                           taskDate.month == date.month &&
-                           taskDate.day == date.day;
+                        taskDate.month == date.month &&
+                        taskDate.day == date.day;
                   });
 
                   return Expanded(
@@ -217,7 +221,7 @@ class SimpleCalendar extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: isSelected
                               ? Colors.blue.withOpacity(0.2)
-                              : isToday 
+                              : isToday
                                   ? Colors.blue.withOpacity(0.1)
                                   : Colors.transparent,
                           borderRadius: BorderRadius.circular(8),
@@ -240,8 +244,8 @@ class SimpleCalendar extends StatelessWidget {
                                           ? Colors.blue
                                           : Colors.black87,
                                   fontSize: 14,
-                                  fontWeight: (isSelected || isToday) 
-                                      ? FontWeight.bold 
+                                  fontWeight: (isSelected || isToday)
+                                      ? FontWeight.bold
                                       : FontWeight.normal,
                                 ),
                               ),
@@ -275,8 +279,18 @@ class SimpleCalendar extends StatelessWidget {
 
   String _getMonthName(int month) {
     const months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December'
     ];
     return months[month - 1];
   }

@@ -1,25 +1,23 @@
 // ========================================
-// FILE: course_controller.dart
-// MÔ TẢ: Controller cho Course - Business Logic Layer
+// FILE: course_student_controller.dart
+// MÔ TẢ: Controller cho Student Course Operations - Business Logic Layer
 // ========================================
 
-import '../../../data/repositories/course/course_repository.dart';
+import '../../../data/repositories/course/course_student_repository.dart';
 import '../../../data/repositories/auth/auth_repository.dart';
 import '../../../domain/models/course_model.dart';
+import '../../../core/config/users-role.dart';
 
 // ========================================
-// CLASS: CourseController - Business Logic
-// MÔ TẢ: Xử lý business logic cho Course operations
+// CLASS: CourseStudentController - Business Logic
+// MÔ TẢ: Xử lý business logic cho Student Course operations
 // ========================================
-class CourseController {
+class CourseStudentController {
   final AuthRepository _authRepository;
-  final CourseRepository _courseRepository;
 
-  CourseController({
+  CourseStudentController({
     required AuthRepository authRepository,
-    required CourseRepository courseRepository,
-  })  : _authRepository = authRepository,
-        _courseRepository = courseRepository;
+  }) : _authRepository = authRepository;
 
   // ========================================
   // HÀM: getMyCourses - Business Logic
@@ -33,21 +31,21 @@ class CourseController {
         throw Exception('User not authenticated');
       }
 
-      print('DEBUG: 🔑 CourseController got userId: $userId');
+      print('DEBUG: 🔑 CourseStudentController got userId: $userId');
       print('DEBUG: 🔑 Expected in Firebase: FT1h3crVGTfKPvPUvh5NzkDzgs2');
 
-      // 2. Lấy courses từ CourseRepository
-      final courses = await CourseRepository.getUserCourses(userId);
+      // 2. Lấy courses từ CourseStudentRepository
+      final courses = await CourseStudentRepository.getUserCourses(userId);
 
       // 3. Business logic: Filter active courses for students
       final user = await _authRepository.currentUserModel;
-      if (user?.role == 'student') {
+      if (user?.role == UserRole.student) {
         return courses.where((course) => course.status == 'active').toList();
       }
 
       return courses;
     } catch (e) {
-      print('DEBUG: ❌ CourseController.getMyCourses error: $e');
+      print('DEBUG: ❌ CourseStudentController.getMyCourses error: $e');
       rethrow;
     }
   }
@@ -64,14 +62,16 @@ class CourseController {
         throw Exception('User not authenticated');
       }
 
-      if (user.role != 'admin' && user.role != 'instructor') {
+      if (user.role != UserRole.instructor) {
         throw Exception('Access denied: Insufficient permissions');
       }
 
-      // 2. Lấy tất cả courses từ Repository
-      return await CourseRepository.getAllCourses();
+      // 2. Lấy tất cả courses từ Repository (instructors can see all courses)
+      // Note: This should probably use a different method or different repository for admin functions
+      throw UnimplementedError(
+          'getAllCourses not implemented for students repository');
     } catch (e) {
-      print('DEBUG: ❌ CourseController.getAllCourses error: $e');
+      print('DEBUG: ❌ CourseStudentController.getAllCourses error: $e');
       rethrow;
     }
   }
@@ -89,7 +89,7 @@ class CourseController {
       }
 
       // 2. Get course từ Repository
-      final course = await CourseRepository.getCourseById(courseId);
+      final course = await CourseStudentRepository.getCourseById(courseId);
 
       // 3. Business logic: Check access permissions for students
       // Note: CourseModel.students is int (count), actual student list is in Firestore array
@@ -97,7 +97,7 @@ class CourseController {
 
       return course;
     } catch (e) {
-      print('DEBUG: ❌ CourseController.getCourseById error: $e');
+      print('DEBUG: ❌ CourseStudentController.getCourseById error: $e');
       rethrow;
     }
   }
@@ -110,12 +110,12 @@ class CourseController {
     try {
       // 1. Validate user
       final user = await _authRepository.currentUserModel;
-      if (user == null || user.role != 'student') {
+      if (user == null || user.role != UserRole.student) {
         throw Exception('Only students can enroll in courses');
       }
 
       // 2. Check if course exists and is available
-      final course = await CourseRepository.getCourseById(courseId);
+      final course = await CourseStudentRepository.getCourseById(courseId);
       if (course == null) {
         throw Exception('Course not found');
       }
@@ -130,11 +130,11 @@ class CourseController {
       }
 
       // 4. TODO: Repository method for enrollment
-      // return await CourseRepository.enrollStudent(courseId, user.uid);
+      // return await CourseStudentRepository.enrollStudent(courseId, user.uid);
       print('DEBUG: Enrollment logic needs Repository method implementation');
       return false;
     } catch (e) {
-      print('DEBUG: ❌ CourseController.enrollCourse error: $e');
+      print('DEBUG: ❌ CourseStudentController.enrollCourse error: $e');
       return false;
     }
   }

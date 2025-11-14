@@ -29,11 +29,15 @@ class InstructorGradesPage extends StatelessWidget {
             Expanded(
               child: ListView(
                 children: [
-                  _buildGradeCard('CS450 - Advanced Web Development', 'Nguyen Van A', 8.5),
-                  _buildGradeCard('CS450 - Advanced Web Development', 'Tran Thi B', 9.0),
+                  _buildGradeCard(
+                      'CS450 - Advanced Web Development', 'Nguyen Van A', 8.5),
+                  _buildGradeCard(
+                      'CS450 - Advanced Web Development', 'Tran Thi B', 9.0),
                   _buildGradeCard('CS380 - Database Systems', 'Le Van C', 7.5),
-                  _buildGradeCard('CS380 - Database Systems', 'Pham Thi D', 8.0),
-                  _buildGradeCard('CS420 - Software Engineering', 'Hoang Van E', 9.5),
+                  _buildGradeCard(
+                      'CS380 - Database Systems', 'Pham Thi D', 8.0),
+                  _buildGradeCard(
+                      'CS420 - Software Engineering', 'Hoang Van E', 9.5),
                 ],
               ),
             ),
@@ -61,7 +65,8 @@ class InstructorGradesPage extends StatelessWidget {
             style: TextStyle(color: gradeColor, fontWeight: FontWeight.bold),
           ),
         ),
-        title: Text(student, style: const TextStyle(fontWeight: FontWeight.bold)),
+        title:
+            Text(student, style: const TextStyle(fontWeight: FontWeight.bold)),
         subtitle: Text(course),
         trailing: IconButton(
           icon: const Icon(Icons.edit),
@@ -71,4 +76,3 @@ class InstructorGradesPage extends StatelessWidget {
     );
   }
 }
-

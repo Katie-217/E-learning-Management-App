@@ -7,7 +7,8 @@ class SimpleBarChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final maxHeight = data.map((e) => e['height'] as double).reduce((a,b) => a > b ? a : b);
+    final maxHeight =
+        data.map((e) => e['height'] as double).reduce((a, b) => a > b ? a : b);
     return SizedBox(
       height: 270,
       child: Row(
@@ -21,14 +22,17 @@ class SimpleBarChart extends StatelessWidget {
             children: [
               Container(
                 width: 18,
-                height:  maxHeight * pct,
+                height: maxHeight * pct,
                 decoration: BoxDecoration(
                   color: Colors.indigo[500],
-                  borderRadius: const BorderRadius.only(topLeft: Radius.circular(6), topRight: Radius.circular(6)),
+                  borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(6),
+                      topRight: Radius.circular(6)),
                 ),
               ),
               const SizedBox(height: 6),
-              Text(d['day'], style: TextStyle(color: Colors.grey[400], fontSize: 12)),
+              Text(d['day'],
+                  style: TextStyle(color: Colors.grey[400], fontSize: 12)),
             ],
           );
         }).toList(),
@@ -36,4 +40,3 @@ class SimpleBarChart extends StatelessWidget {
     );
   }
 }
-

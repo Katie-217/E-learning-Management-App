@@ -5,7 +5,7 @@
 /// ✅ Phiên bản clean, hợp nhất từ 2 file cũ:
 /// - firestore_service.dart
 /// - firestore_services.dart
-/// 
+///
 /// ⚙️ Tạm thời giữ mock data để kiểm tra UI (không cần Firebase).
 /// 🔥 Khi sẵn sàng kết nối Firestore thật, chỉ cần bỏ comment ở phần “Firebase Real”
 /// -------------------------------------------------------------------------
@@ -65,7 +65,6 @@ class FirestoreService {
       },
     ]
   };
-
 
   Future<List<Map<String, dynamic>>> getCollection({
     required String collectionPath,

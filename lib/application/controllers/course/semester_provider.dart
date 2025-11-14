@@ -1,6 +1,4 @@
-
 // Provider quản lý trạng thái học kỳ hiện tại
-
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -23,7 +21,6 @@ class SemesterNotifier extends StateNotifier<String> {
     ];
   }
 }
-
 
 //  Provider chính cho việc quản lý học kỳ
 

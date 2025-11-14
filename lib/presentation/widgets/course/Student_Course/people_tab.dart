@@ -11,13 +11,17 @@ class PeopleTab extends StatelessWidget {
       children: [
         const Text('Instructor',
             style: TextStyle(
-                fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                color: Colors.white)),
         const SizedBox(height: 8),
         // const InstructorCard(),
         const SizedBox(height: 24),
         const Text('Classmates',
             style: TextStyle(
-                fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                color: Colors.white)),
         const SizedBox(height: 8),
         Wrap(
           spacing: 12,
@@ -36,8 +40,8 @@ class PeopleTab extends StatelessWidget {
                     width: 40,
                     height: 40,
                     decoration: const BoxDecoration(
-                        gradient:
-                            LinearGradient(colors: [Colors.indigo, Colors.purple]),
+                        gradient: LinearGradient(
+                            colors: [Colors.indigo, Colors.purple]),
                         shape: BoxShape.circle)),
                 const SizedBox(width: 8),
                 Column(
@@ -45,7 +49,8 @@ class PeopleTab extends StatelessWidget {
                     children: const [
                       Text('Student Name',
                           style: TextStyle(
-                              fontWeight: FontWeight.w600, color: Colors.white)),
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white)),
                       Text('Group 1',
                           style: TextStyle(color: Colors.grey, fontSize: 13)),
                     ]),

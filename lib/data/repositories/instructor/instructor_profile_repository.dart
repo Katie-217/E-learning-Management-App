@@ -21,4 +21,3 @@ class InstructorProfileRepository {
     return snapshot.data();
   }
 }
-

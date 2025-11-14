@@ -32,15 +32,3 @@ class FormatUtils {
     return DateFormat('yyyy-MM-dd').format(date);
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-

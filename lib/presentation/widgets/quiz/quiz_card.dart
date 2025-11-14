@@ -8,16 +8,23 @@ class QuizCard extends StatelessWidget {
 
   Color _bg() {
     switch (quiz.status) {
-      case 'available': return Colors.green.withOpacity(0.12);
-      case 'upcoming': return Colors.orange.withOpacity(0.12);
-      default: return Colors.blue.withOpacity(0.12);
+      case 'available':
+        return Colors.green.withOpacity(0.12);
+      case 'upcoming':
+        return Colors.orange.withOpacity(0.12);
+      default:
+        return Colors.blue.withOpacity(0.12);
     }
   }
+
   Color _textColor() {
     switch (quiz.status) {
-      case 'available': return Colors.greenAccent;
-      case 'upcoming': return Colors.orangeAccent;
-      default: return Colors.lightBlueAccent;
+      case 'available':
+        return Colors.greenAccent;
+      case 'upcoming':
+        return Colors.orangeAccent;
+      default:
+        return Colors.lightBlueAccent;
     }
   }
 
@@ -38,9 +45,12 @@ class QuizCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(quiz.title, style: const TextStyle(fontWeight: FontWeight.w600)),
+                    Text(quiz.title,
+                        style: const TextStyle(fontWeight: FontWeight.w600)),
                     const SizedBox(height: 4),
-                    Text(quiz.dueDate, style: TextStyle(color: Colors.grey[400], fontSize: 12)),
+                    Text(quiz.dueDate,
+                        style:
+                            TextStyle(color: Colors.grey[400], fontSize: 12)),
                   ],
                 ),
               ),
@@ -51,16 +61,27 @@ class QuizCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: _bg().withOpacity(0.8)),
                 ),
-                child: Text(quiz.status, style: TextStyle(color: _textColor(), fontSize: 12)),
+                child: Text(quiz.status,
+                    style: TextStyle(color: _textColor(), fontSize: 12)),
               ),
             ],
           ),
           const SizedBox(height: 8),
           Row(
             children: [
-              Row(children: [const Icon(Icons.access_time, size: 14), const SizedBox(width: 6), Text(quiz.duration, style: TextStyle(color: Colors.grey[400], fontSize: 12))]),
+              Row(children: [
+                const Icon(Icons.access_time, size: 14),
+                const SizedBox(width: 6),
+                Text(quiz.duration,
+                    style: TextStyle(color: Colors.grey[400], fontSize: 12))
+              ]),
               const SizedBox(width: 12),
-              Row(children: [const Icon(Icons.article_outlined, size: 14), const SizedBox(width: 6), Text('${quiz.questions} questions', style: TextStyle(color: Colors.grey[400], fontSize: 12))]),
+              Row(children: [
+                const Icon(Icons.article_outlined, size: 14),
+                const SizedBox(width: 6),
+                Text('${quiz.questions} questions',
+                    style: TextStyle(color: Colors.grey[400], fontSize: 12))
+              ]),
             ],
           )
         ],

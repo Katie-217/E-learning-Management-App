@@ -1,10 +1,10 @@
-
 class ApiClient {
   static final ApiClient _instance = ApiClient._internal();
   factory ApiClient() => _instance;
   ApiClient._internal();
 
-  final String baseUrl = "https://your-backend-api-url.com/api"; // 🔥 Sửa khi dùng thật
+  final String baseUrl =
+      "https://your-backend-api-url.com/api"; // 🔥 Sửa khi dùng thật
   final Map<String, String> defaultHeaders = {
     "Content-Type": "application/json",
     "Accept": "application/json",

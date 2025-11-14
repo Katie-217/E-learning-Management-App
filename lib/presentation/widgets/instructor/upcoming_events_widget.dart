@@ -63,7 +63,8 @@ class UpcomingEventsWidget extends StatelessWidget {
           Column(
             children: events.map((dayData) {
               final Color color = dayData['color'] as Color;
-              final List<Map<String, dynamic>> items = (dayData['items'] as List).cast<Map<String, dynamic>>();
+              final List<Map<String, dynamic>> items =
+                  (dayData['items'] as List).cast<Map<String, dynamic>>();
               return Padding(
                 padding: const EdgeInsets.only(bottom: 18.0),
                 child: Column(

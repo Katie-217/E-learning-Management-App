@@ -59,7 +59,8 @@ class AppIcons {
   // HÀM: getIconWidget()
   // MÔ TẢ: Tạo widget icon từ IconData
   // ========================================
-  static Widget getIconWidget(IconData icon, {
+  static Widget getIconWidget(
+    IconData icon, {
     double? size,
     Color? color,
   }) {
@@ -70,8 +71,3 @@ class AppIcons {
     );
   }
 }
-
-
-
-
-

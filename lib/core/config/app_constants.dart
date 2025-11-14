@@ -20,6 +20,3 @@ class AppConstants {
   // ========================================
   static const String appName = 'E-learning Management App';
 }
-
-
-
