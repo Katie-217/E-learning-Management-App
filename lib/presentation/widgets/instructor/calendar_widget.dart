@@ -13,16 +13,39 @@ class CalendarWidget extends ConsumerStatefulWidget {
 class _CalendarWidgetState extends ConsumerState<CalendarWidget> {
   DateTime _currentDate = DateTime.now();
 
+  @override
+  void initState() {
+    super.initState();
+    // Initialize with current month
+    _currentDate = DateTime.now();
+  }
+
   void _previousMonth() {
+    final newMonth = DateTime(_currentDate.year, _currentDate.month - 1, 1);
     setState(() {
-      _currentDate = DateTime(_currentDate.year, _currentDate.month - 1, 1);
+      _currentDate = newMonth;
     });
+    _syncSelectedDateWithMonth(newMonth);
   }
 
   void _nextMonth() {
+    final newMonth = DateTime(_currentDate.year, _currentDate.month + 1, 1);
     setState(() {
-      _currentDate = DateTime(_currentDate.year, _currentDate.month + 1, 1);
+      _currentDate = newMonth;
     });
+    _syncSelectedDateWithMonth(newMonth);
+  }
+
+  void _syncSelectedDateWithMonth(DateTime monthDate) {
+    final selectedDate = ref.read(selectedDateProvider);
+    final desiredDay = selectedDate.day;
+    final lastDayOfMonth = DateTime(monthDate.year, monthDate.month + 1, 0).day;
+    final newSelectedDate = DateTime(
+      monthDate.year,
+      monthDate.month,
+      desiredDay > lastDayOfMonth ? lastDayOfMonth : desiredDay,
+    );
+    ref.read(selectedDateProvider.notifier).state = newSelectedDate;
   }
 
   void _goToToday() {
@@ -87,6 +110,7 @@ class SimpleCalendar extends StatelessWidget {
     final lastDay = DateTime(currentDate.year, currentDate.month + 1, 0);
     final daysInMonth = lastDay.day;
     final firstWeekday = firstDay.weekday % 7; // Convert to 0-6 (Sunday = 0)
+    // Check if currentDate is the current month (year and month match)
     final isCurrentMonth = currentDate.year == now.year && currentDate.month == now.month;
 
     return Container(
@@ -136,9 +160,11 @@ class SimpleCalendar extends StatelessWidget {
               ),
             ],
           ),
-          if (!isCurrentMonth && onGoToToday != null)
+          // Show "Today" button only when IN the current month
+          // (when viewing the month that contains today's date)
+          if (isCurrentMonth && onGoToToday != null)
             Padding(
-              padding: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.only(top: 8, bottom: 12),
               child: TextButton(
                 onPressed: onGoToToday,
                 style: TextButton.styleFrom(
@@ -152,6 +178,8 @@ class SimpleCalendar extends StatelessWidget {
                 ),
               ),
             ),
+          if (!isCurrentMonth || onGoToToday == null)
+            const SizedBox(height: 20),
           // Days of week header
           Row(
             children: ['S', 'M', 'T', 'W', 'T', 'F', 'S']
@@ -189,10 +217,17 @@ class SimpleCalendar extends StatelessWidget {
                   }
 
                   final date = DateTime(currentDate.year, currentDate.month, dayNumber);
-                  final isToday = date.year == now.year && 
-                                  date.month == now.month && 
-                                  date.day == now.day;
-                  final isSelected = date.year == selectedDate.year && 
+                  // Only highlight today if we're viewing the current month AND the date is actually today
+                  // This prevents showing "today" indicator in other months
+                  final isToday = (currentDate.year == now.year && 
+                                   currentDate.month == now.month) &&
+                                  (date.year == now.year && 
+                                   date.month == now.month && 
+                                   date.day == now.day);
+                  // Only highlight selected date if we're viewing the same month/year as the selected date
+                  final isSelected = currentDate.year == selectedDate.year &&
+                                    currentDate.month == selectedDate.month &&
+                                    date.year == selectedDate.year && 
                                     date.month == selectedDate.month && 
                                     date.day == selectedDate.day;
                   
@@ -215,27 +250,38 @@ class SimpleCalendar extends StatelessWidget {
                         height: 40,
                         margin: const EdgeInsets.symmetric(horizontal: 2),
                         decoration: BoxDecoration(
-                          color: isSelected
-                              ? Colors.blue.withOpacity(0.2)
-                              : isToday 
-                                  ? Colors.blue.withOpacity(0.1)
-                                  : Colors.transparent,
+                          color: Colors.transparent,
                           borderRadius: BorderRadius.circular(8),
-                          border: isSelected
-                              ? Border.all(color: Colors.blue, width: 2)
-                              : isToday
-                                  ? Border.all(color: Colors.blue, width: 1.5)
-                                  : null,
+                          border: isToday && !isSelected
+                              ? Border.all(color: Colors.blue.withOpacity(0.5), width: 1.5)
+                              : null,
                         ),
                         child: Stack(
                           alignment: Alignment.center,
                           children: [
+                            // Selected indicator - only show for selected date
+                            if (isSelected)
+                              Container(
+                                width: 32,
+                                height: 32,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF3B82F6), // Blue-500
+                                  borderRadius: BorderRadius.circular(6),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFF3B82F6).withOpacity(0.3),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             Center(
                               child: Text(
                                 dayNumber.toString(),
                                 style: TextStyle(
                                   color: isSelected
-                                      ? Colors.blue
+                                      ? Colors.white
                                       : isToday
                                           ? Colors.blue
                                           : Colors.black87,
