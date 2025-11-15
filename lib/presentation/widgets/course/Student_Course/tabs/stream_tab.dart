@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:elearning_management_app/domain/models/course_model.dart';
-import 'upcoming_widget.dart';
+import '../widgets/upcoming_widget.dart';
+import '../../../../../core/theme/app_colors.dart';
 
 class StreamTab extends StatelessWidget {
   final CourseModel course;
@@ -46,9 +47,9 @@ class StreamTab extends StatelessWidget {
                 const SizedBox(width: 16),
 
                 // RIGHT: upcoming fixed width
-                const SizedBox(
+                SizedBox(
                   width: 320,
-                  child: UpcomingWidget(),
+                  child: UpcomingWidget(course: course),
                 ),
               ],
             )
@@ -70,7 +71,7 @@ class StreamTab extends StatelessWidget {
                     meta: 'Teacher • 2 days ago',
                   ),
                   const SizedBox(height: 16),
-                  const UpcomingWidget(),
+                  UpcomingWidget(course: course),
                 ],
               ),
             ),
@@ -165,7 +166,10 @@ class _PostItem extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(title,
-                        style: const TextStyle(fontWeight: FontWeight.w600)),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        )),
                     Text(meta,
                         style:
                             TextStyle(color: Colors.grey[500], fontSize: 12)),
@@ -270,7 +274,10 @@ class _CommentItem extends StatelessWidget {
               Row(
                 children: [
                   Text(name,
-                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
+                      )),
                   const SizedBox(width: 8),
                   Text(time,
                       style: TextStyle(color: Colors.grey[500], fontSize: 12)),

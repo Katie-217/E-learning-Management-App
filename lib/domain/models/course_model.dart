@@ -62,13 +62,16 @@ class CourseModel {
   factory CourseModel.fromFirestore(DocumentSnapshot doc) {
     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
 
+    // Parse sessions - support multiple field names
+    int sessionsCount = _parseSessions(data);
+
     return CourseModel(
       id: doc.id,
       code: data['code'] ?? '',
       name: data['name'] ?? '',
       instructor: data['teacherName'] ?? data['instructor'] ?? '',
       semester: data['semester'] ?? '',
-      sessions: data['session'] ?? 0,
+      sessions: sessionsCount,
       progress: _parseProgress(data['progress']),
       description: data['description'] ?? '',
       credits: data['credits'] ?? 0,
@@ -76,6 +79,32 @@ class CourseModel {
       status: data['status'] ?? '',
       maxCapacity: data['maxCapacity'] ?? 50,
     );
+  }
+
+  // Helper method để parse sessions từ nhiều field names
+  static int _parseSessions(Map<String, dynamic> data) {
+    // Try multiple field names
+    if (data['sessions'] != null) {
+      final value = data['sessions'];
+      if (value is int) return value;
+      if (value is String) return int.tryParse(value) ?? 0;
+    }
+    if (data['session'] != null) {
+      final value = data['session'];
+      if (value is int) return value;
+      if (value is String) return int.tryParse(value) ?? 0;
+    }
+    if (data['totalSessions'] != null) {
+      final value = data['totalSessions'];
+      if (value is int) return value;
+      if (value is String) return int.tryParse(value) ?? 0;
+    }
+    if (data['numberOfSessions'] != null) {
+      final value = data['numberOfSessions'];
+      if (value is int) return value;
+      if (value is String) return int.tryParse(value) ?? 0;
+    }
+    return 0;
   }
 
   // Method để convert thành JSON (cho API calls)

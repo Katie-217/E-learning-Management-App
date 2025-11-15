@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../application/controllers/course/course_provider.dart';
-import '../../../../core/theme/app_colors.dart';
+import 'package:elearning_management_app/application/controllers/course/course_provider.dart';
+import 'package:elearning_management_app/core/theme/app_colors.dart';
 
 class CourseFilterWidget extends ConsumerWidget {
   const CourseFilterWidget({super.key});

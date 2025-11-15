@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:elearning_management_app/domain/models/course_model.dart';
-import 'package:elearning_management_app/presentation/widgets/course/Student_Course/course_card_widget.dart';
-import 'package:elearning_management_app/presentation/widgets/course/Student_Course/course_detail.dart';
-import 'package:elearning_management_app/presentation/widgets/course/Student_Course/course_tabs_widget.dart';
-import 'package:elearning_management_app/presentation/widgets/course/Student_Course/course_filter_widget.dart';
+import 'package:elearning_management_app/presentation/widgets/course/Student_Course/cards/course_card_widget.dart';
+import 'package:elearning_management_app/presentation/screens/course/Student_Course/detail/course_detail.dart';
+import 'package:elearning_management_app/presentation/widgets/course/Student_Course/tabs/course_tabs_widget.dart';
+import 'package:elearning_management_app/presentation/widgets/course/Student_Course/widgets/course_filter_widget.dart';
 import 'package:elearning_management_app/core/theme/app_colors.dart';
 import 'package:elearning_management_app/presentation/widgets/common/sidebar_model.dart';
 import 'package:elearning_management_app/application/controllers/course/course_provider.dart';
@@ -78,7 +78,10 @@ class _CoursePageState extends ConsumerState<CoursePage>
                   ),
                   const SizedBox(width: 12),
                   const Text('E-Learning',
-                      style: TextStyle(fontWeight: FontWeight.w600)),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
+                      )),
                 ],
               ),
               actions: [

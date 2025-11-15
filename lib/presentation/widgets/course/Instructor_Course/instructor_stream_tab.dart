@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:elearning_management_app/domain/models/course_model.dart';
-import '../Student_Course/upcoming_widget.dart';
+import '../Student_Course/widgets/upcoming_widget.dart';
 
 class InstructorStreamTab extends StatelessWidget {
   final CourseModel course;
@@ -46,9 +46,9 @@ class InstructorStreamTab extends StatelessWidget {
                 const SizedBox(width: 16),
 
                 // RIGHT: upcoming fixed width
-                const SizedBox(
+                SizedBox(
                   width: 320,
-                  child: UpcomingWidget(),
+                  child: UpcomingWidget(course: course),
                 ),
               ],
             )
@@ -70,7 +70,7 @@ class InstructorStreamTab extends StatelessWidget {
                     meta: 'Teacher • 2 days ago',
                   ),
                   const SizedBox(height: 16),
-                  const UpcomingWidget(),
+                  UpcomingWidget(course: course),
                 ],
               ),
             ),

@@ -104,10 +104,12 @@ class CourseStudentNotifier extends StateNotifier<CourseState> {
 
       // Gọi dữ liệu từ CourseController theo Clean Architecture
       print('DEBUG: ========== COURSE PROVIDER LOADING ==========');
+      print('DEBUG: 🚀 Starting to load courses...');
       try {
         // Sử dụng CourseController để lấy my courses (bao gồm auth + business logic)
+        print('DEBUG: 📞 Calling _courseController.getMyCourses()...');
         courses = await _courseController.getMyCourses();
-        print('DEBUG: ✅ Provider received ${courses.length} courses');
+        print('DEBUG: ✅ Provider received ${courses.length} courses from controller');
 
         if (courses.isNotEmpty) {
           print('DEBUG: 📚 Courses loaded:');
@@ -127,6 +129,13 @@ class CourseStudentNotifier extends StateNotifier<CourseState> {
 
       // Áp dụng bộ lọc hiện tại
       final filteredCourses = _applyFilters(courses);
+      
+      print('DEBUG: 📊 Course Provider State Update:');
+      print('DEBUG:   - Total courses loaded: ${courses.length}');
+      print('DEBUG:   - Filtered courses: ${filteredCourses.length}');
+      print('DEBUG:   - Selected semester: ${state.selectedSemester}');
+      print('DEBUG:   - Selected status: ${state.selectedStatus}');
+      
       state = state.copyWith(
           courses: courses, filteredCourses: filteredCourses, isLoading: false);
     } catch (e) {
@@ -161,21 +170,29 @@ class CourseStudentNotifier extends StateNotifier<CourseState> {
   // Áp dụng tất cả bộ lọc
   List<CourseModel> _applyFilters(List<CourseModel> courses) {
     List<CourseModel> filtered = courses;
+    
+    print('DEBUG: 🔍 Applying filters to ${courses.length} courses');
+    print('DEBUG:   - Before filter: ${filtered.length} courses');
 
     // Lọc theo học kì
     if (state.selectedSemester != 'All') {
+      final beforeSemester = filtered.length;
       filtered = filtered
           .where((course) => course.semester == state.selectedSemester)
           .toList();
+      print('DEBUG:   - After semester filter (${state.selectedSemester}): ${filtered.length} courses (removed ${beforeSemester - filtered.length})');
     }
 
     // Lọc theo trạng thái
     if (state.selectedStatus != 'All') {
+      final beforeStatus = filtered.length;
       filtered = filtered
           .where((course) => course.status == state.selectedStatus)
           .toList();
+      print('DEBUG:   - After status filter (${state.selectedStatus}): ${filtered.length} courses (removed ${beforeStatus - filtered.length})');
     }
 
+    print('DEBUG:   - Final filtered: ${filtered.length} courses');
     return filtered;
   }
 

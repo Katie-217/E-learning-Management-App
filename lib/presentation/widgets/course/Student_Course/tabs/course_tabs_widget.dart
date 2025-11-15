@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'upcoming_widget.dart';
+import '../widgets/upcoming_widget.dart';
 import 'classwork_tab.dart';
 import 'people_tab.dart';
 import 'package:elearning_management_app/domain/models/course_model.dart';
@@ -35,8 +35,8 @@ class CourseTabsWidget extends StatelessWidget {
             controller: tabController,
             children: [
               StreamTab(course: course),
-              const ClassworkTab(),
-              const PeopleTab(),
+              ClassworkTab(course: course),
+              PeopleTab(course: course),
             ],
           ),
         ),

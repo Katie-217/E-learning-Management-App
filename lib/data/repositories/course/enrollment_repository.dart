@@ -130,36 +130,86 @@ class EnrollmentRepository {
   // ========================================
   Future<List<EnrollmentModel>> getCoursesOfStudent(String userId) async {
     try {
+      print('DEBUG: ========== GET COURSES OF STUDENT ==========');
       print('DEBUG: 🔍 Querying enrollments for userId: $userId');
 
-      // Simplified query để avoid composite index requirement
-      final querySnapshot = await _firestore
-          .collection(_collection)
-          .where('userId', isEqualTo: userId)
-          .where('status', isEqualTo: 'active')
-          .get();
+      // Query chỉ với userId để tránh vấn đề composite index
+      // Sau đó filter status và role trong memory
+      QuerySnapshot querySnapshot;
+      
+      try {
+        // Query chỉ với userId (không filter status ở Firestore để tránh cần index)
+        querySnapshot = await _firestore
+            .collection(_collection)
+            .where('userId', isEqualTo: userId)
+            .get();
+        
+        print('DEBUG: 📋 Query found ${querySnapshot.docs.length} total enrollment documents');
+        
+        // Log tất cả documents để debug
+        for (var doc in querySnapshot.docs) {
+          final data = doc.data() as Map<String, dynamic>;
+          print('DEBUG: 📄 Doc ID: ${doc.id}');
+          print('DEBUG:    - userId: ${data['userId']}');
+          print('DEBUG:    - courseId: ${data['courseId']}');
+          print('DEBUG:    - role: ${data['role']}');
+          print('DEBUG:    - status: ${data['status']}');
+        }
+      } catch (e) {
+        print('DEBUG: ❌ Error querying enrollments: $e');
+        print('DEBUG: ❌ Stack trace: ${StackTrace.current}');
+        rethrow;
+      }
 
-      print(
-          'DEBUG: 📋 Found ${querySnapshot.docs.length} enrollment documents');
-
-      // Filter by role in memory để avoid complex index
-      final enrollments = querySnapshot.docs
+      // Filter by status and role in memory để đảm bảo lấy đủ
+      final allEnrollments = querySnapshot.docs
           .map((doc) {
-            final data = doc.data();
-            print(
-                'DEBUG: 📄 Enrollment doc: ${doc.id} - role: ${data['role']} - courseId: ${data['courseId']}');
-            return EnrollmentModel.fromMap(doc.id, data);
+            try {
+              final data = doc.data() as Map<String, dynamic>;
+              return EnrollmentModel.fromMap(doc.id, data);
+            } catch (e) {
+              print('DEBUG: ⚠️ Error parsing enrollment doc ${doc.id}: $e');
+              return null;
+            }
           })
-          .where((enrollment) => enrollment.role == 'student')
+          .whereType<EnrollmentModel>()
+          .toList();
+      
+      print('DEBUG: 📊 Parsed ${allEnrollments.length} enrollment models');
+
+      // Filter active student enrollments
+      final enrollments = allEnrollments
+          .where((enrollment) {
+            final isStudent = enrollment.role == 'student';
+            final isActive = enrollment.status == 'active';
+            if (!isStudent || !isActive) {
+              print('DEBUG: ⚠️ Filtered out enrollment: ${enrollment.id} - role: ${enrollment.role}, status: ${enrollment.status}');
+            }
+            return isStudent && isActive;
+          })
           .toList();
 
       // Sort by enrolledAt in memory
       enrollments.sort((a, b) => b.enrolledAt.compareTo(a.enrolledAt));
 
-      print('DEBUG: ✅ Filtered to ${enrollments.length} student enrollments');
+      print('DEBUG: ✅ Final result: ${enrollments.length} active student enrollments');
+      
+      if (enrollments.isEmpty) {
+        print('DEBUG: ⚠️ No active enrollments found for user $userId');
+        print('DEBUG: 💡 Check if user has enrollments in Firestore collection: $_collection');
+        print('DEBUG: 💡 Query: where userId == $userId');
+      } else {
+        print('DEBUG: 📚 Course IDs:');
+        for (var i = 0; i < enrollments.length; i++) {
+          print('DEBUG:   ${i + 1}. ${enrollments[i].courseId}');
+        }
+      }
+      
+      print('DEBUG: ===========================================');
       return enrollments;
     } catch (e) {
       print('DEBUG: ❌ Error in getCoursesOfStudent: $e');
+      print('DEBUG: ❌ Stack trace: ${StackTrace.current}');
       throw Exception('Lỗi lấy danh sách khóa học của sinh viên: $e');
     }
   }

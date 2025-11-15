@@ -18,6 +18,7 @@ class CourseStudentRepository {
   // ========================================
   static Future<List<CourseModel>> getUserCourses(String uid) async {
     try {
+      print('DEBUG: ========== COURSE STUDENT REPOSITORY ==========');
       print('DEBUG: 🔍 Getting enrolled courses for user: $uid');
 
       final enrollmentRepo = EnrollmentRepository();
@@ -29,39 +30,87 @@ class CourseStudentRepository {
 
       if (enrollments.isEmpty) {
         print('DEBUG: 🚨 No enrollments found for user $uid');
+        print('DEBUG: 💡 User may need to enroll in courses first');
         return [];
       }
 
       // Lấy thông tin chi tiết các courses từ courseIds
       final List<CourseModel> courses = [];
+      final List<String> courseIds = enrollments.map((e) => e.courseId).toList();
+      
+      print('DEBUG: ========== FETCHING COURSES ==========');
+      print('DEBUG: 📚 Fetching ${courseIds.length} courses from Firestore collection: $_collectionName');
+      print('DEBUG: 📋 Course IDs to fetch:');
+      for (var i = 0; i < courseIds.length; i++) {
+        print('DEBUG:   ${i + 1}. $courseIds[i]');
+      }
 
-      for (final enrollment in enrollments) {
+      // Fetch tất cả courses - sử dụng Future.wait để fetch song song
+      final List<Future<CourseModel?>> courseFutures = courseIds.map((courseId) async {
         try {
+          print('DEBUG: 🔍 Fetching course: $courseId');
           final courseDoc = await _firestore
               .collection(_collectionName)
-              .doc(enrollment.courseId)
+              .doc(courseId)
               .get();
 
           if (courseDoc.exists) {
-            final course = CourseModel.fromFirestore(courseDoc);
-            courses.add(course);
-            print('DEBUG: ✅ Added course: ${course.name}');
+            var course = CourseModel.fromFirestore(courseDoc);
+            
+            // If sessions is 0, try to count from sub-collection
+            if (course.sessions == 0) {
+              print('DEBUG: 📊 Sessions field is 0, counting from sub-collection...');
+              final sessionsCount = await _countSessionsFromSubCollection(courseId);
+              if (sessionsCount > 0) {
+                course = course.copyWith(sessions: sessionsCount);
+                print('DEBUG: ✅ Found $sessionsCount sessions in sub-collection');
+              }
+            }
+            
+            print('DEBUG: ✅ Found course: ${course.name} (${course.code}) - ID: $courseId - Sessions: ${course.sessions}');
+            return course;
           } else {
-            print(
-                'DEBUG: ⚠️ Course ${enrollment.courseId} not found in courses collection');
+            print('DEBUG: ⚠️ Course document $courseId NOT FOUND in collection $_collectionName');
+            print('DEBUG: 💡 Enrollment exists but course document is missing');
+            return null;
           }
         } catch (e) {
-          print('DEBUG: ❌ Error fetching course ${enrollment.courseId}: $e');
+          print('DEBUG: ❌ Error fetching course $courseId: $e');
+          print('DEBUG: ❌ Stack trace: ${StackTrace.current}');
+          return null;
         }
-      }
+      }).toList();
+
+      // Wait for all courses to be fetched
+      final fetchedCourses = await Future.wait(courseFutures);
+      
+      // Filter out null values (courses that couldn't be fetched)
+      courses.addAll(fetchedCourses.whereType<CourseModel>());
 
       // Sort theo name
       courses.sort((a, b) => a.name.compareTo(b.name));
 
-      print('DEBUG: ✅ Successfully fetched ${courses.length} courses for user');
+      print('DEBUG: ✅ Successfully fetched ${courses.length}/${enrollments.length} courses for user');
+      
+      if (courses.length < enrollments.length) {
+        final missingCount = enrollments.length - courses.length;
+        print('DEBUG: ⚠️ WARNING: Some courses could not be loaded!');
+        print('DEBUG: ⚠️ Missing $missingCount out of ${enrollments.length} courses');
+        print('DEBUG: 💡 Check if course documents exist in Firestore collection: $_collectionName');
+      } else {
+        print('DEBUG: ✅ All courses loaded successfully!');
+      }
+      
+      print('DEBUG: 📚 Final courses list:');
+      for (var i = 0; i < courses.length; i++) {
+        print('DEBUG:   ${i + 1}. ${courses[i].name} (${courses[i].code}) - ${courses[i].semester}');
+      }
+      
+      print('DEBUG: ===========================================');
       return courses;
     } catch (e) {
       print('DEBUG: ❌ Error fetching user courses: $e');
+      print('DEBUG: ❌ Stack trace: ${StackTrace.current}');
       return [];
     }
   }
@@ -88,8 +137,22 @@ class CourseStudentRepository {
             'DEBUG: 📄 Doc ${doc.id}: name="${data['name']}", students=${data['students']}');
       }
 
-      final courses =
-          snapshot.docs.map((doc) => CourseModel.fromFirestore(doc)).toList();
+      final List<CourseModel> courses = [];
+      
+      // Fetch courses and count sessions if needed
+      for (var doc in snapshot.docs) {
+        var course = CourseModel.fromFirestore(doc);
+        
+        // If sessions is 0, try to count from sub-collection
+        if (course.sessions == 0) {
+          final sessionsCount = await _countSessionsFromSubCollection(doc.id);
+          if (sessionsCount > 0) {
+            course = course.copyWith(sessions: sessionsCount);
+          }
+        }
+        
+        courses.add(course);
+      }
 
       // Sort by name on client
       courses.sort((a, b) => a.name.compareTo(b.name));
@@ -111,7 +174,19 @@ class CourseStudentRepository {
           await _firestore.collection(_collectionName).doc(courseId).get();
 
       if (doc.exists) {
-        return CourseModel.fromFirestore(doc);
+        var course = CourseModel.fromFirestore(doc);
+        
+        // If sessions is 0, try to count from sub-collection
+        if (course.sessions == 0) {
+          print('DEBUG: 📊 Sessions field is 0, counting from sub-collection...');
+          final sessionsCount = await _countSessionsFromSubCollection(courseId);
+          if (sessionsCount > 0) {
+            course = course.copyWith(sessions: sessionsCount);
+            print('DEBUG: ✅ Found $sessionsCount sessions in sub-collection');
+          }
+        }
+        
+        return course;
       }
       return null;
     } catch (e) {
@@ -151,7 +226,16 @@ class CourseStudentRepository {
               .get();
 
           if (courseDoc.exists) {
-            final course = CourseModel.fromFirestore(courseDoc);
+            var course = CourseModel.fromFirestore(courseDoc);
+            
+            // If sessions is 0, try to count from sub-collection
+            if (course.sessions == 0) {
+              final sessionsCount = await _countSessionsFromSubCollection(enrollment.courseId);
+              if (sessionsCount > 0) {
+                course = course.copyWith(sessions: sessionsCount);
+              }
+            }
+            
             if (course.semester == semester) {
               courses.add(course);
             }
@@ -262,6 +346,25 @@ class CourseStudentRepository {
     } catch (e) {
       print('DEBUG: ❌ Error checking student enrollment: $e');
       return false;
+    }
+  }
+
+  // ========================================
+  // HÀM: _countSessionsFromSubCollection
+  // MÔ TẢ: Đếm số lượng sessions từ sub-collection
+  // ========================================
+  static Future<int> _countSessionsFromSubCollection(String courseId) async {
+    try {
+      final snapshot = await _firestore
+          .collection(_collectionName)
+          .doc(courseId)
+          .collection('sessions')
+          .get();
+      
+      return snapshot.docs.length;
+    } catch (e) {
+      print('DEBUG: ⚠️ Error counting sessions from sub-collection: $e');
+      return 0;
     }
   }
 }
