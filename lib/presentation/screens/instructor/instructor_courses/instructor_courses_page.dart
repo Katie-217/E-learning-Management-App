@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:elearning_management_app/presentation/screens/instructor/instructor_courses/instructor_course_detail_page.dart';
 import 'package:elearning_management_app/domain/models/course_model.dart';
-import 'package:elearning_management_app/presentation/widgets/course/Student_Course/course_card_widget.dart';
+import 'package:elearning_management_app/presentation/widgets/course/Student_Course/cards/course_card_widget.dart';
 import 'package:elearning_management_app/application/controllers/course/course_instructor_provider.dart';
 
 class InstructorCoursesPage extends ConsumerStatefulWidget {

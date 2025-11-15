@@ -26,13 +26,17 @@ class PieChartWidget extends StatefulWidget {
 }
 
 class _PieChartWidgetState extends State<PieChartWidget>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late AnimationController _animationController;
   late Animation<double> _animation;
+  double? _previousCompleted;
+  double? _previousPending;
+  bool _hasAnimated = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 600),
       vsync: this,
@@ -41,34 +45,132 @@ class _PieChartWidgetState extends State<PieChartWidget>
       parent: _animationController,
       curve: Curves.easeOutCubic,
     );
-    _animationController.forward();
+    _previousCompleted = widget.completed;
+    _previousPending = widget.pending;
+    
+    // Trigger animation when widget is first created - use multiple callbacks for web
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _triggerAnimation();
+    });
+    
+    // Additional callback for web compatibility
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (mounted && !_hasAnimated) {
+        _triggerAnimation();
+      }
+    });
+  }
+  
+  void _triggerAnimation() {
+    if (mounted) {
+      if (_animationController.status == AnimationStatus.dismissed) {
+        _animationController.forward();
+        _hasAnimated = true;
+      } else if (_animationController.status == AnimationStatus.completed) {
+        // If already completed, ensure it's visible
+        setState(() {});
+      }
+    }
+  }
+
+  @override
+  void reassemble() {
+    super.reassemble();
+    // Được gọi khi hot reload xảy ra - reset và trigger lại animation
+    _hasAnimated = false;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _animationController.reset();
+        _animationController.forward();
+        _hasAnimated = true;
+      }
+    });
+  }
+  
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    // Trigger animation when app becomes visible
+    if (state == AppLifecycleState.resumed) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _animationController.status == AnimationStatus.dismissed) {
+          _triggerAnimation();
+        }
+      });
+    }
+  }
+
+  @override
+  void didUpdateWidget(PieChartWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Nếu data thay đổi, reset và trigger lại animation
+    if (oldWidget.completed != widget.completed || 
+        oldWidget.pending != widget.pending) {
+      _previousCompleted = widget.completed;
+      _previousPending = widget.pending;
+      _animationController.reset();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _animationController.forward();
+        }
+      });
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Đảm bảo animation được trigger khi widget được hiển thị lại
+    // (ví dụ khi navigate đến trang) - chỉ trigger nếu animation chưa chạy
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        if (_animationController.status == AnimationStatus.dismissed) {
+          // Nếu animation chưa chạy, trigger nó
+          _triggerAnimation();
+        } else if (_animationController.status == AnimationStatus.completed && !_hasAnimated) {
+          // Nếu animation đã hoàn thành nhưng chưa được đánh dấu, đánh dấu lại
+          _hasAnimated = true;
+        }
+      }
+    });
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _animationController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    // Đảm bảo animation được trigger nếu chưa chạy
+    // Điều này đảm bảo biểu đồ hiển thị ngay cả khi vào trang lần đầu
+    if (!_hasAnimated && _animationController.status == AnimationStatus.dismissed) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _triggerAnimation();
+      });
+    }
+    
     // Normalize input values
     final double completedValue = _safeDouble(widget.completed);
     final double pendingValue = _safeDouble(widget.pending);
     final double total = completedValue + pendingValue;
 
-    if (total <= 0) {
-      return _buildEmptyState();
-    }
+    final bool hasData = total > 0;
 
-    final double completedPercent = (completedValue / total) * 100;
-    final double pendingPercent = (pendingValue / total) * 100;
+    final double completedPercent = hasData ? (completedValue / total) * 100 : 0.0;
+    final double pendingPercent = hasData ? (pendingValue / total) * 100 : 0.0;
     
-    // Apply animation
-    final double animatedCompleted = completedValue * _animation.value;
-    final double animatedPending = pendingValue * _animation.value;
-    final double animatedCompletedPercent = (animatedCompleted / total) * 100;
-    final double animatedPendingPercent = (animatedPending / total) * 100;
+    // Apply animation - ensure chart is visible even if animation hasn't started
+    // On web, animation might not start immediately, so show full values if animation is dismissed
+    final double animationValue = _animationController.status == AnimationStatus.dismissed 
+        ? 1.0  // Show full chart if animation hasn't started (web compatibility)
+        : _animation.value;
+    final double animatedCompleted = hasData ? completedValue * animationValue : 0.0;
+    final double animatedPending = hasData ? pendingValue * animationValue : 0.0;
+    final double animatedCompletedPercent = hasData ? (animatedCompleted / total) * 100 : 0.0;
+    final double animatedPendingPercent = hasData ? (animatedPending / total) * 100 : 0.0;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -121,8 +223,20 @@ class _PieChartWidgetState extends State<PieChartWidget>
                         ),
                         const SizedBox(height: 12),
                         Center(
-                          child: _buildLegend(completedValue, pendingValue, total),
+                          child: _buildLegend(completedValue, pendingValue, hasData ? total : 1.0),
                         ),
+                        if (!hasData) ...[
+                          const SizedBox(height: 12),
+                          Center(
+                            child: Text(
+                              'No data available',
+                              style: TextStyle(
+                                color: Colors.grey[400],
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ],
                         if (widget.trendPercent != null) ...[
                           const SizedBox(height: 20),
                           Center(
@@ -177,8 +291,18 @@ class _PieChartWidgetState extends State<PieChartWidget>
                                 alignment: isAssignments 
                                     ? Alignment(-0.2, 0) // Lệch về trái một chút cho assignments
                                     : Alignment.centerLeft,
-                                child: _buildLegend(completedValue, pendingValue, total),
+                                child: _buildLegend(completedValue, pendingValue, hasData ? total : 1.0),
                               ),
+                              if (!hasData) ...[
+                                const SizedBox(height: 12),
+                                Text(
+                                  'No data available',
+                                  style: TextStyle(
+                                    color: Colors.grey[400],
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
                               if (widget.trendPercent != null) ...[
                                 const SizedBox(height: 20),
                                 _buildTrendIndicator(widget.trendPercent!, widget.trendLabel),
@@ -469,7 +593,14 @@ class _PieChartCustomPainter extends CustomPainter {
     final radius = math.min(size.width, size.height) / 2 - 15;
     final total = completed + pending;
 
-    if (total <= 0) return;
+    if (total <= 0) {
+      // Draw empty circle when no data
+      final centerPaint = Paint()
+        ..color = const Color(0xFF111827).withOpacity(0.8)
+        ..style = PaintingStyle.fill;
+      canvas.drawCircle(center, radius * 0.6, centerPaint);
+      return;
+    }
 
     // Calculate angles
     final completedAngle = (completed / total) * 2 * math.pi;

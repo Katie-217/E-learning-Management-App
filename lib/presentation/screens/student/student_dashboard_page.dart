@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:elearning_management_app/application/controllers/instructor/task_provider.dart';
 import 'package:elearning_management_app/domain/models/task_model.dart';
+import 'package:elearning_management_app/domain/models/assignment_model.dart';
+import 'package:elearning_management_app/data/repositories/course/course_student_repository.dart';
+import 'package:elearning_management_app/data/repositories/assignment/assignment_repository.dart';
+import 'package:elearning_management_app/data/repositories/submission/submission_repository.dart';
+import 'package:elearning_management_app/domain/models/submission_model.dart';
 import 'package:elearning_management_app/presentation/widgets/student/stats_card.dart';
 import 'package:elearning_management_app/presentation/widgets/student/circular_progress_widget.dart';
 import 'package:elearning_management_app/presentation/widgets/student/pie_chart_widget.dart';
@@ -22,18 +29,171 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
   // final FirestoreService _service = FirestoreService.instance;
 
   final List<_SemesterOption> _semesters = const [
-    _SemesterOption(id: 'sp25', label: 'Spring 2025', isReadonly: false),
-    _SemesterOption(id: 'fa24', label: 'Fall 2024', isReadonly: true),
-    _SemesterOption(id: 'sp24', label: 'Spring 2024', isReadonly: true),
+    _SemesterOption(id: 'hk1_25', label: 'HK1/2025', isReadonly: false),
+    _SemesterOption(id: 'hk2_25', label: 'HK2/2025', isReadonly: true),
+    _SemesterOption(id: 'hkhe_25', label: 'HKH/2025', isReadonly: true),
   ];
 
   String? _selectedSemesterId;
+  String _userName = 'User';
+  
+  // Summary metrics data
+  int _coursesCount = 0;
+  int _assignmentsCount = 0;
+  int _pendingLateCount = 0;
+  int _quizzesCount = 0;
+  bool _isLoadingMetrics = true;
+  
+  // Pie chart data
+  double _assignmentsCompleted = 0.0;
+  double _assignmentsPending = 0.0;
+  double _quizzesCompleted = 0.0;
+  double _quizzesPending = 0.0;
 
   @override
   void initState() {
     super.initState();
     if (_semesters.isNotEmpty) {
       _selectedSemesterId = _semesters.first.id;
+    }
+    _loadUserName();
+    _loadSummaryMetrics();
+  }
+
+  Future<void> _loadUserName() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+
+        if (doc.exists) {
+          final data = doc.data()!;
+          setState(() {
+            _userName = data['name'] ?? user.displayName ?? 'User';
+          });
+        } else {
+          // Fallback to Firebase Auth data
+          setState(() {
+            _userName = user.displayName ?? 'User';
+          });
+        }
+      }
+    } catch (e) {
+      print('Error loading user name: $e');
+    }
+  }
+
+  Future<void> _loadSummaryMetrics() async {
+    try {
+      setState(() {
+        _isLoadingMetrics = true;
+      });
+
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        setState(() {
+          _isLoadingMetrics = false;
+        });
+        return;
+      }
+
+      // Load courses
+      final courses = await CourseStudentRepository.getUserCourses(user.uid);
+      final coursesCount = courses.length;
+
+      // Load all assignments from all courses
+      List<Assignment> allAssignments = [];
+      Map<String, String> assignmentToCourseMap = {}; // assignmentId -> courseId
+      
+      for (var course in courses) {
+        try {
+          final assignments = await AssignmentRepository.getAssignmentsByCourse(course.id);
+          allAssignments.addAll(assignments);
+          // Map assignment IDs to course IDs
+          for (var assignment in assignments) {
+            assignmentToCourseMap[assignment.id] = course.id;
+          }
+        } catch (e) {
+          print('Error loading assignments for course ${course.id}: $e');
+        }
+      }
+
+      final now = DateTime.now();
+      
+      // Count assignments
+      final assignmentsCount = allAssignments.length;
+      
+      // Load submissions for all assignments
+      Map<String, bool> assignmentSubmittedMap = {}; // assignmentId -> isSubmitted
+      int assignmentsCompleted = 0;
+      int assignmentsPending = 0;
+      
+      for (var assignment in allAssignments) {
+        final courseId = assignmentToCourseMap[assignment.id];
+        if (courseId != null) {
+          try {
+            final submission = await SubmissionRepository.getUserSubmissionForAssignment(
+              courseId,
+              assignment.id,
+            );
+            final isSubmitted = submission != null && 
+                                (submission.status == SubmissionStatus.submitted || 
+                                 submission.status == SubmissionStatus.graded);
+            assignmentSubmittedMap[assignment.id] = isSubmitted;
+            
+            if (isSubmitted) {
+              assignmentsCompleted++;
+            } else {
+              assignmentsPending++;
+            }
+          } catch (e) {
+            print('Error checking submission for assignment ${assignment.id}: $e');
+            assignmentSubmittedMap[assignment.id] = false;
+            assignmentsPending++;
+          }
+        } else {
+          assignmentSubmittedMap[assignment.id] = false;
+          assignmentsPending++;
+        }
+      }
+      
+      // Count pending/late assignments (not submitted and deadline passed or upcoming)
+      final pendingLate = allAssignments.where((a) {
+        final isSubmitted = assignmentSubmittedMap[a.id] ?? false;
+        if (isSubmitted) return false; // Exclude submitted assignments
+        
+        // Pending: deadline in future
+        // Late: deadline in past
+        return a.deadline.isAfter(now) || a.deadline.isBefore(now);
+      }).length;
+      
+      // For now, quizzes count = 0 (need quiz repository or check assignment type)
+      // TODO: Implement quiz repository or check assignment type field
+      final quizzesCount = 0;
+      final quizzesPending = 0.0;
+      final quizzesCompleted = 0.0;
+
+      setState(() {
+        _coursesCount = coursesCount;
+        _assignmentsCount = assignmentsCount;
+        _pendingLateCount = pendingLate;
+        _quizzesCount = quizzesCount;
+        _assignmentsPending = assignmentsPending.toDouble();
+        _assignmentsCompleted = assignmentsCompleted.toDouble();
+        _quizzesPending = quizzesPending;
+        _quizzesCompleted = quizzesCompleted;
+        _isLoadingMetrics = false;
+      });
+
+      print('DEBUG: Summary metrics loaded - Courses: $coursesCount, Assignments: $assignmentsCount, Completed: $assignmentsCompleted, Pending: $assignmentsPending, Pending/Late: $pendingLate');
+    } catch (e) {
+      print('Error loading summary metrics: $e');
+      setState(() {
+        _isLoadingMetrics = false;
+      });
     }
   }
 
@@ -63,38 +223,38 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
 
   bool get _isReadonlySemester => _activeSemester.isReadonly;
 
-  final List<_SummaryMetric> _summaryMetrics = const [
+  List<_SummaryMetric> get _summaryMetrics => [
     _SummaryMetric(
       icon: Icons.menu_book_outlined,
       title: 'Courses',
-      value: '8',
-      bgStart: Color(0xFF6366F1),
-      bgEnd: Color(0xFF8B5CF6),
-      iconColor: Color(0xFFACAFFF),
+      value: _isLoadingMetrics ? '...' : '$_coursesCount',
+      bgStart: const Color(0xFF6366F1),
+      bgEnd: const Color(0xFF8B5CF6),
+      iconColor: const Color(0xFFACAFFF),
     ),
     _SummaryMetric(
       icon: Icons.assignment_outlined,
       title: 'Assignments',
-      value: '18',
-      bgStart: Color(0xFFF97316),
-      bgEnd: Color(0xFFFFB347),
-      iconColor: Color(0xFFFFE0B5),
+      value: _isLoadingMetrics ? '...' : '$_assignmentsCount',
+      bgStart: const Color(0xFFF97316),
+      bgEnd: const Color(0xFFFFB347),
+      iconColor: const Color(0xFFFFE0B5),
     ),
     _SummaryMetric(
       icon: Icons.pending_actions_outlined,
       title: 'Pending / Late',
-      value: '3',
-      bgStart: Color(0xFFFF6B6B),
-      bgEnd: Color(0xFFFF8E72),
-      iconColor: Color(0xFFFFD6D6),
+      value: _isLoadingMetrics ? '...' : '$_pendingLateCount',
+      bgStart: const Color(0xFFFF6B6B),
+      bgEnd: const Color(0xFFFF8E72),
+      iconColor: const Color(0xFFFFD6D6),
     ),
     _SummaryMetric(
       icon: Icons.quiz_outlined,
       title: 'Quizzes',
-      value: '6',
-      bgStart: Color(0xFF0EA5E9),
-      bgEnd: Color(0xFF38BDF8),
-      iconColor: Color(0xFFBEE8FF),
+      value: _isLoadingMetrics ? '...' : '$_quizzesCount',
+      bgStart: const Color(0xFF0EA5E9),
+      bgEnd: const Color(0xFF38BDF8),
+      iconColor: const Color(0xFFBEE8FF),
     ),
   ];
 
@@ -143,11 +303,7 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
         ),
       ];
 
-  // Data for pie charts - using percentages converted to counts for better visualization
-  final double _assignmentsCompleted = 72.0;
-  final double _assignmentsPending = 18.0;
-  final double _quizzesCompleted = 64.0;
-  final double _quizzesPending = 12.0;
+  // Data for pie charts - loaded from real data in _loadSummaryMetrics()
 
   Widget _buildQuizExamList(List<TaskModel> tasks) {
     final relevantTasks = tasks
@@ -230,7 +386,10 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
                   ),
                   const SizedBox(width: 12),
                   const Text('E-Learning',
-                      style: TextStyle(fontWeight: FontWeight.w600)),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      )),
                 ]),
                 actions: [
                   SizedBox(
@@ -271,7 +430,10 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      const Text('Jara Khan'),
+                      const Text(
+                        'Jara Khan',
+                        style: TextStyle(color: Colors.white),
+                      ),
                     ]),
                   )
                 ],
@@ -295,9 +457,9 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
-                                  'Hello Jara',
-                                  style: TextStyle(
+                                Text(
+                                  'Hello $_userName',
+                                  style: const TextStyle(
                                     fontSize: 24,
                                     fontWeight: FontWeight.w700,
                                     color: Colors.white,

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:elearning_management_app/domain/models/course_model.dart';
-import 'package:elearning_management_app/presentation/widgets/course/Student_Course/course_detail.dart';
+import 'package:elearning_management_app/presentation/screens/course/Student_Course/detail/course_detail.dart';
 import 'package:elearning_management_app/presentation/widgets/course/Instructor_Course/instructor_course_tabs_widget.dart';
 
 class InstructorCourseDetailPage extends ConsumerStatefulWidget {

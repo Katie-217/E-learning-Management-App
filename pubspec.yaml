@@ -51,6 +51,7 @@ dependencies:
   # Utils
   intl: ^0.20.2
   csv: ^6.0.0
+  url_launcher: ^6.3.1
   # Notifications (optional, platform-specific setup required)
   flutter_local_notifications: ^16.3.2
   # Charts

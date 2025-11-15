@@ -19,20 +19,58 @@ class AssignmentRepository {
   static Future<List<Assignment>> getAssignmentsByCourse(
       String courseId) async {
     try {
-      print('DEBUG: Fetching assignments for course: $courseId');
+      print('DEBUG: ========== FETCHING ASSIGNMENTS ==========');
+      print('DEBUG: 🔍 Fetching assignments for course: $courseId');
+      print('DEBUG: 📂 Collection path: $_courseCollectionName/$courseId/$_assignmentSubCollectionName');
 
-      final QuerySnapshot snapshot = await _firestore
-          .collection(_courseCollectionName)
-          .doc(courseId)
-          .collection(_assignmentSubCollectionName)
-          .orderBy('deadline', descending: false)
-          .get();
+      QuerySnapshot snapshot;
+      try {
+        snapshot = await _firestore
+            .collection(_courseCollectionName)
+            .doc(courseId)
+            .collection(_assignmentSubCollectionName)
+            .orderBy('deadline', descending: false)
+            .get();
+      } catch (e) {
+        // Nếu orderBy fail (có thể do thiếu index), thử query không orderBy
+        print('DEBUG: ⚠️ Query with orderBy failed: $e');
+        print('DEBUG: 💡 Trying without orderBy...');
+        snapshot = await _firestore
+            .collection(_courseCollectionName)
+            .doc(courseId)
+            .collection(_assignmentSubCollectionName)
+            .get();
+      }
 
-      print('DEBUG: Found ${snapshot.docs.length} assignments');
+      print('DEBUG: 📋 Found ${snapshot.docs.length} assignment documents');
 
-      return snapshot.docs.map((doc) => Assignment.fromFirestore(doc)).toList();
+      if (snapshot.docs.isEmpty) {
+        print('DEBUG: ⚠️ No assignments found in sub-collection');
+        print('DEBUG: 💡 Check if assignments exist in Firestore at: $_courseCollectionName/$courseId/$_assignmentSubCollectionName');
+        return [];
+      }
+
+      // Parse assignments
+      final assignments = <Assignment>[];
+      for (var doc in snapshot.docs) {
+        try {
+          final assignment = Assignment.fromFirestore(doc);
+          assignments.add(assignment);
+          print('DEBUG: ✅ Parsed assignment: ${assignment.title} (ID: ${assignment.id})');
+        } catch (e) {
+          print('DEBUG: ⚠️ Error parsing assignment doc ${doc.id}: $e');
+        }
+      }
+
+      // Sort by deadline if not already sorted
+      assignments.sort((a, b) => a.deadline.compareTo(b.deadline));
+
+      print('DEBUG: ✅ Successfully loaded ${assignments.length} assignments');
+      print('DEBUG: ===========================================');
+      return assignments;
     } catch (e) {
-      print('DEBUG: Error fetching assignments: $e');
+      print('DEBUG: ❌ Error fetching assignments: $e');
+      print('DEBUG: ❌ Stack trace: ${StackTrace.current}');
       return [];
     }
   }

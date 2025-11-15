@@ -18,6 +18,8 @@ class UserSessionService {
   static const String _userUidKey = 'user_uid';
   static const String _userRoleKey = 'user_role';
   static const String _userNameKey = 'user_name';
+  static const String _firebaseIdTokenKey = 'firebase_id_token';
+  static const String _firebaseRefreshTokenKey = 'firebase_refresh_token';
 
   // ========================================
   // HÀM: saveUserSession - Nhận UserModel
@@ -25,16 +27,22 @@ class UserSessionService {
   // ========================================
   static Future<void> saveUserSession(UserModel user) async {
     try {
+      print('DEBUG: 💾 Saving user session to SharedPreferences: ${user.email}');
       final prefs = await SharedPreferences.getInstance();
 
-      await prefs.setBool(_isLoggedInKey, true);
+      final success = await prefs.setBool(_isLoggedInKey, true);
       await prefs.setString(_userEmailKey, user.email);
       await prefs.setString(_userDisplayNameKey, user.displayName);
       await prefs.setString(_userUidKey, user.uid);
       await prefs.setString(_userRoleKey, user.role.name);
       await prefs.setString(_userNameKey, user.name);
+      
+      // Verify session was saved
+      final isLoggedIn = prefs.getBool(_isLoggedInKey) ?? false;
+      final savedUid = prefs.getString(_userUidKey);
+      print('DEBUG: ✅ Session saved - isLoggedIn: $isLoggedIn, uid: $savedUid');
     } catch (e) {
-      // Handle error silently
+      print('DEBUG: ❌ Error saving session: $e');
     }
   }
 
@@ -80,6 +88,7 @@ class UserSessionService {
   // ========================================
   static Future<void> clearUserSession() async {
     try {
+      print('DEBUG: 🗑️ Clearing user session from SharedPreferences');
       final prefs = await SharedPreferences.getInstance();
 
       await prefs.remove(_isLoggedInKey);
@@ -88,11 +97,14 @@ class UserSessionService {
       await prefs.remove(_userUidKey);
       await prefs.remove(_userRoleKey);
       await prefs.remove(_userNameKey);
+      await prefs.remove(_firebaseIdTokenKey);
+      await prefs.remove(_firebaseRefreshTokenKey);
 
-      // Also clear all SharedPreferences to be sure
-      await prefs.clear();
+      // KHÔNG clear tất cả SharedPreferences vì có thể có dữ liệu khác
+      // await prefs.clear(); // Đã xóa để tránh xóa dữ liệu khác
+      print('DEBUG: ✅ Session cleared');
     } catch (e) {
-      // Handle error silently
+      print('DEBUG: ❌ Error clearing session: $e');
     }
   }
 
@@ -105,9 +117,14 @@ class UserSessionService {
       final prefs = await SharedPreferences.getInstance();
       final isLoggedIn = prefs.getBool(_isLoggedInKey) ?? false;
       final uid = prefs.getString(_userUidKey) ?? '';
+      final email = prefs.getString(_userEmailKey) ?? '';
 
-      return isLoggedIn && uid.isNotEmpty;
+      final hasSession = isLoggedIn && uid.isNotEmpty;
+      print('DEBUG: 🔍 Checking SharedPreferences session - isLoggedIn: $isLoggedIn, uid: $uid, email: $email, hasSession: $hasSession');
+      
+      return hasSession;
     } catch (e) {
+      print('DEBUG: ❌ Error checking session: $e');
       return false;
     }
   }

@@ -3,6 +3,8 @@
 // MÔ TẢ: Model tài liệu học tập
 // ========================================
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class MaterialModel {
   final String id;
   final String courseId;
@@ -37,6 +39,115 @@ class MaterialModel {
     this.targetGroupIds = const [],
     this.downloadCount = 0,
   });
+
+  // ========================================
+  // HÀM: fromFirestore()
+  // MÔ TẢ: Tạo MaterialModel từ Firestore DocumentSnapshot
+  // ========================================
+  factory MaterialModel.fromFirestore(DocumentSnapshot doc) {
+    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+    
+    print('DEBUG: 📄 Parsing material doc ${doc.id}');
+    print('DEBUG: 📄 Raw data: $data');
+    
+    // Parse dates - handle both Timestamp and DateTime
+    DateTime? parseDate(dynamic dateData) {
+      if (dateData == null) {
+        return null;
+      }
+      if (dateData is Timestamp) {
+        return dateData.toDate();
+      }
+      if (dateData is DateTime) {
+        return dateData;
+      }
+      try {
+        return DateTime.parse(dateData.toString());
+      } catch (e) {
+        return null;
+      }
+    }
+    
+    // Parse attachment - có thể là 'attachment' hoặc 'files'
+    AttachmentModel? attachment;
+    if (data['attachment'] != null) {
+      try {
+        attachment = AttachmentModel.fromMap(
+          Map<String, dynamic>.from(data['attachment'] as Map),
+        );
+      } catch (e) {
+        print('DEBUG: ⚠️ Error parsing attachment: $e');
+      }
+    } else if (data['files'] != null) {
+      // Nếu có 'files' object, convert sang attachment
+      try {
+        final filesData = data['files'] as Map<String, dynamic>;
+        attachment = AttachmentModel(
+          id: filesData['fileId']?.toString() ?? doc.id,
+          name: filesData['name']?.toString() ?? 'Unknown',
+          url: filesData['url']?.toString() ?? '',
+          mimeType: filesData['type']?.toString() ?? 'application/octet-stream',
+          sizeInBytes: (filesData['size'] as int?) ?? 0,
+          uploadedAt: parseDate(data['createdAt']) ?? DateTime.now(),
+        );
+      } catch (e) {
+        print('DEBUG: ⚠️ Error parsing files: $e');
+      }
+    }
+
+    // Parse targetGroupIds
+    List<String> targetGroupIds = (data['targetGroupIds'] as List<dynamic>?)
+            ?.map((item) => item.toString())
+            .toList() ??
+        [];
+
+    // Lấy title từ files.title hoặc data.title
+    String title = data['title']?.toString() ?? 
+                   (data['files'] != null && data['files'] is Map 
+                     ? (data['files'] as Map)['title']?.toString() ?? 'Untitled Material'
+                     : 'Untitled Material');
+
+    // Lấy type từ files.type hoặc data.type
+    String typeStr = data['type']?.toString() ?? 
+                     (data['files'] != null && data['files'] is Map
+                       ? (data['files'] as Map)['type']?.toString() ?? 'document'
+                       : 'document');
+    
+    // Xác định MaterialType từ MIME type nếu cần
+    if (typeStr.contains('pdf') || typeStr.contains('document')) {
+      typeStr = 'document';
+    } else if (typeStr.contains('video')) {
+      typeStr = 'video';
+    } else if (typeStr.contains('audio')) {
+      typeStr = 'audio';
+    } else if (typeStr.contains('image')) {
+      typeStr = 'document'; // Images as documents
+    }
+
+    // Lấy URL từ files.url hoặc data.url
+    String? url = data['url']?.toString() ?? 
+                  (data['files'] != null && data['files'] is Map
+                    ? (data['files'] as Map)['url']?.toString()
+                    : null);
+
+    return MaterialModel(
+      id: doc.id,
+      courseId: data['courseId']?.toString() ?? '', // Có thể cần lấy từ parent collection
+      title: title,
+      description: data['description']?.toString(),
+      type: _parseMaterialType(typeStr),
+      url: url,
+      filePath: data['filePath']?.toString(),
+      attachment: attachment,
+      authorId: data['authorId']?.toString() ?? '',
+      authorName: data['authorName']?.toString() ?? '',
+      createdAt: parseDate(data['createdAt']) ?? DateTime.now(),
+      updatedAt: parseDate(data['updatedAt']),
+      isPublished: data['isPublished'] ?? true, // Default true nếu không có field
+      targetGroupIds: targetGroupIds,
+      downloadCount: (data['downloadCount'] as int?) ?? 0,
+    );
+  }
 
   // ========================================
   // HÀM: fromMap()

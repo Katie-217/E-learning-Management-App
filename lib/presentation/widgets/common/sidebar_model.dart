@@ -113,7 +113,7 @@ class _SidebarWidgetState extends State<SidebarWidget>
             color: isSelected
                 ? Colors.purple
                 : Colors.white.withOpacity(0.7),
-            size: 22,
+            size: 24,
           ),
         ),
         title: AnimatedDefaultTextStyle(
@@ -121,7 +121,7 @@ class _SidebarWidgetState extends State<SidebarWidget>
           curve: Curves.easeInOutCubic,
           style: TextStyle(
             color: Colors.white,
-            fontSize: 14,
+            fontSize: 16,
             fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
           ),
           child: Text(title),

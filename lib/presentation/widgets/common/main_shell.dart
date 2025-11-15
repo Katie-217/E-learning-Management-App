@@ -139,7 +139,10 @@ class _MainShellState extends State<MainShell> {
           ),
           const SizedBox(width: 12),
           const Text('E-Learning',
-              style: TextStyle(fontWeight: FontWeight.w600)),
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              )),
         ]),
         actions: [
           SizedBox(
@@ -171,7 +174,10 @@ class _MainShellState extends State<MainShell> {
             child: Row(children: [
               _buildUserAvatar(),
               const SizedBox(width: 8),
-              Text(_userName),
+              Text(
+                _userName,
+                style: const TextStyle(color: Colors.white),
+              ),
             ]),
           )
         ],

@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:elearning_management_app/presentation/screens/instructor/instructor_dashboard.dart';
-import 'package:elearning_management_app/presentation/screens/student/student_dashboard_page.dart';
+import 'package:elearning_management_app/presentation/widgets/common/main_shell.dart';
 
 class RoleBasedDashboard extends StatelessWidget {
   const RoleBasedDashboard({super.key});
@@ -11,7 +11,7 @@ class RoleBasedDashboard extends StatelessWidget {
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      return const StudentDashboardPage();
+      return const MainShell();
     }
     return Scaffold(
       body: FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
@@ -22,14 +22,15 @@ class RoleBasedDashboard extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
-            return const StudentDashboardPage();
+            return const MainShell();
           }
           final data = snapshot.data?.data();
           final role = (data?['role'] ?? '').toString().toLowerCase();
           if (role == 'teacher' || role == 'instructor') {
             return const InstructorDashboard();
           }
-          return const StudentDashboardPage();
+          // Sử dụng MainShell cho student để có navigation
+          return const MainShell();
         },
       ),
     );

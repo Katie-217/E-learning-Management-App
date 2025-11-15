@@ -52,15 +52,29 @@ class Assignment {
                 .toList() ??
             [];
 
+    // Parse dates - handle both Timestamp and DateTime
+    DateTime parseDate(dynamic dateData) {
+      if (dateData == null) {
+        return DateTime.now();
+      }
+      if (dateData is Timestamp) {
+        return dateData.toDate();
+      }
+      if (dateData is DateTime) {
+        return dateData;
+      }
+      return DateTime.now();
+    }
+
     return Assignment(
       id: doc.id,
       title: data['title'] ?? '',
       description: data['description'] ?? '',
-      startDate: (data['startDate'] as Timestamp).toDate(),
-      deadline: (data['deadline'] as Timestamp).toDate(),
+      startDate: parseDate(data['startDate'] ?? data['timestamp']),
+      deadline: parseDate(data['deadline']),
       allowLateSubmissions: data['allowLateSubmissions'] ?? false,
       lateDeadline:
-          (data['lateDeadline'] as Timestamp?)?.toDate(), // Xử lý nullable
+          data['lateDeadline'] != null ? parseDate(data['lateDeadline']) : null,
       maxSubmissionAttempts: data['maxSubmissionAttempts'] ?? 1,
       allowedFileFormats: allowedFileFormats,
       maxFileSizeMB: data['maxFileSizeMB'] ?? 10,
