@@ -6,6 +6,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../../domain/models/group_model.dart';
+import '../course/enrollment_repository.dart';
 
 class GroupRepository {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -53,16 +54,14 @@ class GroupRepository {
         return [];
       }
 
-      // Lấy danh sách courses mà user đã enroll
-      final userCoursesSnapshot = await _firestore
-          .collection(_courseCollectionName)
-          .where('students', arrayContains: user.uid)
-          .get();
+      // Lấy danh sách courses mà user đã enroll sử dụng EnrollmentRepository
+      final enrollmentRepo = EnrollmentRepository();
+      final enrollments = await enrollmentRepo.getCoursesOfStudent(user.uid);
 
       List<GroupModel> allGroups = [];
 
-      for (var courseDoc in userCoursesSnapshot.docs) {
-        final courseGroups = await getGroupsByCourse(courseDoc.id);
+      for (var enrollment in enrollments) {
+        final courseGroups = await getGroupsByCourse(enrollment.courseId);
         // Lọc chỉ groups mà user tham gia
         final userGroups = courseGroups
             .where((group) => group.studentIds.contains(user.uid))
@@ -107,11 +106,21 @@ class GroupRepository {
 
   // ========================================
   // HÀM: addMemberToGroup
-  // MÔ TẢ: Thêm student vào group
+  // MÔ TẢ: Thêm student vào group (với validation enrollment)
   // ========================================
   static Future<bool> addMemberToGroup(
       String courseId, String groupId, String studentId) async {
     try {
+      // Kiểm tra xem student có enrolled trong course không
+      final enrollmentRepo = EnrollmentRepository();
+      final isEnrolled =
+          await enrollmentRepo.isStudentEnrolled(courseId, studentId);
+
+      if (!isEnrolled) {
+        print('DEBUG: Student is not enrolled in course $courseId');
+        return false;
+      }
+
       await _firestore
           .collection(_courseCollectionName)
           .doc(courseId)

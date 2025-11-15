@@ -47,8 +47,10 @@ class StatsCard extends StatelessWidget {
               child: Icon(icon, color: iconColor),
             ),
             const SizedBox(width: 10),
-            Text(title,
-                style: TextStyle(color: Colors.grey[300], fontSize: 23)),
+            Expanded(
+              child: Text(title,
+                  style: TextStyle(color: Colors.grey[300], fontSize: 23)),
+            ),
           ]),
           const SizedBox(height: 12),
           Text(value,

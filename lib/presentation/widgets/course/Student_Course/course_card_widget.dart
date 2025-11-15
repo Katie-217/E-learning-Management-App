@@ -84,7 +84,9 @@ class _CourseCardWidgetState extends State<CourseCardWidget> {
                         Text('${c.sessions} sessions',
                             style: const TextStyle(
                                 color: Colors.grey, fontSize: 12)),
-                        Text('${c.students} students',
+                        // TODO: Replace with async enrollment count
+                        // Use EnrollmentRepository.countStudentsInCourse(c.id)
+                        Text('Loading students...',
                             style: const TextStyle(
                                 color: Colors.grey, fontSize: 12)),
                       ],

@@ -1,5 +1,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+// ========================================
+// COURSE MODEL - CLEANED VERSION
+// ========================================
+// NOTE: Student management logic has been moved to EnrollmentRepository/EnrollmentController
+// This model no longer handles student lists or counts
+// Use EnrollmentRepository.countStudentsInCourse() for student count
+// Use EnrollmentRepository.getStudentsInCourse() for student list
+// ========================================
+
 class CourseModel {
   final String id;
   final String code;
@@ -7,7 +16,6 @@ class CourseModel {
   final String instructor;
   final String semester;
   final int sessions;
-  final int students;
   final int progress;
 
   // Additional properties for compatibility
@@ -17,10 +25,6 @@ class CourseModel {
   final String status;
   final int maxCapacity; // Maximum number of students allowed
 
-  // Computed properties (no longer stored fields)
-  int get totalStudents =>
-      students; // Dynamic calculation from actual enrolled students
-
   CourseModel({
     required this.id,
     required this.code,
@@ -28,7 +32,6 @@ class CourseModel {
     required this.instructor,
     required this.semester,
     required this.sessions,
-    required this.students,
     required this.progress,
     this.description = '',
     this.credits = 3,
@@ -46,7 +49,6 @@ class CourseModel {
       instructor: json['instructor'] ?? '',
       semester: json['semester'] ?? '',
       sessions: json['session'] ?? 0,
-      students: json['students'] ?? 0,
       progress: json['progress'] ?? 0,
       description: json['description'] ?? '',
       credits: json['credits'] ?? 3,
@@ -67,7 +69,6 @@ class CourseModel {
       instructor: data['teacherName'] ?? data['instructor'] ?? '',
       semester: data['semester'] ?? '',
       sessions: data['session'] ?? 0,
-      students: (data['students'] as List<dynamic>?)?.length ?? 0,
       progress: _parseProgress(data['progress']),
       description: data['description'] ?? '',
       credits: data['credits'] ?? 0,
@@ -86,7 +87,6 @@ class CourseModel {
       'instructor': instructor,
       'semester': semester,
       'sessions': sessions,
-      'students': students,
       'progress': progress,
       'description': description,
       'credits': credits,
@@ -103,7 +103,6 @@ class CourseModel {
       'instructor': instructor,
       'semester': semester,
       'sessions': sessions,
-      'students': students,
       'progress': progress,
       'description': description,
       'credits': credits,
@@ -133,7 +132,6 @@ class CourseModel {
     String? instructor,
     String? semester,
     int? sessions,
-    int? students,
     int? progress,
     String? description,
     int? credits,
@@ -148,7 +146,6 @@ class CourseModel {
       instructor: instructor ?? this.instructor,
       semester: semester ?? this.semester,
       sessions: sessions ?? this.sessions,
-      students: students ?? this.students,
       progress: progress ?? this.progress,
       description: description ?? this.description,
       credits: credits ?? this.credits,

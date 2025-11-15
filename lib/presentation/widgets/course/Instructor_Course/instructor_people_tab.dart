@@ -90,7 +90,9 @@ class InstructorPeopleTab extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Students (${course.students})',
+                // TODO: Replace with async enrollment count
+                // Use EnrollmentRepository.countStudentsInCourse(course.id)
+                'Students (Loading...)',
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,

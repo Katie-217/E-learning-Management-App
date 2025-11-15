@@ -5,60 +5,60 @@
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../domain/models/course_model.dart';
+import 'enrollment_repository.dart';
 
 class CourseStudentRepository {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   static const String _collectionName = 'course_of_study';
 
   // ========================================
-  // HÀM: getUserCourses - Clean Architecture
-  // MÔ TẢ: Lấy courses của user (nhận uid từ Controller)
+  // HÀM: getUserCourses - Clean Architecture with EnrollmentRepository
+  // MÔ TẢ: Lấy courses của user thông qua EnrollmentRepository
+  // 🔄 SửDỤNG: EnrollmentRepository thay vì students array
   // ========================================
   static Future<List<CourseModel>> getUserCourses(String uid) async {
     try {
-      print('DEBUG: 🔍 Searching for courses with uid: $uid');
+      print('DEBUG: 🔍 Getting enrolled courses for user: $uid');
 
-      // Tránh Composite Index - Lọc đơn giản trên client
-      final QuerySnapshot snapshot = await _firestore
-          .collection(_collectionName)
-          .where('students', arrayContains: uid)
-          .get();
+      final enrollmentRepo = EnrollmentRepository();
 
-      print('DEBUG: 📊 Query result: ${snapshot.docs.length} documents found');
+      // 🔄 Sử DỤNG: EnrollmentRepository để lấy danh sách enrollments
+      final enrollments = await enrollmentRepo.getCoursesOfStudent(uid);
 
-      // Debug: Print document data
-      for (var doc in snapshot.docs) {
-        final data = doc.data() as Map<String, dynamic>;
-        print('DEBUG: 📄 Document ${doc.id}: students = ${data['students']}');
+      print('DEBUG: 📊 Found ${enrollments.length} enrollments for user');
+
+      if (enrollments.isEmpty) {
+        print('DEBUG: 🚨 No enrollments found for user $uid');
+        return [];
       }
 
-      // Sort trên client để tránh composite index
-      List<CourseModel> courses =
-          snapshot.docs.map((doc) => CourseModel.fromFirestore(doc)).toList();
+      // Lấy thông tin chi tiết các courses từ courseIds
+      final List<CourseModel> courses = [];
 
-      print('DEBUG: ✅ Parsed ${courses.length} courses successfully');
+      for (final enrollment in enrollments) {
+        try {
+          final courseDoc = await _firestore
+              .collection(_collectionName)
+              .doc(enrollment.courseId)
+              .get();
 
-      // FALLBACK: Nếu không tìm thấy courses với students array, thử lấy tất cả
-      if (courses.isEmpty) {
-        print(
-            'DEBUG: 🔄 No courses found with arrayContains, trying getAllCourses...');
-        final allCourses = await getAllCourses();
-        print('DEBUG: 📚 Found ${allCourses.length} total courses in database');
-
-        // Debug: Show all course data
-        for (var course in allCourses) {
-          print(
-              'DEBUG: 🔍 Course ${course.id}: name="${course.name}", students=${course.students}');
+          if (courseDoc.exists) {
+            final course = CourseModel.fromFirestore(courseDoc);
+            courses.add(course);
+            print('DEBUG: ✅ Added course: ${course.name}');
+          } else {
+            print(
+                'DEBUG: ⚠️ Course ${enrollment.courseId} not found in courses collection');
+          }
+        } catch (e) {
+          print('DEBUG: ❌ Error fetching course ${enrollment.courseId}: $e');
         }
-
-        // TEMP: Return all courses for now (until we fix students array)
-        print('DEBUG: 🚨 TEMPORARY: Returning all courses for testing');
-        return allCourses;
       }
 
-      // Sort theo name (client-side)
+      // Sort theo name
       courses.sort((a, b) => a.name.compareTo(b.name));
 
+      print('DEBUG: ✅ Successfully fetched ${courses.length} courses for user');
       return courses;
     } catch (e) {
       print('DEBUG: ❌ Error fetching user courses: $e');
@@ -121,22 +121,51 @@ class CourseStudentRepository {
   }
 
   // ========================================
-  // HÀM: getCoursesBySemester
+  // HÀM: getCoursesBySemester - Updated to use EnrollmentRepository
   // MÔ TẢ: Lấy courses theo semester cho user
+  // 🔄 SỬ DỤNG: EnrollmentRepository
   // ========================================
   static Future<List<CourseModel>> getCoursesBySemester(
       String uid, String semester) async {
     try {
-      final QuerySnapshot snapshot = await _firestore
-          .collection(_collectionName)
-          .where('students', arrayContains: uid)
-          .where('semester', isEqualTo: semester)
-          .orderBy('createdAt', descending: true)
-          .get();
+      print('DEBUG: 🔍 Getting courses for user $uid in semester $semester');
 
-      return snapshot.docs
-          .map((doc) => CourseModel.fromFirestore(doc))
-          .toList();
+      final enrollmentRepo = EnrollmentRepository();
+
+      // Lấy tất cả enrollments của user
+      final enrollments = await enrollmentRepo.getCoursesOfStudent(uid);
+
+      if (enrollments.isEmpty) {
+        print('DEBUG: 📭 No enrollments found for user');
+        return [];
+      }
+
+      // Lấy courses và filter theo semester
+      final List<CourseModel> courses = [];
+
+      for (final enrollment in enrollments) {
+        try {
+          final courseDoc = await _firestore
+              .collection(_collectionName)
+              .doc(enrollment.courseId)
+              .get();
+
+          if (courseDoc.exists) {
+            final course = CourseModel.fromFirestore(courseDoc);
+            if (course.semester == semester) {
+              courses.add(course);
+            }
+          }
+        } catch (e) {
+          print('DEBUG: ❌ Error fetching course ${enrollment.courseId}: $e');
+        }
+      }
+
+      // Sort by name
+      courses.sort((a, b) => a.name.compareTo(b.name));
+
+      print('DEBUG: ✅ Found ${courses.length} courses for semester $semester');
+      return courses;
     } catch (e) {
       print('DEBUG: ❌ Error fetching courses by semester: $e');
       return [];
@@ -177,37 +206,61 @@ class CourseStudentRepository {
   }
 
   // ========================================
-  // HÀM: addStudentToCourse
-  // MÔ TẢ: Thêm student vào course
+  // DEPRECATED METHODS - Use EnrollmentRepository instead
   // ========================================
+
+  @Deprecated('Use EnrollmentRepository.enrollStudent() instead')
   static Future<bool> addStudentToCourse(
       String courseId, String studentId) async {
-    try {
-      await _firestore.collection(_collectionName).doc(courseId).update({
-        'students': FieldValue.arrayUnion([studentId])
-      });
+    throw UnimplementedError(
+        'This method is deprecated. Use EnrollmentRepository.enrollStudent() instead.');
+  }
 
-      return true;
+  @Deprecated('Use EnrollmentRepository.unenrollStudent() instead')
+  static Future<bool> removeStudentFromCourse(
+      String courseId, String studentId) async {
+    throw UnimplementedError(
+        'This method is deprecated. Use EnrollmentRepository.unenrollStudent() instead.');
+  }
+
+  // ========================================
+  // HÀM: getStudentsInCourse - NEW METHOD
+  // MÔ TẢ: Lấy danh sách sinh viên trong khóa học
+  // 🔄 SửDỤNG: EnrollmentRepository
+  // ========================================
+  static Future<List<Map<String, dynamic>>> getStudentsInCourse(
+      String courseId) async {
+    try {
+      final enrollmentRepo = EnrollmentRepository();
+      final enrollments = await enrollmentRepo.getStudentsInCourse(courseId);
+
+      return enrollments
+          .map((enrollment) => {
+                'userId': enrollment.userId,
+                'studentName': enrollment.studentName,
+                'studentEmail': enrollment.studentEmail,
+                'enrolledAt': enrollment.enrolledAt,
+                'status': enrollment.status,
+              })
+          .toList();
     } catch (e) {
-      print('DEBUG: ❌ Error adding student to course: $e');
-      return false;
+      print('DEBUG: ❌ Error getting students in course: $e');
+      return [];
     }
   }
 
   // ========================================
-  // HÀM: removeStudentFromCourse
-  // MÔ TẢ: Xóa student khỏi course
+  // HÀM: isStudentEnrolledInCourse - NEW METHOD
+  // MÔ TẢ: Kiểm tra sinh viên có trong khóa học không
+  // 🔄 SửDỤNG: EnrollmentRepository
   // ========================================
-  static Future<bool> removeStudentFromCourse(
-      String courseId, String studentId) async {
+  static Future<bool> isStudentEnrolledInCourse(
+      String courseId, String userId) async {
     try {
-      await _firestore.collection(_collectionName).doc(courseId).update({
-        'students': FieldValue.arrayRemove([studentId])
-      });
-
-      return true;
+      final enrollmentRepo = EnrollmentRepository();
+      return await enrollmentRepo.isStudentEnrolled(courseId, userId);
     } catch (e) {
-      print('DEBUG: ❌ Error removing student from course: $e');
+      print('DEBUG: ❌ Error checking student enrollment: $e');
       return false;
     }
   }

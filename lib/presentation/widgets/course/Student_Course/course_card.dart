@@ -150,7 +150,9 @@ class CourseCard extends StatelessWidget {
                   color:
                       Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
               SizedBox(width: 4),
-              Text('${course.totalStudents} students',
+              // TODO: Replace with async enrollment count
+              // Use EnrollmentRepository.countStudentsInCourse(course.id)
+              Text('Loading students...',
                   style: TextStyle(
                       fontSize: 12,
                       color: Theme.of(context)

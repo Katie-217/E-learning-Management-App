@@ -1,0 +1,58 @@
+// ========================================
+// FIRESTORE SECURITY RULES - DEVELOPMENT VERSION
+// ========================================
+// WARNING: These rules are for DEVELOPMENT only!
+// For production, use more restrictive rules
+// ========================================
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Users collection - Allow users to read/write their own data
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      // Admin users can read all user data
+      allow read: if request.auth != null && 
+                     resource.data.role == 'instructor' || 
+                     resource.data.role == 'admin';
+    }
+    
+    // Course collection - Authenticated users can read
+    match /course_of_study/{courseId} {
+      allow read: if request.auth != null;
+      // Only instructors can write courses
+      allow write: if request.auth != null && 
+                      get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'instructor';
+      
+      // Groups sub-collection
+      match /groups/{groupId} {
+        allow read, write: if request.auth != null;
+      }
+    }
+    
+    // Enrollments collection - New enrollment system
+    match /enrollments/{enrollmentId} {
+      allow read, write: if request.auth != null;
+      // Students can only modify their own enrollments
+      allow write: if request.auth != null && 
+                      resource.data.userId == request.auth.uid;
+    }
+    
+    // Materials, assignments, etc.
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
+
+// ========================================
+// DEPLOYMENT INSTRUCTIONS:
+// ========================================
+// 1. Go to Firebase Console > Firestore Database > Rules
+// 2. Copy and paste the rules above
+// 3. Click "Publish"
+// 
+// NOTE: These rules are permissive for development.
+// In production, implement proper role-based access control.
+// ========================================

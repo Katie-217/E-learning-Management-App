@@ -7,17 +7,22 @@ import '../../../data/repositories/course/course_student_repository.dart';
 import '../../../data/repositories/auth/auth_repository.dart';
 import '../../../domain/models/course_model.dart';
 import '../../../core/config/users-role.dart';
+import 'enrollment_controller.dart';
 
 // ========================================
 // CLASS: CourseStudentController - Business Logic
 // MÔ TẢ: Xử lý business logic cho Student Course operations
+// 🔄 UPDATED: Tích hợp EnrollmentController thay vì students array
 // ========================================
 class CourseStudentController {
   final AuthRepository _authRepository;
+  final EnrollmentController _enrollmentController;
 
   CourseStudentController({
     required AuthRepository authRepository,
-  }) : _authRepository = authRepository;
+    EnrollmentController? enrollmentController,
+  })  : _authRepository = authRepository,
+        _enrollmentController = enrollmentController ?? EnrollmentController();
 
   // ========================================
   // HÀM: getMyCourses - Business Logic
@@ -32,7 +37,6 @@ class CourseStudentController {
       }
 
       print('DEBUG: 🔑 CourseStudentController got userId: $userId');
-      print('DEBUG: 🔑 Expected in Firebase: FT1h3crVGTfKPvPUvh5NzkDzgs2');
 
       // 2. Lấy courses từ CourseStudentRepository
       final courses = await CourseStudentRepository.getUserCourses(userId);
@@ -92,7 +96,7 @@ class CourseStudentController {
       final course = await CourseStudentRepository.getCourseById(courseId);
 
       // 3. Business logic: Check access permissions for students
-      // Note: CourseModel.students is int (count), actual student list is in Firestore array
+      // Note: Student counts are now managed by EnrollmentRepository
       // Repository should handle enrollment checking
 
       return course;
@@ -103,10 +107,11 @@ class CourseStudentController {
   }
 
   // ========================================
-  // HÀM: enrollCourse - Student enrollment
+  // 🔄 UPDATED METHOD - enrollCourse using EnrollmentController
   // MÔ TẢ: Business logic cho việc đăng ký course
+  // 🔄 SỬ DỤNG: EnrollmentController thay vì direct array operations
   // ========================================
-  Future<bool> enrollCourse(String courseId) async {
+  Future<String> enrollCourse(String courseId) async {
     try {
       // 1. Validate user
       final user = await _authRepository.currentUserModel;
@@ -124,18 +129,103 @@ class CourseStudentController {
         throw Exception('Course is not available for enrollment');
       }
 
-      // 3. Business rule: Check capacity
-      if (course.students >= course.maxCapacity) {
-        throw Exception('Course is full');
+      // 3. Validation using EnrollmentController
+      final validation = await _enrollmentController.validateEnrollment(
+        courseId: courseId,
+        userId: user.uid,
+        maxCapacity: course.maxCapacity,
+      );
+
+      if (!validation['isValid']) {
+        throw Exception(validation['reason']);
       }
 
-      // 4. TODO: Repository method for enrollment
-      // return await CourseStudentRepository.enrollStudent(courseId, user.uid);
-      print('DEBUG: Enrollment logic needs Repository method implementation');
-      return false;
+      // 4. Enroll student via EnrollmentController
+      return await _enrollmentController.enrollStudentInCourse(
+        courseId: courseId,
+        userId: user.uid,
+        studentName: user.name,
+        studentEmail: user.email,
+      );
     } catch (e) {
       print('DEBUG: ❌ CourseStudentController.enrollCourse error: $e');
+      rethrow;
+    }
+  }
+
+  // ========================================
+  // HÀM: unenrollCourse - Student unenrollment (NEW)
+  // MÔ TẢ: Business logic cho việc hủy đăng ký course
+  // 🔄 SỬ DỤNG: EnrollmentController
+  // ========================================
+  Future<void> unenrollCourse(String courseId) async {
+    try {
+      // 1. Validate user
+      final user = await _authRepository.currentUserModel;
+      if (user == null || user.role != UserRole.student) {
+        throw Exception('Only students can unenroll from courses');
+      }
+
+      // 2. Check if student is actually enrolled
+      final isEnrolled =
+          await _enrollmentController.isStudentEnrolled(courseId, user.uid);
+      if (!isEnrolled) {
+        throw Exception('You are not enrolled in this course');
+      }
+
+      // 3. Unenroll via EnrollmentController
+      await _enrollmentController.unenrollStudentFromCourse(courseId, user.uid);
+    } catch (e) {
+      print('DEBUG: ❌ CourseStudentController.unenrollCourse error: $e');
+      rethrow;
+    }
+  }
+
+  // ========================================
+  // HÀM: checkEnrollmentStatus - Check if student is enrolled (NEW)
+  // MÔ TẢ: Kiểm tra trạng thái ghi danh của sinh viên
+  // 🔄 SỬ DỤNG: EnrollmentController.isStudentEnrolled()
+  // ========================================
+  Future<bool> checkEnrollmentStatus(String courseId) async {
+    try {
+      final user = await _authRepository.currentUserModel;
+      if (user == null) return false;
+
+      return await _enrollmentController.isStudentEnrolled(courseId, user.uid);
+    } catch (e) {
+      print('DEBUG: ❌ CourseStudentController.checkEnrollmentStatus error: $e');
       return false;
+    }
+  }
+
+  // ========================================
+  // HÀM: getMyEnrollmentHistory - Lấy lịch sử ghi danh (NEW)
+  // MÔ TẢ: Lấy tất cả courses mà student đã từng ghi danh
+  // 🔄 SỬ DỤNG: EnrollmentController
+  // ========================================
+  Future<List<Map<String, dynamic>>> getMyEnrollmentHistory() async {
+    try {
+      final user = await _authRepository.currentUserModel;
+      if (user == null || user.role != UserRole.student) {
+        throw Exception('Only students can view enrollment history');
+      }
+
+      final enrollments =
+          await _enrollmentController.getEnrollmentHistory(user.uid);
+
+      return enrollments
+          .map((enrollment) => {
+                'courseId': enrollment.courseId,
+                'enrolledAt': enrollment.enrolledAt,
+                'status': enrollment.status,
+                'studentName': enrollment.studentName,
+                'studentEmail': enrollment.studentEmail,
+              })
+          .toList();
+    } catch (e) {
+      print(
+          'DEBUG: ❌ CourseStudentController.getMyEnrollmentHistory error: $e');
+      return [];
     }
   }
 }

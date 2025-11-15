@@ -7,17 +7,22 @@ import '../../../data/repositories/course/course_instructor_repository.dart';
 import '../../../data/repositories/auth/auth_repository.dart';
 import '../../../domain/models/course_model.dart';
 import '../../../core/config/users-role.dart';
+import 'enrollment_controller.dart';
 
 // ========================================
 // CLASS: CourseInstructorController - Business Logic cho Giảng viên
 // MÔ TẢ: Xử lý business logic cho Course operations dành cho giảng viên
+// 🔄 UPDATED: Tích hợp EnrollmentController thay vì students array
 // ========================================
 class CourseInstructorController {
   final AuthRepository _authRepository;
+  final EnrollmentController _enrollmentController;
 
   CourseInstructorController({
     required AuthRepository authRepository,
-  }) : _authRepository = authRepository;
+    EnrollmentController? enrollmentController,
+  })  : _authRepository = authRepository,
+        _enrollmentController = enrollmentController ?? EnrollmentController();
 
   // ========================================
   // HÀM: getInstructorCourses - Business Logic
@@ -188,49 +193,72 @@ class CourseInstructorController {
   }
 
   // ========================================
-  // HÀM: addStudentToCourse - Business logic thêm student
-  // MÔ TẢ: Instructor có thể thêm students vào course của mình
+  // 🔄 UPDATED METHODS - Using EnrollmentController
   // ========================================
-  Future<bool> addStudentToCourse(String courseId, String studentUid) async {
+
+  // HÀM: enrollStudentInCourse - Business logic ghi danh student (NEW)
+  // MÔ TẢ: Instructor có thể ghi danh students vào course của mình
+  // 🔄 SỬ DỤNG: EnrollmentController thay vì array operations
+  Future<String> enrollStudentInCourse({
+    required String courseId,
+    required String studentUid,
+    required String studentName,
+    required String studentEmail,
+  }) async {
     try {
       // 1. Validate user và role
       final user = await _authRepository.currentUserModel;
       if (user == null || user.role != UserRole.instructor) {
         throw Exception(
-            'Access denied: Only instructors can manage course enrollment');
+            'Access denied: Only instructors can manage enrollment');
       }
 
-      // 2. Business logic: Check if course exists and is owned by instructor
+      // 2. Business logic: Check course ownership và status
       final course = await getCourseById(courseId);
       if (course == null) {
         throw Exception('Course not found or access denied');
       }
 
       if (course.status != 'active') {
-        throw Exception('Cannot add students to inactive course');
+        throw Exception('Cannot enroll students in inactive course');
       }
 
-      // 3. Add student via Repository
-      return await CourseInstructorRepository.addStudentToCourse(
-          courseId, studentUid, user.uid);
+      // 3. Validation using EnrollmentController
+      final validation = await _enrollmentController.validateEnrollment(
+        courseId: courseId,
+        userId: studentUid,
+        maxCapacity: course.maxCapacity,
+      );
+
+      if (!validation['isValid']) {
+        throw Exception(validation['reason']);
+      }
+
+      // 4. Enroll student via EnrollmentController
+      return await _enrollmentController.enrollStudentInCourse(
+        courseId: courseId,
+        userId: studentUid,
+        studentName: studentName,
+        studentEmail: studentEmail,
+      );
     } catch (e) {
-      print('DEBUG: ❌ CourseInstructorController.addStudentToCourse error: $e');
-      return false;
+      print(
+          'DEBUG: ❌ CourseInstructorController.enrollStudentInCourse error: $e');
+      rethrow;
     }
   }
 
-  // ========================================
-  // HÀM: removeStudentFromCourse - Business logic xóa student
-  // MÔ TẢ: Instructor có thể xóa students khỏi course của mình
-  // ========================================
-  Future<bool> removeStudentFromCourse(
+  // HÀM: unenrollStudentFromCourse - Business logic hủy ghi danh student (NEW)
+  // MÔ TẢ: Instructor có thể hủy ghi danh students khỏi course của mình
+  // 🔄 SỬ DỤNG: EnrollmentController thay vì array operations
+  Future<void> unenrollStudentFromCourse(
       String courseId, String studentUid) async {
     try {
       // 1. Validate user và role
       final user = await _authRepository.currentUserModel;
       if (user == null || user.role != UserRole.instructor) {
         throw Exception(
-            'Access denied: Only instructors can manage course enrollment');
+            'Access denied: Only instructors can manage enrollment');
       }
 
       // 2. Business logic: Validate course ownership
@@ -239,14 +267,74 @@ class CourseInstructorController {
         throw Exception('Course not found or access denied');
       }
 
-      // 3. Remove student via Repository
-      return await CourseInstructorRepository.removeStudentFromCourse(
-          courseId, studentUid, user.uid);
+      // 3. Check if student is actually enrolled
+      final isEnrolled =
+          await _enrollmentController.isStudentEnrolled(courseId, studentUid);
+      if (!isEnrolled) {
+        throw Exception('Student is not enrolled in this course');
+      }
+
+      // 4. Unenroll student via EnrollmentController
+      await _enrollmentController.unenrollStudentFromCourse(
+          courseId, studentUid);
     } catch (e) {
       print(
-          'DEBUG: ❌ CourseInstructorController.removeStudentFromCourse error: $e');
-      return false;
+          'DEBUG: ❌ CourseInstructorController.unenrollStudentFromCourse error: $e');
+      rethrow;
     }
+  }
+
+  // HÀM: getEnrolledStudents - Lấy danh sách sinh viên đã ghi danh (NEW)
+  // MÔ TẢ: Thay thế việc đọc course.students
+  // 🔄 SỬ DỤNG: EnrollmentController để lấy danh sách thực tế
+  Future<List<Map<String, dynamic>>> getEnrolledStudents(
+      String courseId) async {
+    try {
+      // 1. Validate user và role
+      final user = await _authRepository.currentUserModel;
+      if (user == null || user.role != UserRole.instructor) {
+        throw Exception('Access denied: Only instructors can view enrollment');
+      }
+
+      // 2. Validate course ownership
+      final course = await getCourseById(courseId);
+      if (course == null) {
+        throw Exception('Course not found or access denied');
+      }
+
+      // 3. Get enrolled students via EnrollmentController
+      final enrollments =
+          await _enrollmentController.getEnrolledStudents(courseId);
+
+      return enrollments
+          .map((enrollment) => {
+                'userId': enrollment.userId,
+                'studentName': enrollment.studentName,
+                'studentEmail': enrollment.studentEmail,
+                'enrolledAt': enrollment.enrolledAt,
+                'status': enrollment.status,
+              })
+          .toList();
+    } catch (e) {
+      print(
+          'DEBUG: ❌ CourseInstructorController.getEnrolledStudents error: $e');
+      return [];
+    }
+  }
+
+  // ========================================
+  // DEPRECATED METHODS - Use new enrollment methods instead
+  // ========================================
+
+  @Deprecated('Use enrollStudentInCourse() instead')
+  Future<bool> addStudentToCourse(String courseId, String studentUid) async {
+    throw UnimplementedError('Use enrollStudentInCourse() instead');
+  }
+
+  @Deprecated('Use unenrollStudentFromCourse() instead')
+  Future<bool> removeStudentFromCourse(
+      String courseId, String studentUid) async {
+    throw UnimplementedError('Use unenrollStudentFromCourse() instead');
   }
 
   // ========================================

@@ -30,7 +30,6 @@ class _InstructorCourseDetailPageState
     instructor: 'Dr. Johnson',
     semester: 'HK1/24-25',
     sessions: 0,
-    students: 1,
     progress: 0,
     description: 'Cross-platform mobile development with Flutter',
   );

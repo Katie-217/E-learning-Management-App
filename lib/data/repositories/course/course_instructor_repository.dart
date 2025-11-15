@@ -5,6 +5,7 @@
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../domain/models/course_model.dart';
+import 'enrollment_repository.dart';
 
 // ========================================
 // CLASS: CourseInstructorRepository - Data Access cho Giảng viên
@@ -171,63 +172,32 @@ class CourseInstructorRepository {
   }
 
   // ========================================
-  // HÀM: addStudentToCourse - Thêm student vào course
-  // MÔ TẢ: Instructor có thể thêm students vào course của mình
+  // DEPRECATED METHODS - Use EnrollmentRepository instead
   // ========================================
+
+  @Deprecated('Use EnrollmentRepository.enrollStudent() instead')
   static Future<bool> addStudentToCourse(
       String courseId, String studentUid, String instructorUid) async {
-    try {
-      print('DEBUG: 👥 Adding student $studentUid to course $courseId');
-
-      // Validate instructor ownership first
-      await getCourseById(courseId, instructorUid: instructorUid);
-
-      await _firestore.collection(_collection).doc(courseId).update({
-        'students': FieldValue.arrayUnion([studentUid]),
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-
-      print('DEBUG: ✅ Student added to course successfully');
-      return true;
-    } catch (e) {
-      print('DEBUG: ❌ CourseInstructorRepository.addStudentToCourse error: $e');
-      return false;
-    }
+    throw UnimplementedError(
+        'This method is deprecated. Use EnrollmentRepository.enrollStudent() instead.');
   }
 
-  // ========================================
-  // HÀM: removeStudentFromCourse - Xóa student khỏi course
-  // MÔ TẢ: Instructor có thể xóa students khỏi course của mình
-  // ========================================
+  @Deprecated('Use EnrollmentRepository.unenrollStudent() instead')
   static Future<bool> removeStudentFromCourse(
       String courseId, String studentUid, String instructorUid) async {
-    try {
-      print('DEBUG: 👥 Removing student $studentUid from course $courseId');
-
-      // Validate instructor ownership first
-      await getCourseById(courseId, instructorUid: instructorUid);
-
-      await _firestore.collection(_collection).doc(courseId).update({
-        'students': FieldValue.arrayRemove([studentUid]),
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-
-      print('DEBUG: ✅ Student removed from course successfully');
-      return true;
-    } catch (e) {
-      print(
-          'DEBUG: ❌ CourseInstructorRepository.removeStudentFromCourse error: $e');
-      return false;
-    }
+    throw UnimplementedError(
+        'This method is deprecated. Use EnrollmentRepository.unenrollStudent() instead.');
   }
 
   // ========================================
   // HÀM: getStudentEnrollmentStats - Thống kê enrollment cho giảng viên
   // MÔ TẢ: Lấy thống kê số lượng students trong các courses
+  // SửDỤNG: EnrollmentRepository để đếm students thực tế
   // ========================================
   static Future<Map<String, int>> getStudentEnrollmentStats(
       String instructorUid) async {
     try {
+      final enrollmentRepo = EnrollmentRepository();
       final courses = await getInstructorCourses(instructorUid);
 
       int totalStudents = 0;
@@ -236,7 +206,10 @@ class CourseInstructorRepository {
       for (final course in courses) {
         if (course.status == 'active') {
           activeCourses++;
-          totalStudents += course.students;
+          // 🔄 SửDỤNG EnrollmentRepository thay vì course.students
+          final studentCount =
+              await enrollmentRepo.countStudentsInCourse(course.id);
+          totalStudents += studentCount;
         }
       }
 
