@@ -8,7 +8,6 @@ import 'package:elearning_management_app/presentation/widgets/student/pie_chart_
 import 'package:elearning_management_app/presentation/widgets/student/student_calendar_panel.dart';
 import 'package:elearning_management_app/presentation/widgets/common/sidebar_model.dart';
 import 'package:intl/intl.dart';
-import 'package:elearning_management_app/data/services/study_hour_service.dart';
 
 class StudentDashboardPage extends ConsumerStatefulWidget {
   final bool showSidebar;
@@ -19,8 +18,7 @@ class StudentDashboardPage extends ConsumerStatefulWidget {
       _StudentDashboardPageState();
 }
 
-class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage>
-    with WidgetsBindingObserver {
+class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
   // final FirestoreService _service = FirestoreService.instance;
 
   final List<_SemesterOption> _semesters = const [
@@ -30,34 +28,12 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage>
   ];
 
   String? _selectedSemesterId;
-  late final StudyHourService _studyHourService;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    _studyHourService = StudyHourService();
     if (_semesters.isNotEmpty) {
       _selectedSemesterId = _semesters.first.id;
-    }
-    Future.microtask(() => _studyHourService.startSession());
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    _studyHourService.endSession();
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      _studyHourService.startSession();
-    } else if (state == AppLifecycleState.inactive ||
-        state == AppLifecycleState.paused ||
-        state == AppLifecycleState.detached) {
-      _studyHourService.endSession();
     }
   }
 
@@ -307,11 +283,7 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage>
             if (widget.showSidebar && MediaQuery.of(context).size.width > 800)
               const SidebarWidget(),
             Expanded(
-              child: Listener(
-                behavior: HitTestBehavior.translucent,
-                onPointerDown: (_) => _studyHourService.recordInteraction(),
-                onPointerUp: (_) => _studyHourService.recordInteraction(),
-                child: SingleChildScrollView(
+              child: SingleChildScrollView(
                   padding: const EdgeInsets.all(18),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
