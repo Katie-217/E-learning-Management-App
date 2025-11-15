@@ -548,7 +548,7 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
                 ),
               ),
             ),
-            )],
+          ],
         ),
       ),
     );

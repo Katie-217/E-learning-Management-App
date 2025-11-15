@@ -14,10 +14,12 @@ class CourseModel {
   final String description;
   final int credits;
   final String imageUrl;
-  final int totalStudents;
-  final DateTime startDate;
-  final DateTime endDate;
   final String status;
+  final int maxCapacity; // Maximum number of students allowed
+
+  // Computed properties (no longer stored fields)
+  int get totalStudents =>
+      students; // Dynamic calculation from actual enrolled students
 
   CourseModel({
     required this.id,
@@ -31,12 +33,9 @@ class CourseModel {
     this.description = '',
     this.credits = 3,
     this.imageUrl = '',
-    this.totalStudents = 0,
-    DateTime? startDate,
-    DateTime? endDate,
     this.status = 'active',
-  })  : startDate = startDate ?? DateTime.now(),
-        endDate = endDate ?? DateTime.now().add(const Duration(days: 90));
+    this.maxCapacity = 50, // Default capacity
+  });
 
   // Factory constructor để tạo từ JSON (cho API calls)
   factory CourseModel.fromJson(Map<String, dynamic> json) {
@@ -52,14 +51,8 @@ class CourseModel {
       description: json['description'] ?? '',
       credits: json['credits'] ?? 3,
       imageUrl: json['imageUrl'] ?? '',
-      totalStudents: json['totalStudents'] ?? 0,
-      startDate: json['startDate'] != null
-          ? DateTime.parse(json['startDate'])
-          : DateTime.now(),
-      endDate: json['endDate'] != null
-          ? DateTime.parse(json['endDate'])
-          : DateTime.now().add(const Duration(days: 90)),
       status: json['status'] ?? 'active',
+      maxCapacity: json['maxCapacity'] ?? 50,
     );
   }
 
@@ -79,14 +72,8 @@ class CourseModel {
       description: data['description'] ?? '',
       credits: data['credits'] ?? 0,
       imageUrl: data['imageUrl'] ?? '',
-      totalStudents: (data['students'] as List<dynamic>?)?.length ?? 0,
-      startDate: data['startDate'] != null
-          ? (data['startDate'] as Timestamp).toDate()
-          : DateTime.now(),
-      endDate: data['endDate'] != null
-          ? (data['endDate'] as Timestamp).toDate()
-          : DateTime.now(),
       status: data['status'] ?? '',
+      maxCapacity: data['maxCapacity'] ?? 50,
     );
   }
 
@@ -104,9 +91,6 @@ class CourseModel {
       'description': description,
       'credits': credits,
       'imageUrl': imageUrl,
-      'totalStudents': totalStudents,
-      'startDate': startDate.toIso8601String(),
-      'endDate': endDate.toIso8601String(),
       'status': status,
     };
   }
@@ -124,9 +108,6 @@ class CourseModel {
       'description': description,
       'credits': credits,
       'imageUrl': imageUrl,
-      'totalStudents': totalStudents,
-      'startDate': Timestamp.fromDate(startDate),
-      'endDate': Timestamp.fromDate(endDate),
       'status': status,
     };
   }
@@ -157,9 +138,7 @@ class CourseModel {
     String? description,
     int? credits,
     String? imageUrl,
-    int? totalStudents,
-    DateTime? startDate,
-    DateTime? endDate,
+    int? maxCapacity,
     String? status,
   }) {
     return CourseModel(
@@ -173,10 +152,8 @@ class CourseModel {
       progress: progress ?? this.progress,
       description: description ?? this.description,
       credits: credits ?? this.credits,
-      totalStudents: totalStudents ?? this.totalStudents,
-      startDate: startDate ?? this.startDate,
-      endDate: endDate ?? this.endDate,
       status: status ?? this.status,
+      maxCapacity: maxCapacity ?? this.maxCapacity,
     );
   }
 }

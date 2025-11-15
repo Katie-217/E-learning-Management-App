@@ -1,7 +1,9 @@
 // ========================================
 // FILE: semester_model.dart
-// MÔ TẢ: Model định nghĩa học kỳ
+// MÔ TẢ: Model định nghĩa học kỳ cụ thể (Instance)
 // ========================================
+
+import 'semester_template_model.dart';
 
 class SemesterModel {
   final String id;
@@ -23,6 +25,29 @@ class SemesterModel {
     required this.createdAt,
     this.description,
   });
+
+  // ========================================
+  // HÀM: fromTemplate()
+  // MÔ TẢ: Tạo SemesterModel từ SemesterTemplateModel + year
+  // VD: Template "HK1" + year 2025 = "HK1_2025"
+  // ========================================
+  factory SemesterModel.fromTemplate({
+    required SemesterTemplateModel template,
+    required int year,
+    String? customDescription,
+  }) {
+    return SemesterModel(
+      id: template.generateSemesterCode(year), // Will be used as document ID
+      code: template.generateSemesterCode(year), // "HK1_2025"
+      name:
+          template.generateSemesterName(year), // "Học kỳ 1 (Năm học 2025-2026)"
+      startDate: template.generateStartDate(year), // DateTime(2025, 9, 5)
+      endDate: template.generateEndDate(year), // DateTime(2025, 12, 30)
+      isActive: true,
+      createdAt: DateTime.now(),
+      description: customDescription ?? template.description,
+    );
+  }
 
   // ========================================
   // HÀM: fromMap()
@@ -97,6 +122,35 @@ class SemesterModel {
   bool get isCurrentSemester {
     final now = DateTime.now();
     return now.isAfter(startDate) && now.isBefore(endDate) && isActive;
+  }
+
+  // ========================================
+  // GETTER: templateId
+  // MÔ TẢ: Lấy template ID từ code (VD: "HK1_2025" -> "HK1")
+  // ========================================
+  String get templateId {
+    final parts = code.split('_');
+    return parts.isNotEmpty ? parts[0] : '';
+  }
+
+  // ========================================
+  // GETTER: year
+  // MÔ TẢ: Lấy năm từ code (VD: "HK1_2025" -> 2025)
+  // ========================================
+  int get year {
+    final parts = code.split('_');
+    if (parts.length > 1) {
+      return int.tryParse(parts[1]) ?? DateTime.now().year;
+    }
+    return DateTime.now().year;
+  }
+
+  // ========================================
+  // HÀM: getRelatedTemplate()
+  // MÔ TẢ: Lấy template tương ứng với semester này
+  // ========================================
+  SemesterTemplateModel? getRelatedTemplate() {
+    return SemesterTemplates.getTemplateById(templateId);
   }
 
   // ========================================

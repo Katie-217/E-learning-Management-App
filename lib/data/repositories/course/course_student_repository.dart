@@ -56,8 +56,8 @@ class CourseStudentRepository {
         return allCourses;
       }
 
-      // Sort theo startDate (client-side)
-      courses.sort((a, b) => b.startDate.compareTo(a.startDate));
+      // Sort theo name (client-side)
+      courses.sort((a, b) => a.name.compareTo(b.name));
 
       return courses;
     } catch (e) {
@@ -91,8 +91,8 @@ class CourseStudentRepository {
       final courses =
           snapshot.docs.map((doc) => CourseModel.fromFirestore(doc)).toList();
 
-      // Sort by startDate on client
-      courses.sort((a, b) => b.startDate.compareTo(a.startDate));
+      // Sort by name on client
+      courses.sort((a, b) => a.name.compareTo(b.name));
 
       return courses;
     } catch (e) {

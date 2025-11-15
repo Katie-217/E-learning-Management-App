@@ -125,7 +125,7 @@ class CourseStudentController {
       }
 
       // 3. Business rule: Check capacity
-      if (course.students >= course.totalStudents) {
+      if (course.students >= course.maxCapacity) {
         throw Exception('Course is full');
       }
 
