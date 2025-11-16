@@ -9,7 +9,6 @@ class GroupModel {
   final String name;
   final String code;
   final String? description;
-  final List<String> studentIds;
   final int maxMembers;
   final DateTime createdAt;
   final String createdBy; // UID của instructor
@@ -21,7 +20,6 @@ class GroupModel {
     required this.name,
     required this.code,
     this.description,
-    required this.studentIds,
     this.maxMembers = 30,
     required this.createdAt,
     required this.createdBy,
@@ -39,7 +37,6 @@ class GroupModel {
       name: map['name'] ?? '',
       code: map['code'] ?? '',
       description: map['description'],
-      studentIds: List<String>.from(map['studentIds'] ?? []),
       maxMembers: map['maxMembers'] ?? 30,
       createdAt: _parseDateTime(map['createdAt']),
       createdBy: map['createdBy'] ?? '',
@@ -58,7 +55,6 @@ class GroupModel {
       'name': name,
       'code': code,
       'description': description,
-      'studentIds': studentIds,
       'maxMembers': maxMembers,
       'createdAt': createdAt.toIso8601String(),
       'createdBy': createdBy,
@@ -76,7 +72,6 @@ class GroupModel {
     String? name,
     String? code,
     String? description,
-    List<String>? studentIds,
     int? maxMembers,
     DateTime? createdAt,
     String? createdBy,
@@ -88,7 +83,6 @@ class GroupModel {
       name: name ?? this.name,
       code: code ?? this.code,
       description: description ?? this.description,
-      studentIds: studentIds ?? this.studentIds,
       maxMembers: maxMembers ?? this.maxMembers,
       createdAt: createdAt ?? this.createdAt,
       createdBy: createdBy ?? this.createdBy,
@@ -97,22 +91,10 @@ class GroupModel {
   }
 
   // ========================================
-  // GETTER: currentMemberCount
-  // MÔ TẢ: Số lượng thành viên hiện tại
+  // NOTE: Student management moved to EnrollmentRepository
+  // Use EnrollmentRepository.getStudentsInGroup(groupId) to get members
+  // Use EnrollmentRepository.countStudentsInGroup(groupId) for member count
   // ========================================
-  int get currentMemberCount => studentIds.length;
-
-  // ========================================
-  // GETTER: isFull
-  // MÔ TẢ: Kiểm tra nhóm đã đầy chưa
-  // ========================================
-  bool get isFull => currentMemberCount >= maxMembers;
-
-  // ========================================
-  // GETTER: availableSlots
-  // MÔ TẢ: Số chỗ còn trống
-  // ========================================
-  int get availableSlots => maxMembers - currentMemberCount;
 
   // ========================================
   // GETTER: displayName
@@ -121,35 +103,11 @@ class GroupModel {
   String get displayName => '$code - $name';
 
   // ========================================
-  // HÀM: addStudent()
-  // MÔ TẢ: Thêm sinh viên vào nhóm
+  // DEPRECATED: Student management methods moved to EnrollmentRepository
+  // Use EnrollmentController.assignStudentToGroup() instead
+  // Use EnrollmentController.removeStudentFromGroup() instead
+  // Use EnrollmentRepository.isStudentInGroup() instead
   // ========================================
-  GroupModel addStudent(String studentId) {
-    if (isFull || studentIds.contains(studentId)) {
-      return this;
-    }
-
-    final updatedStudentIds = [...studentIds, studentId];
-    return copyWith(studentIds: updatedStudentIds);
-  }
-
-  // ========================================
-  // HÀM: removeStudent()
-  // MÔ TẢ: Xóa sinh viên khỏi nhóm
-  // ========================================
-  GroupModel removeStudent(String studentId) {
-    final updatedStudentIds =
-        studentIds.where((id) => id != studentId).toList();
-    return copyWith(studentIds: updatedStudentIds);
-  }
-
-  // ========================================
-  // HÀM: hasStudent()
-  // MÔ TẢ: Kiểm tra sinh viên có trong nhóm không
-  // ========================================
-  bool hasStudent(String studentId) {
-    return studentIds.contains(studentId);
-  }
 
   // ========================================
   // HÀM: _parseDateTime()
@@ -169,7 +127,7 @@ class GroupModel {
 
   @override
   String toString() {
-    return 'GroupModel(id: $id, code: $code, name: $name, members: $currentMemberCount/$maxMembers)';
+    return 'GroupModel(id: $id, code: $code, name: $name, maxMembers: $maxMembers)';
   }
 
   @override

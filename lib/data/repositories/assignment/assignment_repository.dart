@@ -21,7 +21,8 @@ class AssignmentRepository {
     try {
       print('DEBUG: ========== FETCHING ASSIGNMENTS ==========');
       print('DEBUG: 🔍 Fetching assignments for course: $courseId');
-      print('DEBUG: 📂 Collection path: $_courseCollectionName/$courseId/$_assignmentSubCollectionName');
+      print(
+          'DEBUG: 📂 Collection path: $_courseCollectionName/$courseId/$_assignmentSubCollectionName');
 
       QuerySnapshot snapshot;
       try {
@@ -46,7 +47,8 @@ class AssignmentRepository {
 
       if (snapshot.docs.isEmpty) {
         print('DEBUG: ⚠️ No assignments found in sub-collection');
-        print('DEBUG: 💡 Check if assignments exist in Firestore at: $_courseCollectionName/$courseId/$_assignmentSubCollectionName');
+        print(
+            'DEBUG: 💡 Check if assignments exist in Firestore at: $_courseCollectionName/$courseId/$_assignmentSubCollectionName');
         return [];
       }
 
@@ -56,7 +58,8 @@ class AssignmentRepository {
         try {
           final assignment = Assignment.fromFirestore(doc);
           assignments.add(assignment);
-          print('DEBUG: ✅ Parsed assignment: ${assignment.title} (ID: ${assignment.id})');
+          print(
+              'DEBUG: ✅ Parsed assignment: ${assignment.title} (ID: ${assignment.id})');
         } catch (e) {
           print('DEBUG: ⚠️ Error parsing assignment doc ${doc.id}: $e');
         }
@@ -138,20 +141,24 @@ class AssignmentRepository {
   // ========================================
   // HÀM: createAssignment
   // MÔ TẢ: Tạo assignment mới trong course (chỉ cho instructor)
+  // UPDATED: Đảm bảo courseId được set cho Collection Group Query
   // ========================================
   static Future<bool> createAssignment(
       String courseId, Assignment assignment) async {
     try {
+      // ✅ CRITICAL: Ensure assignment has courseId for Collection Group Query
+      final assignmentWithCourseId = assignment.copyWith(courseId: courseId);
+
       await _firestore
           .collection(_courseCollectionName)
           .doc(courseId)
           .collection(_assignmentSubCollectionName)
-          .add(assignment.toFirestore());
+          .add(assignmentWithCourseId.toFirestore());
 
-      print('DEBUG: Assignment created successfully');
+      print('DEBUG: ✅ Assignment created with courseId: $courseId');
       return true;
     } catch (e) {
-      print('DEBUG: Error creating assignment: $e');
+      print('DEBUG: ❌ Error creating assignment: $e');
       return false;
     }
   }
@@ -197,6 +204,146 @@ class AssignmentRepository {
     } catch (e) {
       print('DEBUG: Error deleting assignment: $e');
       return false;
+    }
+  }
+
+  // ========================================
+  // COLLECTION GROUP QUERY METHODS - NEW FEATURE
+  // Sử dụng courseId để query cross-course assignments
+  // ========================================
+
+  // ========================================
+  // HÀM: getAllAssignmentsAcrossSystem
+  // MÔ TẢ: Lấy TẤT CẢ assignments trong toàn hệ thống (Collection Group Query)
+  // USE CASE: Admin xuất CSV tất cả assignments, system analytics
+  // ========================================
+  static Future<List<Assignment>> getAllAssignmentsAcrossSystem() async {
+    try {
+      print(
+          'DEBUG: 🌐 Fetching ALL assignments across system using Collection Group Query');
+
+      final QuerySnapshot snapshot = await _firestore
+          .collectionGroup(_assignmentSubCollectionName)
+          .orderBy('deadline', descending: false)
+          .get();
+
+      print(
+          'DEBUG: 📊 Found ${snapshot.docs.length} assignments across all courses');
+
+      final assignments = <Assignment>[];
+      for (var doc in snapshot.docs) {
+        try {
+          final assignment = Assignment.fromFirestore(doc);
+          assignments.add(assignment);
+          print(
+              'DEBUG: ✅ Assignment: ${assignment.title} (Course: ${assignment.courseId})');
+        } catch (e) {
+          print('DEBUG: ⚠️ Error parsing assignment: $e');
+        }
+      }
+
+      return assignments;
+    } catch (e) {
+      print('DEBUG: ❌ Error in Collection Group Query: $e');
+      return [];
+    }
+  }
+
+  // ========================================
+  // HÀM: getUpcomingAssignmentsForStudent
+  // MÔ TẢ: Lấy TẤT CẢ bài tập sắp hết hạn của sinh viên (từ MỌI khóa học)
+  // USE CASE: Student dashboard - "All assignments due soon"
+  // ========================================
+  static Future<List<Assignment>> getUpcomingAssignmentsForStudent({
+    required List<String> enrolledCourseIds,
+    required int daysAhead,
+  }) async {
+    try {
+      final DateTime now = DateTime.now();
+      final DateTime futureDate = now.add(Duration(days: daysAhead));
+
+      print('DEBUG: 📅 Fetching upcoming assignments (next $daysAhead days)');
+      print('DEBUG: 📚 From courses: ${enrolledCourseIds.join(", ")}');
+
+      final QuerySnapshot snapshot = await _firestore
+          .collectionGroup(_assignmentSubCollectionName)
+          .where('courseId',
+              whereIn: enrolledCourseIds) // ✅ Filter by enrolled courses
+          .where('deadline', isGreaterThanOrEqualTo: Timestamp.fromDate(now))
+          .where('deadline',
+              isLessThanOrEqualTo: Timestamp.fromDate(futureDate))
+          .orderBy('deadline', descending: false)
+          .get();
+
+      print('DEBUG: 🎯 Found ${snapshot.docs.length} upcoming assignments');
+
+      final assignments = <Assignment>[];
+      for (var doc in snapshot.docs) {
+        try {
+          final assignment = Assignment.fromFirestore(doc);
+          assignments.add(assignment);
+          print(
+              'DEBUG: ⏰ Upcoming: ${assignment.title} - Due: ${assignment.deadline} (Course: ${assignment.courseId})');
+        } catch (e) {
+          print('DEBUG: ⚠️ Error parsing assignment: $e');
+        }
+      }
+
+      return assignments;
+    } catch (e) {
+      print('DEBUG: ❌ Error fetching upcoming assignments: $e');
+      return [];
+    }
+  }
+
+  // ========================================
+  // HÀM: getAssignmentsByMultipleCourses
+  // MÔ TẢ: Lấy assignments từ nhiều courses cùng lúc
+  // USE CASE: Cross-course analytics, bulk operations
+  // ========================================
+  static Future<Map<String, List<Assignment>>> getAssignmentsByMultipleCourses(
+      List<String> courseIds) async {
+    try {
+      print(
+          'DEBUG: 📋 Fetching assignments from multiple courses: ${courseIds.join(", ")}');
+
+      final QuerySnapshot snapshot = await _firestore
+          .collectionGroup(_assignmentSubCollectionName)
+          .where('courseId', whereIn: courseIds)
+          .get();
+
+      print(
+          'DEBUG: 📊 Found ${snapshot.docs.length} assignments from ${courseIds.length} courses');
+
+      // Group assignments by courseId
+      final Map<String, List<Assignment>> assignmentsByCourse = {};
+
+      for (var doc in snapshot.docs) {
+        try {
+          final assignment = Assignment.fromFirestore(doc);
+          final courseId = assignment.courseId;
+
+          if (!assignmentsByCourse.containsKey(courseId)) {
+            assignmentsByCourse[courseId] = [];
+          }
+          assignmentsByCourse[courseId]!.add(assignment);
+        } catch (e) {
+          print('DEBUG: ⚠️ Error parsing assignment: $e');
+        }
+      }
+
+      // Sort assignments within each course by deadline
+      for (var courseId in assignmentsByCourse.keys) {
+        assignmentsByCourse[courseId]!
+            .sort((a, b) => a.deadline.compareTo(b.deadline));
+        print(
+            'DEBUG: ✅ Course $courseId: ${assignmentsByCourse[courseId]!.length} assignments');
+      }
+
+      return assignmentsByCourse;
+    } catch (e) {
+      print('DEBUG: ❌ Error fetching assignments by multiple courses: $e');
+      return {};
     }
   }
 }

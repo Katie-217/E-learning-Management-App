@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Assignment {
   final String id;
+  final String courseId; // ✅ NEW: Support Collection Group Query
   final String title;
   final String description;
   final DateTime startDate;
@@ -17,6 +18,7 @@ class Assignment {
 
   Assignment({
     required this.id,
+    required this.courseId, // ✅ REQUIRED: Parent course ID
     required this.title,
     required this.description,
     required this.startDate,
@@ -68,6 +70,7 @@ class Assignment {
 
     return Assignment(
       id: doc.id,
+      courseId: data['courseId'] ?? '', // ✅ Read courseId from Firebase
       title: data['title'] ?? '',
       description: data['description'] ?? '',
       startDate: parseDate(data['startDate'] ?? data['timestamp']),
@@ -86,6 +89,7 @@ class Assignment {
   // "Phiên dịch" từ đối tượng Dart sang Map để ghi lên Firebase
   Map<String, dynamic> toFirestore() {
     return {
+      'courseId': courseId, // ✅ Write courseId to Firebase
       'title': title,
       'description': description,
       'startDate': Timestamp.fromDate(startDate),
@@ -99,5 +103,41 @@ class Assignment {
       'attachments': attachments,
       'groupIds': groupIds,
     };
+  }
+
+  // ========================================
+  // copyWith method for immutable updates
+  // ========================================
+  Assignment copyWith({
+    String? id,
+    String? courseId, // ✅ Support courseId updates
+    String? title,
+    String? description,
+    DateTime? startDate,
+    DateTime? deadline,
+    bool? allowLateSubmissions,
+    DateTime? lateDeadline,
+    int? maxSubmissionAttempts,
+    List<String>? allowedFileFormats,
+    int? maxFileSizeMB,
+    List<Map<String, dynamic>>? attachments,
+    List<String>? groupIds,
+  }) {
+    return Assignment(
+      id: id ?? this.id,
+      courseId: courseId ?? this.courseId,
+      title: title ?? this.title,
+      description: description ?? this.description,
+      startDate: startDate ?? this.startDate,
+      deadline: deadline ?? this.deadline,
+      allowLateSubmissions: allowLateSubmissions ?? this.allowLateSubmissions,
+      lateDeadline: lateDeadline ?? this.lateDeadline,
+      maxSubmissionAttempts:
+          maxSubmissionAttempts ?? this.maxSubmissionAttempts,
+      allowedFileFormats: allowedFileFormats ?? this.allowedFileFormats,
+      maxFileSizeMB: maxFileSizeMB ?? this.maxFileSizeMB,
+      attachments: attachments ?? this.attachments,
+      groupIds: groupIds ?? this.groupIds,
+    );
   }
 }

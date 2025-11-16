@@ -31,7 +31,7 @@ class CourseStudentController {
   Future<List<CourseModel>> getMyCourses() async {
     try {
       print('DEBUG: ========== COURSE STUDENT CONTROLLER ==========');
-      
+
       // 1. Lấy current user ID từ AuthRepository
       final userId = await _authRepository.getCurrentUserId();
       if (userId == null) {
@@ -42,31 +42,34 @@ class CourseStudentController {
 
       // 2. Lấy courses từ CourseStudentRepository
       final courses = await CourseStudentRepository.getUserCourses(userId);
-      
+
       print('DEBUG: 📚 Repository returned ${courses.length} courses');
 
       // 3. Business logic: Filter active courses for students
       final user = await _authRepository.currentUserModel;
       if (user?.role == UserRole.student) {
-        final activeCourses = courses.where((course) => course.status == 'active').toList();
+        final activeCourses =
+            courses.where((course) => course.status == 'active').toList();
         print('DEBUG: 🎓 Student role detected - filtering active courses');
         print('DEBUG: 📊 Before filter: ${courses.length} courses');
         print('DEBUG: 📊 After filter: ${activeCourses.length} active courses');
-        
+
         if (activeCourses.length < courses.length) {
           final inactiveCount = courses.length - activeCourses.length;
           print('DEBUG: ⚠️ Filtered out $inactiveCount inactive courses');
           for (var course in courses) {
             if (course.status != 'active') {
-              print('DEBUG:   - ${course.name} (${course.code}): status = ${course.status}');
+              print(
+                  'DEBUG:   - ${course.name} (${course.code}): status = ${course.status}');
             }
           }
         }
-        
+
         return activeCourses;
       }
 
-      print('DEBUG: ✅ Returning all ${courses.length} courses (non-student role)');
+      print(
+          'DEBUG: ✅ Returning all ${courses.length} courses (non-student role)');
       print('DEBUG: ===========================================');
       return courses;
     } catch (e) {
@@ -162,13 +165,10 @@ class CourseStudentController {
         throw Exception(validation['reason']);
       }
 
-      // 4. Enroll student via EnrollmentController
-      return await _enrollmentController.enrollStudentInCourse(
-        courseId: courseId,
-        userId: user.uid,
-        studentName: user.name,
-        studentEmail: user.email,
-      );
+      // 4. ❌ BROKEN: enrollStudentInCourse removed for Strict Enrollment
+      // TODO: Update UI to use enrollStudentInGroup with groupId parameter
+      throw Exception(
+          'enrollStudentInCourse removed - use enrollStudentInGroup with groupId');
     } catch (e) {
       print('DEBUG: ❌ CourseStudentController.enrollCourse error: $e');
       rethrow;

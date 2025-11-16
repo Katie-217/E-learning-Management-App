@@ -12,6 +12,7 @@ class EnrollmentModel {
   final DateTime enrolledAt;
   final String role; // 'student', 'teacher'
   final String status; // 'active', 'dropped'
+  final String groupId; // ID của nhóm - SINGLE SOURCE OF TRUTH - REQUIRED!
 
   EnrollmentModel({
     required this.id,
@@ -22,6 +23,7 @@ class EnrollmentModel {
     required this.enrolledAt,
     this.role = 'student',
     this.status = 'active',
+    required this.groupId, // REQUIRED - sinh viên CHỈ có thể enroll khi đã chọn nhóm
   });
 
   Map<String, dynamic> toMap() {
@@ -32,6 +34,7 @@ class EnrollmentModel {
       'studentEmail': studentEmail,
       'enrolledAt': enrolledAt.toIso8601String(), // Hoặc dùng Timestamp
       'role': role,
+      'groupId': groupId, // Nơi lưu groupId assignment
       'status': status,
     };
   }
@@ -46,6 +49,7 @@ class EnrollmentModel {
       enrolledAt: _parseDateTime(map['enrolledAt']),
       role: map['role'] ?? 'student',
       status: map['status'] ?? 'active',
+      groupId: map['groupId'] ?? '', // REQUIRED - must have groupId
     );
   }
 
@@ -74,5 +78,42 @@ class EnrollmentModel {
 
     // Default fallback
     return DateTime.now();
+  }
+
+  // ========================================
+  // METHOD: copyWith - For group assignment changes
+  // ========================================
+  EnrollmentModel copyWith({
+    String? id,
+    String? courseId,
+    String? userId,
+    String? studentName,
+    String? studentEmail,
+    DateTime? enrolledAt,
+    String? role,
+    String? status,
+    String? groupId, // Can change group but cannot be null/empty
+  }) {
+    return EnrollmentModel(
+      id: id ?? this.id,
+      courseId: courseId ?? this.courseId,
+      userId: userId ?? this.userId,
+      studentName: studentName ?? this.studentName,
+      studentEmail: studentEmail ?? this.studentEmail,
+      enrolledAt: enrolledAt ?? this.enrolledAt,
+      role: role ?? this.role,
+      status: status ?? this.status,
+      groupId: groupId ?? this.groupId,
+    );
+  }
+
+  // ========================================
+  // HELPER: generateId - Composite ID for uniqueness
+  // ========================================
+  static String generateId({
+    required String courseId,
+    required String userId,
+  }) {
+    return '${courseId}_${userId}';
   }
 }

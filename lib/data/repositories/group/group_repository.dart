@@ -6,7 +6,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../../domain/models/group_model.dart';
-import '../course/enrollment_repository.dart';
 
 class GroupRepository {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -54,23 +53,14 @@ class GroupRepository {
         return [];
       }
 
-      // Lấy danh sách courses mà user đã enroll sử dụng EnrollmentRepository
-      final enrollmentRepo = EnrollmentRepository();
-      final enrollments = await enrollmentRepo.getCoursesOfStudent(user.uid);
+      // ❌ DEPRECATED LOGIC - studentIds no longer exists in GroupModel
+      // TODO: Reimplement using EnrollmentRepository to get user's group memberships
 
-      List<GroupModel> allGroups = [];
+      print(
+          '⚠️ DEPRECATED: getAllGroupsForUser() needs rewrite using enrollment-based group lookup');
 
-      for (var enrollment in enrollments) {
-        final courseGroups = await getGroupsByCourse(enrollment.courseId);
-        // Lọc chỉ groups mà user tham gia
-        final userGroups = courseGroups
-            .where((group) => group.studentIds.contains(user.uid))
-            .toList();
-        allGroups.addAll(userGroups);
-      }
-
-      print('DEBUG: Total groups for user: ${allGroups.length}');
-      return allGroups;
+      print('DEBUG: Total groups for user: 0 (deprecated method)');
+      return [];
     } catch (e) {
       print('DEBUG: Error fetching user groups: $e');
       return [];
@@ -105,60 +95,22 @@ class GroupRepository {
   }
 
   // ========================================
-  // HÀM: addMemberToGroup
-  // MÔ TẢ: Thêm student vào group (với validation enrollment)
+  // DEPRECATED: Student management methods moved to EnrollmentRepository
+  // MÔ TẢ: GroupRepository now only handles group CRUD operations
+  // Use EnrollmentRepository for all student-group assignments
   // ========================================
-  static Future<bool> addMemberToGroup(
-      String courseId, String groupId, String studentId) async {
-    try {
-      // Kiểm tra xem student có enrolled trong course không
-      final enrollmentRepo = EnrollmentRepository();
-      final isEnrolled =
-          await enrollmentRepo.isStudentEnrolled(courseId, studentId);
 
-      if (!isEnrolled) {
-        print('DEBUG: Student is not enrolled in course $courseId');
-        return false;
-      }
+  // OLD METHOD: addMemberToGroup - DEPRECATED
+  // NEW METHOD: Use EnrollmentRepository.assignStudentToGroup()
 
-      await _firestore
-          .collection(_courseCollectionName)
-          .doc(courseId)
-          .collection(_groupSubCollectionName)
-          .doc(groupId)
-          .update({
-        'studentIds': FieldValue.arrayUnion([studentId])
-      });
+  // OLD METHOD: removeMemberFromGroup - DEPRECATED
+  // NEW METHOD: Use EnrollmentRepository.removeStudentFromGroup()
 
-      print('DEBUG: Student added to group successfully');
-      return true;
-    } catch (e) {
-      print('DEBUG: Error adding student to group: $e');
-      return false;
-    }
-  }
+  // For querying students in group, use:
+  // EnrollmentRepository.getStudentsInGroup(groupId)
 
   // ========================================
-  // HÀM: removeMemberFromGroup
-  // MÔ TẢ: Xóa student khỏi group
+  // NOTE: This repository now focuses solely on Group entity CRUD
+  // All student-group relationships managed through enrollment pattern
   // ========================================
-  static Future<bool> removeMemberFromGroup(
-      String courseId, String groupId, String studentId) async {
-    try {
-      await _firestore
-          .collection(_courseCollectionName)
-          .doc(courseId)
-          .collection(_groupSubCollectionName)
-          .doc(groupId)
-          .update({
-        'studentIds': FieldValue.arrayRemove([studentId])
-      });
-
-      print('DEBUG: Student removed from group successfully');
-      return true;
-    } catch (e) {
-      print('DEBUG: Error removing student from group: $e');
-      return false;
-    }
-  }
 }

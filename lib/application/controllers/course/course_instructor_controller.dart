@@ -235,12 +235,10 @@ class CourseInstructorController {
       }
 
       // 4. Enroll student via EnrollmentController
-      return await _enrollmentController.enrollStudentInCourse(
-        courseId: courseId,
-        userId: studentUid,
-        studentName: studentName,
-        studentEmail: studentEmail,
-      );
+      // ❌ BROKEN: enrollStudentInCourse removed for Strict Enrollment
+      // TODO: Update UI to use enrollStudentInGroup with groupId parameter
+      throw Exception(
+          'enrollStudentInCourse removed - use enrollStudentInGroup with groupId');
     } catch (e) {
       print(
           'DEBUG: ❌ CourseInstructorController.enrollStudentInCourse error: $e');

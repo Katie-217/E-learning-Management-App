@@ -5,15 +5,15 @@ import '../../../../../domain/models/material_model.dart';
 import '../../../../../domain/models/course_model.dart';
 import '../../../../../core/theme/app_colors.dart';
 
-// Import for web
-import 'dart:html' as html;
+// Web imports disabled for Windows compatibility
+// import 'dart:html' as html;
 
 // View widget for material detail (used within same page, no rebuild)
 class MaterialDetailView extends StatelessWidget {
   final MaterialModel material;
   final CourseModel course;
   final VoidCallback onBack;
-  
+
   const MaterialDetailView({
     super.key,
     required this.material,
@@ -60,8 +60,20 @@ class MaterialDetailView extends StatelessWidget {
   }
 
   String _formatDate(DateTime date) {
-    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    final months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
 
@@ -80,7 +92,8 @@ class MaterialDetailView extends StatelessWidget {
             child: Row(
               children: [
                 IconButton(
-                  icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+                  icon: const Icon(Icons.arrow_back,
+                      color: AppColors.textPrimary),
                   onPressed: onBack,
                   tooltip: 'Back to materials',
                 ),
@@ -125,8 +138,8 @@ class MaterialDetailView extends StatelessWidget {
                                     Row(
                                       children: [
                                         Text(
-                                          material.authorName.isNotEmpty 
-                                              ? material.authorName 
+                                          material.authorName.isNotEmpty
+                                              ? material.authorName
                                               : course.instructor,
                                           style: const TextStyle(
                                             color: AppColors.textSecondary,
@@ -136,7 +149,8 @@ class MaterialDetailView extends StatelessWidget {
                                         const SizedBox(width: 8),
                                         const Text(
                                           '•',
-                                          style: TextStyle(color: AppColors.textMuted),
+                                          style: TextStyle(
+                                              color: AppColors.textMuted),
                                         ),
                                         const SizedBox(width: 8),
                                         Text(
@@ -184,9 +198,10 @@ class MaterialDetailView extends StatelessWidget {
                             ],
                           ),
                           Divider(height: 32, color: AppColors.border),
-                          
+
                           // Description Section
-                          if (material.description != null && material.description!.isNotEmpty) ...[
+                          if (material.description != null &&
+                              material.description!.isNotEmpty) ...[
                             Text(
                               material.description!,
                               style: const TextStyle(
@@ -199,7 +214,9 @@ class MaterialDetailView extends StatelessWidget {
                           ],
 
                           // Attachment/File Section (with embedded link)
-                          if (material.attachment != null || (material.url != null && material.url!.isNotEmpty)) ...[
+                          if (material.attachment != null ||
+                              (material.url != null &&
+                                  material.url!.isNotEmpty)) ...[
                             const Text(
                               'Attachment',
                               style: TextStyle(
@@ -212,44 +229,49 @@ class MaterialDetailView extends StatelessWidget {
                             InkWell(
                               onTap: () async {
                                 // Ưu tiên dùng URL từ material.url, nếu không có thì dùng attachment.url
-                                String? urlToOpen = material.url?.isNotEmpty == true 
-                                    ? material.url 
-                                    : (material.attachment?.url.isNotEmpty == true 
-                                        ? material.attachment!.url 
+                                String? urlToOpen = material.url?.isNotEmpty ==
+                                        true
+                                    ? material.url
+                                    : (material.attachment?.url.isNotEmpty ==
+                                            true
+                                        ? material.attachment!.url
                                         : null);
-                                
+
                                 if (urlToOpen != null && urlToOpen.isNotEmpty) {
                                   try {
                                     final uri = Uri.parse(urlToOpen);
                                     if (await canLaunchUrl(uri)) {
                                       await launchUrl(
-                                        uri, 
-                                        mode: kIsWeb 
-                                            ? LaunchMode.externalApplication 
+                                        uri,
+                                        mode: kIsWeb
+                                            ? LaunchMode.externalApplication
                                             : LaunchMode.platformDefault,
                                       );
                                     } else if (kIsWeb) {
-                                      // Fallback cho web: mở bằng html window
-                                      html.window.open(urlToOpen, '_blank');
-                                    }
-                                  } catch (e) {
-                                    if (kIsWeb) {
-                                      // Fallback cho web: mở bằng html window
-                                      html.window.open(urlToOpen, '_blank');
-                                    } else {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Text('Error opening URL: $e'),
+                                      // Web platform not fully supported yet
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                              'Web platform opening not supported yet'),
                                         ),
                                       );
                                     }
+                                  } catch (e) {
+                                    // Show error for all platforms
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Error opening URL: $e'),
+                                      ),
+                                    );
                                   }
                                 } else if (material.attachment != null) {
                                   // Nếu không có URL, có thể preview file trực tiếp (nếu có bytes)
                                   // TODO: Implement file preview
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
-                                      content: Text('File preview not available'),
+                                      content:
+                                          Text('File preview not available'),
                                     ),
                                   );
                                 }
@@ -280,13 +302,16 @@ class MaterialDetailView extends StatelessWidget {
                                     const SizedBox(width: 12),
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            material.attachment?.name ?? 
-                                            (material.url != null 
-                                              ? Uri.parse(material.url!).pathSegments.last 
-                                              : 'File'),
+                                            material.attachment?.name ??
+                                                (material.url != null
+                                                    ? Uri.parse(material.url!)
+                                                        .pathSegments
+                                                        .last
+                                                    : 'File'),
                                             style: const TextStyle(
                                               fontSize: 14,
                                               fontWeight: FontWeight.w500,
@@ -294,7 +319,9 @@ class MaterialDetailView extends StatelessWidget {
                                             ),
                                           ),
                                           const SizedBox(height: 4),
-                                          if (material.attachment != null && material.attachment!.sizeInBytes > 0)
+                                          if (material.attachment != null &&
+                                              material.attachment!.sizeInBytes >
+                                                  0)
                                             Text(
                                               '${(material.attachment!.sizeInBytes / 1024).toStringAsFixed(1)} KB',
                                               style: const TextStyle(
@@ -415,12 +442,8 @@ class MaterialDetailView extends StatelessWidget {
                                 Icons.update,
                               ),
                             ],
-                            const SizedBox(height: 12),
-                            _buildDetailItem(
-                              'Downloads',
-                              '${material.downloadCount}',
-                              Icons.download,
-                            ),
+                            // ❌ REMOVED: downloadCount - Now tracked via MaterialTrackingModel
+                            // TODO: Add MaterialTrackingController to show view/download stats
                           ],
                         ),
                       ),
@@ -472,7 +495,7 @@ class MaterialDetailView extends StatelessWidget {
 class MaterialDetailPage extends StatelessWidget {
   final MaterialModel material;
   final CourseModel course;
-  
+
   const MaterialDetailPage({
     super.key,
     required this.material,

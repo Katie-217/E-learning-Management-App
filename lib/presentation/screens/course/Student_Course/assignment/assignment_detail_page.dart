@@ -8,15 +8,15 @@ import '../../../../../domain/models/submission_model.dart';
 import '../../../../../data/repositories/submission/submission_repository.dart';
 import '../../../../../core/theme/app_colors.dart';
 
-// Import for web drag and drop
-import 'dart:html' as html;
+// Web imports disabled for Windows compatibility
+// import 'dart:html' as html;
 
 // View widget for assignment detail (used within same page, no rebuild)
 class AssignmentDetailView extends StatefulWidget {
   final Assignment assignment;
   final CourseModel course;
   final VoidCallback onBack;
-  
+
   const AssignmentDetailView({
     super.key,
     required this.assignment,
@@ -53,7 +53,8 @@ class _AssignmentDetailViewState extends State<AssignmentDetailView> {
       print('DEBUG: Course ID: ${widget.course.id}');
       print('DEBUG: Assignment ID: ${widget.assignment.id}');
 
-      final submission = await SubmissionRepository.getUserSubmissionForAssignment(
+      final submission =
+          await SubmissionRepository.getUserSubmissionForAssignment(
         widget.course.id,
         widget.assignment.id,
       );
@@ -63,20 +64,22 @@ class _AssignmentDetailViewState extends State<AssignmentDetailView> {
         print('DEBUG: Status: ${submission.status.name}');
         print('DEBUG: Submitted at: ${submission.submittedAt}');
         print('DEBUG: Attachments: ${submission.attachments.length}');
-        
+
         setState(() {
           _currentSubmission = submission;
-          _isSubmitted = submission.status == SubmissionStatus.submitted || 
-                        submission.status == SubmissionStatus.graded ||
-                        submission.status == SubmissionStatus.returned;
-          
+          _isSubmitted = submission.status == SubmissionStatus.submitted ||
+              submission.status == SubmissionStatus.graded ||
+              submission.status == SubmissionStatus.returned;
+
           // Load submitted link if available
           if (submission.attachments.isNotEmpty) {
             _submittedLink = submission.attachments.first.url;
-          } else if (submission.textContent != null && submission.textContent!.isNotEmpty) {
+          } else if (submission.textContent != null &&
+              submission.textContent!.isNotEmpty) {
             // Check if textContent is a URL
             final uri = Uri.tryParse(submission.textContent!);
-            if (uri != null && (uri.scheme == 'http' || uri.scheme == 'https')) {
+            if (uri != null &&
+                (uri.scheme == 'http' || uri.scheme == 'https')) {
               _submittedLink = submission.textContent;
             }
           }
@@ -99,40 +102,13 @@ class _AssignmentDetailViewState extends State<AssignmentDetailView> {
   }
 
   void _setupDragAndDrop() {
-    if (kIsWeb) {
-      // Setup drag and drop for web
-      html.document.body?.onDragOver.listen((event) {
-        event.preventDefault();
-      });
+    // Drag and drop only supported on web platform
+    // Non-web platforms will use file picker instead
+    if (!kIsWeb) return;
 
-      html.document.body?.onDrop.listen((event) {
-        event.preventDefault();
-        final files = event.dataTransfer?.files;
-        if (files != null && files.isNotEmpty) {
-          final platformFiles = <PlatformFile>[];
-          for (var i = 0; i < files.length; i++) {
-            final file = files[i];
-            platformFiles.add(PlatformFile(
-              name: file.name,
-              size: file.size,
-              path: null,
-              bytes: null,
-              readStream: null,
-              identifier: null,
-            ));
-          }
-          setState(() {
-            _selectedFiles.addAll(platformFiles);
-          });
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Added ${platformFiles.length} file(s)'),
-              backgroundColor: AppColors.success,
-            ),
-          );
-        }
-      });
-    }
+    // Web-specific drag and drop setup would go here
+    // For now, disabled to prevent compilation errors on Windows
+    print('Drag and drop setup skipped on non-web platform');
   }
 
   Future<void> _handleFilePick() async {
@@ -221,7 +197,8 @@ class _AssignmentDetailViewState extends State<AssignmentDetailView> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+            child: const Text('Cancel',
+                style: TextStyle(color: AppColors.textSecondary)),
           ),
           TextButton(
             onPressed: () {
@@ -239,7 +216,8 @@ class _AssignmentDetailViewState extends State<AssignmentDetailView> {
                 );
               }
             },
-            child: const Text('Add', style: TextStyle(color: AppColors.primary)),
+            child:
+                const Text('Add', style: TextStyle(color: AppColors.primary)),
           ),
         ],
       ),
@@ -247,8 +225,20 @@ class _AssignmentDetailViewState extends State<AssignmentDetailView> {
   }
 
   String _formatDate(DateTime date) {
-    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    final months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
 
@@ -258,17 +248,6 @@ class _AssignmentDetailViewState extends State<AssignmentDetailView> {
     final period = hour >= 12 ? 'PM' : 'AM';
     final displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
     return '$displayHour:$minute $period';
-  }
-
-  String _getStatus() {
-    final now = DateTime.now();
-    if (now.isBefore(widget.assignment.startDate)) {
-      return 'upcoming';
-    } else if (now.isAfter(widget.assignment.deadline)) {
-      return 'overdue';
-    } else {
-      return 'active';
-    }
   }
 
   Future<void> _handleSubmit() async {
@@ -299,8 +278,8 @@ class _AssignmentDetailViewState extends State<AssignmentDetailView> {
       }
 
       // Determine attempt number
-      final attemptNumber = _currentSubmission != null 
-          ? _currentSubmission!.attemptNumber + 1 
+      final attemptNumber = _currentSubmission != null
+          ? _currentSubmission!.attemptNumber + 1
           : 1;
 
       // Check if late
@@ -343,7 +322,7 @@ class _AssignmentDetailViewState extends State<AssignmentDetailView> {
       if (success) {
         // Reload submission to get updated data
         await _loadSubmission();
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Submitted successfully'),
@@ -375,25 +354,26 @@ class _AssignmentDetailViewState extends State<AssignmentDetailView> {
     if (_isSubmitted) {
       return 'turned_in';
     }
-    
+
     final now = DateTime.now();
-    
+
     // Check if deadline has passed
     if (now.isAfter(widget.assignment.deadline)) {
       return 'missing';
     }
-    
+
     // Check if due soon (within 24 hours)
-    final hoursUntilDeadline = widget.assignment.deadline.difference(now).inHours;
+    final hoursUntilDeadline =
+        widget.assignment.deadline.difference(now).inHours;
     if (hoursUntilDeadline <= 24 && hoursUntilDeadline > 0) {
       return 'due_soon';
     }
-    
+
     // Check if assignment has started
     if (now.isBefore(widget.assignment.startDate)) {
       return 'assigned';
     }
-    
+
     // Default: assigned (not yet submitted)
     return 'assigned';
   }
@@ -401,7 +381,7 @@ class _AssignmentDetailViewState extends State<AssignmentDetailView> {
   // Get status display text and color
   Map<String, dynamic> _getWorkStatusDisplay() {
     final status = _getWorkStatus();
-    
+
     switch (status) {
       case 'missing':
         return {
@@ -453,7 +433,8 @@ class _AssignmentDetailViewState extends State<AssignmentDetailView> {
             child: Row(
               children: [
                 IconButton(
-                  icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+                  icon: const Icon(Icons.arrow_back,
+                      color: AppColors.textPrimary),
                   onPressed: widget.onBack,
                   tooltip: 'Back to assignments',
                 ),
@@ -581,7 +562,7 @@ class _AssignmentDetailViewState extends State<AssignmentDetailView> {
             ],
           ),
           Divider(height: 32, color: AppColors.border),
-        
+
           // Instructions Section
           if (widget.assignment.description.isNotEmpty) ...[
             Text(
@@ -658,7 +639,8 @@ class _AssignmentDetailViewState extends State<AssignmentDetailView> {
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.open_in_new, size: 20, color: AppColors.textPrimary),
+                      icon: const Icon(Icons.open_in_new,
+                          size: 20, color: AppColors.textPrimary),
                       onPressed: () {
                         // TODO: Open attachment
                       },
@@ -722,173 +704,183 @@ class _AssignmentDetailViewState extends State<AssignmentDetailView> {
           children: [
             // Your Work Section
             DragTarget<List<PlatformFile>>(
-                  onWillAccept: (data) {
-                    setState(() {
-                      _isDragging = true;
-                    });
-                    return true;
-                  },
-                  onLeave: (data) {
-                    setState(() {
-                      _isDragging = false;
-                    });
-                  },
-                  onAccept: (data) {
-                    setState(() {
-                      _isDragging = false;
-                      _selectedFiles.addAll(data);
-                    });
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Added ${data.length} file(s)'),
-                        backgroundColor: AppColors.success,
-                      ),
-                    );
-                  },
-                  builder: (context, candidateData, rejectedData) {
-                    return Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: _isDragging 
-                            ? AppColors.primary.withOpacity(0.1)
-                            : AppColors.surface,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: _isDragging 
-                              ? AppColors.primary
-                              : AppColors.border,
-                          width: _isDragging ? 2 : 1,
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (_isDragging)
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              margin: const EdgeInsets.only(bottom: 16),
-                              decoration: BoxDecoration(
-                                color: AppColors.primary.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: AppColors.primary),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.cloud_upload, color: AppColors.primary),
-                                  const SizedBox(width: 8),
-                                  const Text(
-                                    'Drop files here',
-                                    style: TextStyle(
-                                      color: AppColors.primary,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-            // Header with status
-            Builder(
-              builder: (context) {
-                final statusDisplay = _getWorkStatusDisplay();
-                return Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Your work',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: statusDisplay['bgColor'] as Color,
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(
-                          color: statusDisplay['borderColor'] as Color,
-                          width: 1,
-                        ),
-                      ),
-                      child: Text(
-                        statusDisplay['text'] as String,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: statusDisplay['color'] as Color,
-                          letterSpacing: 0.3,
-                        ),
-                      ),
-                    ),
-                  ],
+              onWillAccept: (data) {
+                setState(() {
+                  _isDragging = true;
+                });
+                return true;
+              },
+              onLeave: (data) {
+                setState(() {
+                  _isDragging = false;
+                });
+              },
+              onAccept: (data) {
+                setState(() {
+                  _isDragging = false;
+                  _selectedFiles.addAll(data);
+                });
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Added ${data.length} file(s)'),
+                    backgroundColor: AppColors.success,
+                  ),
                 );
               },
-            ),
-            const SizedBox(height: 16),
-            Divider(color: AppColors.border),
-            const SizedBox(height: 16),
-            // Show submitted file/link if submitted
-            if (_isLoadingSubmission)
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: CircularProgressIndicator(),
-                ),
-              )
-            else if (_isSubmitted && _currentSubmission != null) ...[
-              if (_currentSubmission!.attachments.isNotEmpty)
-                ..._currentSubmission!.attachments.map((attachment) => Container(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: AppColors.surfaceVariant,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: AppColors.border),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  attachment.url.contains('drive') || attachment.url.contains('google')
-                                      ? Icons.drive_file_move 
-                                      : Icons.link,
-                                  color: AppColors.primary, 
-                                  size: 24,
+              builder: (context, candidateData, rejectedData) {
+                return Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: _isDragging
+                        ? AppColors.primary.withOpacity(0.1)
+                        : AppColors.surface,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: _isDragging ? AppColors.primary : AppColors.border,
+                      width: _isDragging ? 2 : 1,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (_isDragging)
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          margin: const EdgeInsets.only(bottom: 16),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: AppColors.primary),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.cloud_upload,
+                                  color: AppColors.primary),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'Drop files here',
+                                style: TextStyle(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.w600,
                                 ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        attachment.name,
-                                        style: const TextStyle(
-                                          color: AppColors.primary,
-                                          fontWeight: FontWeight.w500,
-                                          decoration: TextDecoration.underline,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        attachment.sizeInBytes > 0
-                                            ? '${(attachment.sizeInBytes / 1024).toStringAsFixed(1)} KB'
-                                            : 'Link',
-                                        style: const TextStyle(
-                                          color: AppColors.textSecondary,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      // Header with status
+                      Builder(
+                        builder: (context) {
+                          final statusDisplay = _getWorkStatusDisplay();
+                          return Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Your work',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: statusDisplay['bgColor'] as Color,
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
+                                    color:
+                                        statusDisplay['borderColor'] as Color,
+                                    width: 1,
                                   ),
                                 ),
-                              ],
-                            ),
-                )).toList()
-              else if (_currentSubmission!.textContent != null && _currentSubmission!.textContent!.isNotEmpty)
-                Container(
+                                child: Text(
+                                  statusDisplay['text'] as String,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: statusDisplay['color'] as Color,
+                                    letterSpacing: 0.3,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      Divider(color: AppColors.border),
+                      const SizedBox(height: 16),
+                      // Show submitted file/link if submitted
+                      if (_isLoadingSubmission)
+                        const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(16.0),
+                            child: CircularProgressIndicator(),
+                          ),
+                        )
+                      else if (_isSubmitted && _currentSubmission != null) ...[
+                        if (_currentSubmission!.attachments.isNotEmpty)
+                          ..._currentSubmission!.attachments
+                              .map((attachment) => Container(
+                                    margin: const EdgeInsets.only(bottom: 8),
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.surfaceVariant,
+                                      borderRadius: BorderRadius.circular(8),
+                                      border:
+                                          Border.all(color: AppColors.border),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          attachment.url.contains('drive') ||
+                                                  attachment.url
+                                                      .contains('google')
+                                              ? Icons.drive_file_move
+                                              : Icons.link,
+                                          color: AppColors.primary,
+                                          size: 24,
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                attachment.name,
+                                                style: const TextStyle(
+                                                  color: AppColors.primary,
+                                                  fontWeight: FontWeight.w500,
+                                                  decoration:
+                                                      TextDecoration.underline,
+                                                ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                attachment.sizeInBytes > 0
+                                                    ? '${(attachment.sizeInBytes / 1024).toStringAsFixed(1)} KB'
+                                                    : 'Link',
+                                                style: const TextStyle(
+                                                  color:
+                                                      AppColors.textSecondary,
+                                                  fontSize: 12,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ))
+                              .toList()
+                        else if (_currentSubmission!.textContent != null &&
+                            _currentSubmission!.textContent!.isNotEmpty)
+                          Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
                               color: AppColors.surfaceVariant,
@@ -899,13 +891,14 @@ class _AssignmentDetailViewState extends State<AssignmentDetailView> {
                               children: [
                                 const Icon(
                                   Icons.link,
-                                  color: AppColors.primary, 
+                                  color: AppColors.primary,
                                   size: 24,
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         _currentSubmission!.textContent!,
@@ -931,294 +924,317 @@ class _AssignmentDetailViewState extends State<AssignmentDetailView> {
                               ],
                             ),
                           ),
-              const SizedBox(height: 12),
-            ],
-            // Add or Create Button with Dropdown (only show if not submitted and no files)
-            if (!_isSubmitted && _selectedFiles.isEmpty && _submittedLink == null)
-              Center(
-                child: PopupMenuButton<String>(
-                  offset: const Offset(0, 50),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    side: BorderSide(color: AppColors.border),
-                  ),
-                  color: AppColors.surface,
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: AppColors.primary),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.add, size: 18, color: AppColors.primary),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'Add or create',
-                          style: TextStyle(color: AppColors.primary),
-                        ),
-                        const SizedBox(width: 8),
-                        const Icon(Icons.arrow_drop_down, color: AppColors.primary),
+                        const SizedBox(height: 12),
                       ],
-                    ),
-                  ),
-                  itemBuilder: (BuildContext context) => [
-                    PopupMenuItem<String>(
-                      value: 'file',
-                      child: Row(
-                        children: [
-                          const Icon(Icons.insert_drive_file, size: 20, color: AppColors.textPrimary),
-                          const SizedBox(width: 12),
-                          const Text('File', style: TextStyle(color: AppColors.textPrimary)),
-                        ],
-                      ),
-                    ),
-                    PopupMenuItem<String>(
-                      value: 'link',
-                      child: Row(
-                        children: [
-                          const Icon(Icons.link, size: 20, color: AppColors.textPrimary),
-                          const SizedBox(width: 12),
-                          const Text('Link', style: TextStyle(color: AppColors.textPrimary)),
-                        ],
-                      ),
-                    ),
-                    PopupMenuItem<String>(
-                      value: 'image',
-                      child: Row(
-                        children: [
-                          const Icon(Icons.image, size: 20, color: AppColors.textPrimary),
-                          const SizedBox(width: 12),
-                          const Text('Hình', style: TextStyle(color: AppColors.textPrimary)),
-                        ],
-                      ),
-                    ),
-                  ],
-                  onSelected: (String value) {
-                    if (value == 'file') {
-                      _handleFilePick();
-                    } else if (value == 'link') {
-                      _handleLinkAdd();
-                    } else if (value == 'image') {
-                      _handleImagePick();
-                    }
-                  },
-                ),
-              ),
-            // Selected Files Display (only show if not submitted)
-            if (!_isSubmitted && _selectedFiles.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              ..._selectedFiles.map((file) => Container(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceVariant,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: AppColors.border),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.insert_drive_file, color: AppColors.primary, size: 24),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                      // Add or Create Button with Dropdown (only show if not submitted and no files)
+                      if (!_isSubmitted &&
+                          _selectedFiles.isEmpty &&
+                          _submittedLink == null)
+                        Center(
+                          child: PopupMenuButton<String>(
+                            offset: const Offset(0, 50),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              side: BorderSide(color: AppColors.border),
+                            ),
+                            color: AppColors.surface,
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 12),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: AppColors.primary),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.add,
+                                      size: 18, color: AppColors.primary),
+                                  const SizedBox(width: 8),
+                                  const Text(
+                                    'Add or create',
+                                    style: TextStyle(color: AppColors.primary),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Icon(Icons.arrow_drop_down,
+                                      color: AppColors.primary),
+                                ],
+                              ),
+                            ),
+                            itemBuilder: (BuildContext context) => [
+                              PopupMenuItem<String>(
+                                value: 'file',
+                                child: Row(
                                   children: [
-                                    Text(
-                                      file.name,
-                                      style: const TextStyle(
-                                        color: AppColors.textPrimary,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    if (file.size != null)
-                                      Text(
-                                        '${(file.size! / 1024).toStringAsFixed(1)} KB',
-                                        style: const TextStyle(
-                                          color: AppColors.textSecondary,
-                                          fontSize: 12,
-                                        ),
-                                      ),
+                                    const Icon(Icons.insert_drive_file,
+                                        size: 20, color: AppColors.textPrimary),
+                                    const SizedBox(width: 12),
+                                    const Text('File',
+                                        style: TextStyle(
+                                            color: AppColors.textPrimary)),
                                   ],
                                 ),
                               ),
-                              IconButton(
-                                icon: const Icon(Icons.close, color: AppColors.textSecondary, size: 20),
-                                onPressed: () {
-                                  setState(() {
-                                    _selectedFiles.remove(file);
-                                  });
-                                },
+                              PopupMenuItem<String>(
+                                value: 'link',
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.link,
+                                        size: 20, color: AppColors.textPrimary),
+                                    const SizedBox(width: 12),
+                                    const Text('Link',
+                                        style: TextStyle(
+                                            color: AppColors.textPrimary)),
+                                  ],
+                                ),
+                              ),
+                              PopupMenuItem<String>(
+                                value: 'image',
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.image,
+                                        size: 20, color: AppColors.textPrimary),
+                                    const SizedBox(width: 12),
+                                    const Text('Hình',
+                                        style: TextStyle(
+                                            color: AppColors.textPrimary)),
+                                  ],
+                                ),
                               ),
                             ],
-                ),
-              )).toList(),
-            ],
-            const SizedBox(height: 12),
-            // Submit/Unsubmit Button
-            Center(
-              child: _isSubmitted
-                  ? OutlinedButton(
-                      onPressed: () {
-                        setState(() {
-                          _isSubmitted = false;
-                          _submittedLink = null;
-                          _selectedFiles.clear();
-                        });
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Unsubmitted'),
+                            onSelected: (String value) {
+                              if (value == 'file') {
+                                _handleFilePick();
+                              } else if (value == 'link') {
+                                _handleLinkAdd();
+                              } else if (value == 'image') {
+                                _handleImagePick();
+                              }
+                            },
                           ),
-                        );
-                      },
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: AppColors.border),
-                        minimumSize: const Size(double.infinity, 40),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(4),
                         ),
+                      // Selected Files Display (only show if not submitted)
+                      if (!_isSubmitted && _selectedFiles.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        ..._selectedFiles
+                            .map((file) => Container(
+                                  margin: const EdgeInsets.only(bottom: 8),
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.surfaceVariant,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: AppColors.border),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.insert_drive_file,
+                                          color: AppColors.primary, size: 24),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              file.name,
+                                              style: const TextStyle(
+                                                color: AppColors.textPrimary,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            Text(
+                                              '${(file.size / 1024).toStringAsFixed(1)} KB',
+                                              style: const TextStyle(
+                                                color: AppColors.textSecondary,
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(Icons.close,
+                                            color: AppColors.textSecondary,
+                                            size: 20),
+                                        onPressed: () {
+                                          setState(() {
+                                            _selectedFiles.remove(file);
+                                          });
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ))
+                            .toList(),
+                      ],
+                      const SizedBox(height: 12),
+                      // Submit/Unsubmit Button
+                      Center(
+                        child: _isSubmitted
+                            ? OutlinedButton(
+                                onPressed: () {
+                                  setState(() {
+                                    _isSubmitted = false;
+                                    _submittedLink = null;
+                                    _selectedFiles.clear();
+                                  });
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Unsubmitted'),
+                                    ),
+                                  );
+                                },
+                                style: OutlinedButton.styleFrom(
+                                  side: BorderSide(color: AppColors.border),
+                                  minimumSize: const Size(double.infinity, 40),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                ),
+                                child: const Text(
+                                  'Unsubmit',
+                                  style: TextStyle(
+                                    color: AppColors.primary,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              )
+                            : ElevatedButton(
+                                onPressed: (_selectedFiles.isNotEmpty ||
+                                        _submittedLink != null)
+                                    ? () => _handleSubmit()
+                                    : null,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primary,
+                                  disabledBackgroundColor:
+                                      AppColors.surfaceVariant,
+                                  minimumSize: const Size(double.infinity, 40),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                ),
+                                child: Text(
+                                  (_selectedFiles.isNotEmpty ||
+                                          _submittedLink != null)
+                                      ? 'Submit'
+                                      : 'Mark as done',
+                                  style: TextStyle(
+                                    color: (_selectedFiles.isNotEmpty ||
+                                            _submittedLink != null)
+                                        ? AppColors.textPrimary
+                                        : AppColors.textSecondary,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
                       ),
-                      child: const Text(
-                        'Unsubmit',
+                    ],
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 16),
+            // Private Comments Section (separate card)
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.person_outline,
+                        size: 18,
+                        color: AppColors.textPrimary,
+                      ),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Private comments',
                         style: TextStyle(
-                          color: AppColors.primary,
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
+                          color: AppColors.textPrimary,
                         ),
                       ),
-                    )
-                  : ElevatedButton(
-                      onPressed: (_selectedFiles.isNotEmpty || _submittedLink != null)
-                          ? () => _handleSubmit()
-                          : null,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        disabledBackgroundColor: AppColors.surfaceVariant,
-                        minimumSize: const Size(double.infinity, 40),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                      ),
-                      child: Text(
-                        (_selectedFiles.isNotEmpty || _submittedLink != null)
-                            ? 'Submit'
-                            : 'Mark as done',
-                        style: TextStyle(
-                          color: (_selectedFiles.isNotEmpty || _submittedLink != null)
-                              ? AppColors.textPrimary
-                              : AppColors.textSecondary,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Divider(color: AppColors.border),
+                  const SizedBox(height: 8),
+                  TextButton(
+                    onPressed: () {
+                      // TODO: Add private comment
+                    },
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: Text(
+                      'Add comment to ${widget.course.instructor}',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w400,
+                        color: AppColors.primary,
                       ),
                     ),
-            ),
-          ],
-        ),
-      );
-    },
-    ),
-    const SizedBox(height: 16),
-    // Private Comments Section (separate card)
-    Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(
-                Icons.person_outline,
-                size: 18,
-                color: AppColors.textPrimary,
-              ),
-              const SizedBox(width: 8),
-              const Text(
-                'Private comments',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Divider(color: AppColors.border),
-          const SizedBox(height: 8),
-          TextButton(
-            onPressed: () {
-              // TODO: Add private comment
-            },
-            style: TextButton.styleFrom(
-              padding: EdgeInsets.zero,
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-            child: Text(
-              'Add comment to ${widget.course.instructor}',
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w400,
-                color: AppColors.primary,
+                  ),
+                ],
               ),
             ),
-          ),
-        ],
-      ),
-    ),
-    const SizedBox(height: 16),
-    // Assignment Details Card
-    Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Details',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: AppColors.textPrimary,
+            const SizedBox(height: 16),
+            // Assignment Details Card
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Details',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _buildDetailItem(
+                    'Due',
+                    '${_formatDate(widget.assignment.deadline)} at ${_formatTime(widget.assignment.deadline)}',
+                    Icons.calendar_today,
+                  ),
+                  const SizedBox(height: 12),
+                  _buildDetailItem(
+                    'Attempts',
+                    '${widget.assignment.maxSubmissionAttempts}',
+                    Icons.repeat,
+                  ),
+                  if (widget.assignment.allowLateSubmissions) ...[
+                    const SizedBox(height: 12),
+                    _buildDetailItem(
+                      'Late submission',
+                      'Allowed',
+                      Icons.schedule,
+                    ),
+                  ],
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
-          _buildDetailItem(
-            'Due',
-            '${_formatDate(widget.assignment.deadline)} at ${_formatTime(widget.assignment.deadline)}',
-            Icons.calendar_today,
-          ),
-          const SizedBox(height: 12),
-          _buildDetailItem(
-            'Attempts',
-            '${widget.assignment.maxSubmissionAttempts}',
-            Icons.repeat,
-          ),
-          if (widget.assignment.allowLateSubmissions) ...[
-            const SizedBox(height: 12),
-            _buildDetailItem(
-              'Late submission',
-              'Allowed',
-              Icons.schedule,
-            ),
-          ],
-        ],
-      ),
-    ),
           ],
         ),
       ),
@@ -1262,7 +1278,7 @@ class _AssignmentDetailViewState extends State<AssignmentDetailView> {
 class AssignmentDetailPage extends StatelessWidget {
   final Assignment assignment;
   final CourseModel course;
-  
+
   const AssignmentDetailPage({
     super.key,
     required this.assignment,

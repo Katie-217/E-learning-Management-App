@@ -19,8 +19,6 @@ class MaterialModel {
   final DateTime createdAt;
   final DateTime? updatedAt;
   final bool isPublished;
-  final List<String> targetGroupIds; // Nếu rỗng = cho tất cả
-  final int downloadCount;
 
   const MaterialModel({
     required this.id,
@@ -36,8 +34,6 @@ class MaterialModel {
     required this.createdAt,
     this.updatedAt,
     this.isPublished = true,
-    this.targetGroupIds = const [],
-    this.downloadCount = 0,
   });
 
   // ========================================
@@ -46,10 +42,10 @@ class MaterialModel {
   // ========================================
   factory MaterialModel.fromFirestore(DocumentSnapshot doc) {
     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-    
+
     print('DEBUG: 📄 Parsing material doc ${doc.id}');
     print('DEBUG: 📄 Raw data: $data');
-    
+
     // Parse dates - handle both Timestamp and DateTime
     DateTime? parseDate(dynamic dateData) {
       if (dateData == null) {
@@ -67,7 +63,7 @@ class MaterialModel {
         return null;
       }
     }
-    
+
     // Parse attachment - có thể là 'attachment' hoặc 'files'
     AttachmentModel? attachment;
     if (data['attachment'] != null) {
@@ -95,24 +91,18 @@ class MaterialModel {
       }
     }
 
-    // Parse targetGroupIds
-    List<String> targetGroupIds = (data['targetGroupIds'] as List<dynamic>?)
-            ?.map((item) => item.toString())
-            .toList() ??
-        [];
-
     // Lấy title từ files.title hoặc data.title
-    String title = data['title']?.toString() ?? 
-                   (data['files'] != null && data['files'] is Map 
-                     ? (data['files'] as Map)['title']?.toString() ?? 'Untitled Material'
-                     : 'Untitled Material');
+    String title = data['title']?.toString() ??
+        (data['files'] != null && data['files'] is Map
+            ? (data['files'] as Map)['title']?.toString() ?? 'Untitled Material'
+            : 'Untitled Material');
 
     // Lấy type từ files.type hoặc data.type
-    String typeStr = data['type']?.toString() ?? 
-                     (data['files'] != null && data['files'] is Map
-                       ? (data['files'] as Map)['type']?.toString() ?? 'document'
-                       : 'document');
-    
+    String typeStr = data['type']?.toString() ??
+        (data['files'] != null && data['files'] is Map
+            ? (data['files'] as Map)['type']?.toString() ?? 'document'
+            : 'document');
+
     // Xác định MaterialType từ MIME type nếu cần
     if (typeStr.contains('pdf') || typeStr.contains('document')) {
       typeStr = 'document';
@@ -125,14 +115,15 @@ class MaterialModel {
     }
 
     // Lấy URL từ files.url hoặc data.url
-    String? url = data['url']?.toString() ?? 
-                  (data['files'] != null && data['files'] is Map
-                    ? (data['files'] as Map)['url']?.toString()
-                    : null);
+    String? url = data['url']?.toString() ??
+        (data['files'] != null && data['files'] is Map
+            ? (data['files'] as Map)['url']?.toString()
+            : null);
 
     return MaterialModel(
       id: doc.id,
-      courseId: data['courseId']?.toString() ?? '', // Có thể cần lấy từ parent collection
+      courseId: data['courseId']?.toString() ??
+          '', // Có thể cần lấy từ parent collection
       title: title,
       description: data['description']?.toString(),
       type: _parseMaterialType(typeStr),
@@ -143,9 +134,8 @@ class MaterialModel {
       authorName: data['authorName']?.toString() ?? '',
       createdAt: parseDate(data['createdAt']) ?? DateTime.now(),
       updatedAt: parseDate(data['updatedAt']),
-      isPublished: data['isPublished'] ?? true, // Default true nếu không có field
-      targetGroupIds: targetGroupIds,
-      downloadCount: (data['downloadCount'] as int?) ?? 0,
+      isPublished:
+          data['isPublished'] ?? true, // Default true nếu không có field
     );
   }
 
@@ -170,8 +160,6 @@ class MaterialModel {
       createdAt: _parseDateTime(map['createdAt']) ?? DateTime.now(),
       updatedAt: _parseDateTime(map['updatedAt']),
       isPublished: map['isPublished'] ?? true,
-      targetGroupIds: List<String>.from(map['targetGroupIds'] ?? []),
-      downloadCount: map['downloadCount'] ?? 0,
     );
   }
 
@@ -194,8 +182,6 @@ class MaterialModel {
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt?.toIso8601String(),
       'isPublished': isPublished,
-      'targetGroupIds': targetGroupIds,
-      'downloadCount': downloadCount,
     };
   }
 
@@ -217,8 +203,6 @@ class MaterialModel {
     DateTime? createdAt,
     DateTime? updatedAt,
     bool? isPublished,
-    List<String>? targetGroupIds,
-    int? downloadCount,
   }) {
     return MaterialModel(
       id: id ?? this.id,
@@ -234,8 +218,6 @@ class MaterialModel {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       isPublished: isPublished ?? this.isPublished,
-      targetGroupIds: targetGroupIds ?? this.targetGroupIds,
-      downloadCount: downloadCount ?? this.downloadCount,
     );
   }
 
@@ -250,20 +232,6 @@ class MaterialModel {
   // MÔ TẢ: Kiểm tra có URL link không
   // ========================================
   bool get hasUrl => url != null && url!.isNotEmpty;
-
-  // ========================================
-  // GETTER: isForAllGroups
-  // MÔ TẢ: Kiểm tra tài liệu có dành cho tất cả nhóm không
-  // ========================================
-  bool get isForAllGroups => targetGroupIds.isEmpty;
-
-  // ========================================
-  // HÀM: incrementDownloadCount()
-  // MÔ TẢ: Tăng số lần download
-  // ========================================
-  MaterialModel incrementDownloadCount() {
-    return copyWith(downloadCount: downloadCount + 1);
-  }
 
   // ========================================
   // HÀM: _parseMaterialType()
