@@ -5,11 +5,16 @@ import 'package:go_router/go_router.dart';
 import 'package:elearning_management_app/presentation/screens/course/course_page.dart';
 import 'package:elearning_management_app/presentation/screens/instructor/instructor_students_page.dart';
 import 'package:elearning_management_app/presentation/screens/assignment/assignments_page.dart';
-import 'package:elearning_management_app/presentation/screens/instructor/instructor_grades_page.dart';
 import 'package:elearning_management_app/application/controllers/instructor/instructor_profile_provider.dart';
 import 'package:elearning_management_app/presentation/widgets/instructor/calendar_widget.dart';
 import 'package:elearning_management_app/presentation/widgets/instructor/task_list_widget.dart';
 import 'package:elearning_management_app/presentation/screens/instructor/instructor_courses/instructor_courses_page.dart';
+import '../../widgets/instructor/sidebar_widget.dart';
+import 'csv_import_screen.dart';
+import 'instructor_student_create.dart';
+
+// 🆕 THÊM: Typedef cho callback import
+typedef ImportCompleteCallback = void Function(bool success, String message);
 
 class InstructorDashboard extends ConsumerStatefulWidget {
   const InstructorDashboard({super.key});
@@ -21,6 +26,11 @@ class InstructorDashboard extends ConsumerStatefulWidget {
 
 class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
   String _activeTab = 'dashboard';
+  
+  // 🆕 THÊM: Trạng thái để quản lý các view trong Students tab
+  bool _isCreatingStudent = false;
+  bool _isImportingCSV = false;
+
   @override
   Widget build(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 800;
@@ -98,10 +108,15 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
         children: [
           // Sidebar Navigation
           if (!isMobile)
-            Container(
-              width: 220,
-              color: const Color(0xFF111827),
-              child: _buildSidebar(),
+            SidebarWidget(
+              activeTab: _activeTab,
+              onTabSelected: (tab) {
+                setState(() {
+                  _activeTab = tab;
+                  _isCreatingStudent = false; // Reset khi đổi tab
+                  _isImportingCSV = false; // Reset khi đổi tab
+                });
+              },
             ),
           // Main Content
           Expanded(
@@ -120,9 +135,14 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
           child: InstructorCoursesPage(),
         );
       case 'students':
-        return const Padding(
-          padding: EdgeInsets.all(18),
-          child: InstructorStudentsPage(),
+        // 🆕 LOGIC MỚI: Kiểm tra trạng thái để hiển thị đúng màn hình
+        return Padding(
+          padding: const EdgeInsets.all(18),
+          child: _isImportingCSV
+              ? _buildImportCSVView() // Hiển thị màn hình import CSV
+              : _isCreatingStudent
+                  ? _buildCreateStudentView() // Hiển thị form tạo student
+                  : _buildStudentsListView(), // Hiển thị danh sách student
         );
       default: // dashboard
         return SingleChildScrollView(
@@ -139,7 +159,7 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
               Text("Ready to inspire your students today?",
                   style: TextStyle(color: Colors.grey[400], fontSize: 16)),
               const SizedBox(height: 20),
-              // Stats Grid
+              // Stats Grid (XÓA PHẦN IMPORT SECTION)
               LayoutBuilder(builder: (context, cons) {
                 final cross =
                     cons.maxWidth > 900 ? 4 : (cons.maxWidth > 600 ? 2 : 1);
@@ -170,7 +190,6 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
                     ? Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Left Column
                           Expanded(
                             flex: 2,
                             child: Column(
@@ -182,7 +201,6 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
                             ),
                           ),
                           const SizedBox(width: 12),
-                          // Right Column
                           Expanded(
                             flex: 1,
                             child: Column(
@@ -213,58 +231,150 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
     }
   }
 
-  Widget _buildSidebar() {
-    return ListView(
-      padding: const EdgeInsets.symmetric(vertical: 12),
+  // 🆕 HÀM MỚI: Xây dựng view danh sách students
+  Widget _buildStudentsListView() {
+    return InstructorStudentsPage(
+      onCreateStudentPressed: () {
+        // 🔥 KHI NHẤN NÚT CREATE STUDENT
+        setState(() {
+          _isCreatingStudent = true;
+        });
+      },
+      onImportCSVPressed: () {
+        // 🔥 KHI NHẤN NÚT IMPORT CSV
+        setState(() {
+          _isImportingCSV = true;
+        });
+      },
+    );
+  }
+
+  // 🆕 HÀM MỚI: Xây dựng view tạo student
+  Widget _buildCreateStudentView() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSidebarItem(
-          'Dashboard',
-          Icons.dashboard,
-          'dashboard',
+        // Header với nút Back
+        Row(
+          children: [
+            // Nút quay lại
+            IconButton(
+              onPressed: () {
+                // 🔥 QUAY LẠI DANH SÁCH STUDENTS
+                setState(() {
+                  _isCreatingStudent = false;
+                });
+              },
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              tooltip: 'Back to Students List',
+            ),
+            const SizedBox(width: 12),
+            const Text(
+              'Create New Student',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+          ],
         ),
-        _buildSidebarItem(
-          'Teaching',
-          Icons.book,
-          'courses',
+        const SizedBox(height: 6),
+        Text(
+          'Add a new student to the system',
+          style: TextStyle(color: Colors.grey[400], fontSize: 16),
         ),
-        _buildSidebarItem(
-          'Students',
-          Icons.people,
-          'students',
+        const SizedBox(height: 24),
+        // Form tạo student
+        Expanded(
+          child: CreateStudentPage(
+            onSuccess: () {
+              // Callback khi tạo thành công
+              setState(() {
+                _isCreatingStudent = false;
+              });
+            },
+            onCancel: () {
+              // Callback khi hủy
+              setState(() {
+                _isCreatingStudent = false;
+              });
+            },
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildSidebarItem(String label, IconData icon, String tabKey) {
-    final isActive = _activeTab == tabKey;
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: isActive
-            ? Colors.indigo[600]?.withOpacity(0.3)
-            : Colors.transparent,
-        borderRadius: BorderRadius.circular(8),
-        border:
-            isActive ? Border.all(color: Colors.indigo[600]!, width: 1) : null,
-      ),
-      child: ListTile(
-        leading: Icon(icon,
-            color: isActive ? Colors.indigo[400] : Colors.grey[400], size: 20),
-        title: Text(
-          label,
-          style: TextStyle(
-            color: isActive ? Colors.white : Colors.grey[300],
-            fontSize: 14,
-            fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+  // 🆕 HÀM MỚI: Xây dựng view import CSV
+  Widget _buildImportCSVView() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Header với nút Back
+        Row(
+          children: [
+            // Nút quay lại
+            IconButton(
+              onPressed: () {
+                // 🔥 QUAY LẠI DANH SÁCH STUDENTS
+                setState(() {
+                  _isImportingCSV = false;
+                });
+              },
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              tooltip: 'Back to Students List',
+            ),
+            const SizedBox(width: 12),
+            const Text(
+              'Import Students from CSV',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Bulk import students using CSV file',
+          style: TextStyle(color: Colors.grey[400], fontSize: 16),
+        ),
+        const SizedBox(height: 24),
+        // CSV Import Screen
+        Expanded(
+          child: CsvImportScreen(
+            dataType: 'students',
+            onImportComplete: (bool success, String message) {
+              // 🔥 CALLBACK KHI IMPORT XONG
+              setState(() {
+                _isImportingCSV = false;
+              });
+              
+              // Hiển thị thông báo
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(message),
+                  backgroundColor: success ? Colors.green : Colors.red,
+                  duration: const Duration(seconds: 3),
+                ),
+              );
+            },
+            onCancel: () {
+              // 🔥 CALLBACK KHI HỦY
+              setState(() {
+                _isImportingCSV = false;
+              });
+            },
           ),
         ),
-        onTap: () {
-          setState(() => _activeTab = tabKey);
-        },
-      ),
+      ],
     );
   }
+
+  // XÓA CÁC HÀM KHÔNG CẦN THIẾT
+  // _buildImportSection, _buildImportButton, _navigateToImport
 
   Widget _buildStatCard(String title, String value, IconData icon,
       Color gradientStart, Color gradientEnd) {

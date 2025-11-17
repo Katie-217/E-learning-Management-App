@@ -1,67 +1,67 @@
+// presentation/widgets/instructor/stat_card.dart
 import 'package:flutter/material.dart';
 
-/// Widget hiển thị thống kê với icon, tiêu đề, giá trị và gradient background
-class StatsCard extends StatelessWidget {
-  final IconData icon;
+class StatCard extends StatelessWidget {
   final String title;
   final String value;
-  final Color bgStart;
-  final Color bgEnd;
-  final Color iconColor;
-  final VoidCallback? onTap;
+  final IconData icon;
+  final Color gradientStart;
+  final Color gradientEnd;
 
-  const StatsCard({
+  const StatCard({
     super.key,
-    required this.icon,
     required this.title,
     required this.value,
-    required this.bgStart,
-    required this.bgEnd,
-    required this.iconColor,
-    this.onTap,
+    required this.icon,
+    required this.gradientStart,
+    required this.gradientEnd,
   });
 
   @override
   Widget build(BuildContext context) {
-    final borderColor = bgStart.withOpacity(0.3);
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [bgStart.withOpacity(0.18), bgEnd.withOpacity(0.18)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: borderColor),
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [gradientStart, gradientEnd],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: gradientStart.withOpacity(0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: bgStart.withOpacity(0.3),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(icon, color: iconColor),
-                ),
-                const SizedBox(width: 10),
                 Text(
                   title,
-                  style: TextStyle(color: Colors.grey[300], fontSize: 23),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
+                Icon(icon, color: Colors.white, size: 20),
               ],
             ),
-            const SizedBox(height: 12),
             Text(
               value,
-              style: const TextStyle(fontSize: 33, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ],
         ),
