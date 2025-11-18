@@ -11,6 +11,9 @@ class SubmissionModel {
   final String studentId;
   final String studentName;
   final String courseId;
+  final String
+      semesterId; // ✅ NEW: Root Collection support - semester filtering
+  final String groupId; // ✅ NEW: Root Collection support - group filtering
   final DateTime submittedAt;
   final SubmissionStatus status;
   final List<AttachmentModel> attachments;
@@ -30,6 +33,8 @@ class SubmissionModel {
     required this.studentId,
     required this.studentName,
     required this.courseId,
+    required this.semesterId, // ✅ REQUIRED: Root Collection support
+    required this.groupId, // ✅ REQUIRED: Root Collection support
     required this.submittedAt,
     required this.status,
     this.attachments = const [],
@@ -53,19 +58,21 @@ class SubmissionModel {
     print('DEBUG: 📄 Map keys: ${map.keys.toList()}');
     print('DEBUG: 📄 attachments field: ${map['attachments']}');
     print('DEBUG: 📄 attachments type: ${map['attachments']?.runtimeType}');
-    
+
     final attachments = _parseAttachments(map['attachments']);
     print('DEBUG: 📄 Parsed ${attachments.length} attachment(s)');
-    
+
     final submittedAt = _parseDateTime(map['submittedAt']);
     print('DEBUG: 📄 submittedAt: $submittedAt');
-    
+
     final submission = SubmissionModel(
       id: map['id'] ?? '',
       assignmentId: map['assignmentId'] ?? '',
       studentId: map['studentId'] ?? '',
       studentName: map['studentName'] ?? '',
       courseId: map['courseId'] ?? '',
+      semesterId: map['semesterId'] ?? '', // ✅ Read semesterId from Firebase
+      groupId: map['groupId'] ?? '', // ✅ Read groupId from Firebase
       submittedAt: submittedAt ?? DateTime.now(),
       status: _parseStatus(map['status'] ?? 'submitted'),
       attachments: attachments,
@@ -79,8 +86,9 @@ class SubmissionModel {
       attemptNumber: (map['attemptNumber'] as int?) ?? 1,
       lastModified: _parseDateTime(map['lastModified']),
     );
-    
-    print('DEBUG: ✅ Created SubmissionModel: id=${submission.id}, status=${submission.status.name}, attachments=${submission.attachments.length}');
+
+    print(
+        'DEBUG: ✅ Created SubmissionModel: id=${submission.id}, status=${submission.status.name}, attachments=${submission.attachments.length}');
     return submission;
   }
 
@@ -95,6 +103,8 @@ class SubmissionModel {
       'studentId': studentId,
       'studentName': studentName,
       'courseId': courseId,
+      'semesterId': semesterId, // ✅ Write semesterId to Firebase
+      'groupId': groupId, // ✅ Write groupId to Firebase
       'submittedAt': submittedAt.toIso8601String(),
       'status': status.name,
       'attachments':
@@ -121,6 +131,8 @@ class SubmissionModel {
     String? studentId,
     String? studentName,
     String? courseId,
+    String? semesterId, // ✅ Support semesterId updates
+    String? groupId, // ✅ Support groupId updates
     DateTime? submittedAt,
     SubmissionStatus? status,
     List<AttachmentModel>? attachments,
@@ -140,6 +152,8 @@ class SubmissionModel {
       studentId: studentId ?? this.studentId,
       studentName: studentName ?? this.studentName,
       courseId: courseId ?? this.courseId,
+      semesterId: semesterId ?? this.semesterId,
+      groupId: groupId ?? this.groupId,
       submittedAt: submittedAt ?? this.submittedAt,
       status: status ?? this.status,
       attachments: attachments ?? this.attachments,
@@ -225,20 +239,23 @@ class SubmissionModel {
       print('DEBUG: 📎 attachmentsData is null');
       return [];
     }
-    
-    print('DEBUG: 📎 Parsing attachments, type: ${attachmentsData.runtimeType}');
+
+    print(
+        'DEBUG: 📎 Parsing attachments, type: ${attachmentsData.runtimeType}');
     print('DEBUG: 📎 attachmentsData: $attachmentsData');
-    
+
     // If it's a List (array)
     if (attachmentsData is List) {
-      print('DEBUG: 📎 attachmentsData is List with ${attachmentsData.length} items');
+      print(
+          'DEBUG: 📎 attachmentsData is List with ${attachmentsData.length} items');
       return attachmentsData
           .map((item) {
             try {
               if (item is Map) {
                 final map = Map<String, dynamic>.from(item);
                 final attachment = AttachmentModel.fromMap(map);
-                print('DEBUG: ✅ Parsed attachment from list: ${attachment.name}');
+                print(
+                    'DEBUG: ✅ Parsed attachment from list: ${attachment.name}');
                 return attachment;
               }
               print('DEBUG: ⚠️ Item in list is not Map: ${item.runtimeType}');
@@ -251,15 +268,18 @@ class SubmissionModel {
           .whereType<AttachmentModel>()
           .toList();
     }
-    
+
     // If it's a Map (object) - convert to list with single item
     if (attachmentsData is Map) {
       try {
-        print('DEBUG: 📎 attachmentsData is Map, converting to AttachmentModel');
+        print(
+            'DEBUG: 📎 attachmentsData is Map, converting to AttachmentModel');
         final map = Map<String, dynamic>.from(attachmentsData);
         final attachment = AttachmentModel.fromMap(map);
-        print('DEBUG: ✅ Successfully parsed attachment from object: ${attachment.name}');
-        print('DEBUG: ✅ Attachment details: url=${attachment.url}, size=${attachment.sizeInBytes}, mimeType=${attachment.mimeType}');
+        print(
+            'DEBUG: ✅ Successfully parsed attachment from object: ${attachment.name}');
+        print(
+            'DEBUG: ✅ Attachment details: url=${attachment.url}, size=${attachment.sizeInBytes}, mimeType=${attachment.mimeType}');
         return [attachment];
       } catch (e, stackTrace) {
         print('DEBUG: ⚠️ Error parsing attachment from object: $e');
@@ -267,8 +287,9 @@ class SubmissionModel {
         return [];
       }
     }
-    
-    print('DEBUG: ⚠️ attachmentsData is neither List nor Map: ${attachmentsData.runtimeType}');
+
+    print(
+        'DEBUG: ⚠️ attachmentsData is neither List nor Map: ${attachmentsData.runtimeType}');
     return [];
   }
 
@@ -293,7 +314,8 @@ class SubmissionModel {
       return null;
     }
 
-    print('DEBUG: ⏰ Parsing date, type: ${dateData.runtimeType}, value: $dateData');
+    print(
+        'DEBUG: ⏰ Parsing date, type: ${dateData.runtimeType}, value: $dateData');
 
     if (dateData is DateTime) {
       print('DEBUG: ⏰ dateData is already DateTime');
@@ -413,21 +435,22 @@ class AttachmentModel {
     }
 
     print('DEBUG: 📎 Parsing AttachmentModel from map: $map');
-    
+
     final attachment = AttachmentModel(
       id: map['id']?.toString() ?? '',
       name: map['name']?.toString() ?? '',
       url: map['url']?.toString() ?? '',
       mimeType: map['mimeType']?.toString() ?? '',
-      sizeInBytes: (map['sizeInBytes'] as int?) ?? 
-                   (map['size'] as int?) ?? 
-                   ((map['sizeInBytes'] as num?)?.toInt()) ??
-                   ((map['size'] as num?)?.toInt()) ??
-                   0,
+      sizeInBytes: (map['sizeInBytes'] as int?) ??
+          (map['size'] as int?) ??
+          ((map['sizeInBytes'] as num?)?.toInt()) ??
+          ((map['size'] as num?)?.toInt()) ??
+          0,
       uploadedAt: parseUploadedAt(map['uploadedAt']),
     );
-    
-    print('DEBUG: ✅ Created AttachmentModel: name=${attachment.name}, url=${attachment.url}, size=${attachment.sizeInBytes}');
+
+    print(
+        'DEBUG: ✅ Created AttachmentModel: name=${attachment.name}, url=${attachment.url}, size=${attachment.sizeInBytes}');
     return attachment;
   }
 

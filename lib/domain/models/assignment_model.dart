@@ -3,6 +3,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class Assignment {
   final String id;
   final String courseId; // ✅ NEW: Support Collection Group Query
+  final String
+      semesterId; // ✅ NEW: Support Root Collection - semester filtering and CSV export
   final String title;
   final String description;
   final DateTime startDate;
@@ -19,6 +21,7 @@ class Assignment {
   Assignment({
     required this.id,
     required this.courseId, // ✅ REQUIRED: Parent course ID
+    required this.semesterId, // ✅ REQUIRED: Root Collection support
     required this.title,
     required this.description,
     required this.startDate,
@@ -71,6 +74,7 @@ class Assignment {
     return Assignment(
       id: doc.id,
       courseId: data['courseId'] ?? '', // ✅ Read courseId from Firebase
+      semesterId: data['semesterId'] ?? '', // ✅ Read semesterId from Firebase
       title: data['title'] ?? '',
       description: data['description'] ?? '',
       startDate: parseDate(data['startDate'] ?? data['timestamp']),
@@ -90,6 +94,7 @@ class Assignment {
   Map<String, dynamic> toFirestore() {
     return {
       'courseId': courseId, // ✅ Write courseId to Firebase
+      'semesterId': semesterId, // ✅ Write semesterId to Firebase
       'title': title,
       'description': description,
       'startDate': Timestamp.fromDate(startDate),
@@ -111,6 +116,7 @@ class Assignment {
   Assignment copyWith({
     String? id,
     String? courseId, // ✅ Support courseId updates
+    String? semesterId, // ✅ Support semesterId updates
     String? title,
     String? description,
     DateTime? startDate,
@@ -126,6 +132,7 @@ class Assignment {
     return Assignment(
       id: id ?? this.id,
       courseId: courseId ?? this.courseId,
+      semesterId: semesterId ?? this.semesterId,
       title: title ?? this.title,
       description: description ?? this.description,
       startDate: startDate ?? this.startDate,

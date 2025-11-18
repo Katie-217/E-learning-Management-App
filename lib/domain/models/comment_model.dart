@@ -1,12 +1,12 @@
 // ========================================
 // FILE: comment_model.dart
-// MÔ TẢ: Model bình luận ngắn dưới Announcement
+// MÔ TẢ: Model bình luận đơn giản dưới Announcement (SIMPLIFIED)
+// NOTE: Bỏ Reply và Like logic - dành cho Forum
 // ========================================
 
 class CommentModel {
   final String id;
-  final String parentId; // ID của announcement hoặc comment cha
-  final String parentType; // 'announcement' hoặc 'comment'
+  final String announcementId; // ID của announcement mẹ
   final String courseId;
   final String content;
   final String authorId;
@@ -15,15 +15,11 @@ class CommentModel {
   final DateTime createdAt;
   final DateTime? updatedAt;
   final bool isEdited;
-  final List<String> replyIds; // IDs của replies
-  final int likeCount;
-  final List<String> likedBy; // UIDs của người like
   final bool isDeleted;
 
   const CommentModel({
     required this.id,
-    required this.parentId,
-    required this.parentType,
+    required this.announcementId,
     required this.courseId,
     required this.content,
     required this.authorId,
@@ -32,17 +28,13 @@ class CommentModel {
     required this.createdAt,
     this.updatedAt,
     this.isEdited = false,
-    this.replyIds = const [],
-    this.likeCount = 0,
-    this.likedBy = const [],
     this.isDeleted = false,
   });
 
   factory CommentModel.fromMap(Map<String, dynamic> map) {
     return CommentModel(
       id: map['id'] ?? '',
-      parentId: map['parentId'] ?? '',
-      parentType: map['parentType'] ?? 'announcement',
+      announcementId: map['announcementId'] ?? '',
       courseId: map['courseId'] ?? '',
       content: map['content'] ?? '',
       authorId: map['authorId'] ?? '',
@@ -51,9 +43,6 @@ class CommentModel {
       createdAt: _parseDateTime(map['createdAt']) ?? DateTime.now(),
       updatedAt: _parseDateTime(map['updatedAt']),
       isEdited: map['isEdited'] ?? false,
-      replyIds: List<String>.from(map['replyIds'] ?? []),
-      likeCount: map['likeCount'] ?? 0,
-      likedBy: List<String>.from(map['likedBy'] ?? []),
       isDeleted: map['isDeleted'] ?? false,
     );
   }
@@ -61,8 +50,7 @@ class CommentModel {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
-      'parentId': parentId,
-      'parentType': parentType,
+      'announcementId': announcementId,
       'courseId': courseId,
       'content': content,
       'authorId': authorId,
@@ -71,17 +59,13 @@ class CommentModel {
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt?.toIso8601String(),
       'isEdited': isEdited,
-      'replyIds': replyIds,
-      'likeCount': likeCount,
-      'likedBy': likedBy,
       'isDeleted': isDeleted,
     };
   }
 
   CommentModel copyWith({
     String? id,
-    String? parentId,
-    String? parentType,
+    String? announcementId,
     String? courseId,
     String? content,
     String? authorId,
@@ -90,15 +74,11 @@ class CommentModel {
     DateTime? createdAt,
     DateTime? updatedAt,
     bool? isEdited,
-    List<String>? replyIds,
-    int? likeCount,
-    List<String>? likedBy,
     bool? isDeleted,
   }) {
     return CommentModel(
       id: id ?? this.id,
-      parentId: parentId ?? this.parentId,
-      parentType: parentType ?? this.parentType,
+      announcementId: announcementId ?? this.announcementId,
       courseId: courseId ?? this.courseId,
       content: content ?? this.content,
       authorId: authorId ?? this.authorId,
@@ -107,17 +87,9 @@ class CommentModel {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       isEdited: isEdited ?? this.isEdited,
-      replyIds: replyIds ?? this.replyIds,
-      likeCount: likeCount ?? this.likeCount,
-      likedBy: likedBy ?? this.likedBy,
       isDeleted: isDeleted ?? this.isDeleted,
     );
   }
-
-  // ========================================
-  // GETTER: hasReplies
-  // ========================================
-  bool get hasReplies => replyIds.isNotEmpty;
 
   // ========================================
   // GETTER: timeAgo
@@ -137,30 +109,6 @@ class CommentModel {
     }
   }
 
-  // ========================================
-  // HÀM: isLikedBy()
-  // ========================================
-  bool isLikedBy(String userId) => likedBy.contains(userId);
-
-  // ========================================
-  // HÀM: toggleLike()
-  // ========================================
-  CommentModel toggleLike(String userId) {
-    final isCurrentlyLiked = isLikedBy(userId);
-    final updatedLikedBy = [...likedBy];
-
-    if (isCurrentlyLiked) {
-      updatedLikedBy.remove(userId);
-    } else {
-      updatedLikedBy.add(userId);
-    }
-
-    return copyWith(
-      likedBy: updatedLikedBy,
-      likeCount: updatedLikedBy.length,
-    );
-  }
-
   static DateTime? _parseDateTime(dynamic dateData) {
     if (dateData == null) return null;
     if (dateData is DateTime) return dateData;
@@ -173,7 +121,7 @@ class CommentModel {
 
   @override
   String toString() =>
-      'CommentModel(id: $id, authorName: $authorName, parentType: $parentType)';
+      'CommentModel(id: $id, authorName: $authorName, announcementId: $announcementId)';
 
   @override
   bool operator ==(Object other) {
