@@ -1,6 +1,6 @@
 // ========================================
-// FILE: csv_import_service.dart - ENHANCED VERSION
-// MÔ TẢ: Service import CSV với validation & duplicate checking
+// FILE: csv_import_service.dart
+// MÔ TẢ: Service import CSV - REMOVED department field
 // ========================================
 
 import 'package:csv/csv.dart';
@@ -24,7 +24,7 @@ class StudentImportRecord {
   final Map<String, dynamic> data;
   final List<CsvValidationResult> validations;
   final bool isValid;
-  final String status; // 'new', 'duplicate', 'invalid'
+  final String status;
   final String? duplicateEmail;
 
   StudentImportRecord({
@@ -44,7 +44,7 @@ class StudentImportRecord {
 class CsvImportService {
   // ========================================
   // HÀM: parseAndValidateStudentsCsv()
-  // MÔ TẢ: Parse CSV và validate từng record (Step 2)
+  // MÔ TẢ: Parse CSV và validate từng record (REMOVED department)
   // ========================================
   static Future<List<StudentImportRecord>> parseAndValidateStudentsCsv(
     String csvContent,
@@ -60,11 +60,10 @@ class CsvImportService {
         throw Exception('CSV file is empty');
       }
 
-      // Extract headers
       final headers = rows.first.cast<String>().map((h) => h.trim()).toList();
       print('DEBUG: Headers: $headers');
 
-      // Validate headers
+      // Validate headers - REMOVED 'department' from required
       final requiredHeaders = ['email', 'name', 'studentCode'];
       final missingHeaders = requiredHeaders
           .where((h) => !headers.contains(h))
@@ -77,7 +76,6 @@ class CsvImportService {
         );
       }
 
-      // Parse data rows với validation
       final records = <StudentImportRecord>[];
       for (int i = 1; i < rows.length; i++) {
         final row = rows[i];
@@ -135,7 +133,7 @@ class CsvImportService {
 
   // ========================================
   // HÀM: _validateStudentRecord()
-  // MÔ TẢ: Validate từng field của student
+  // MÔ TẢ: Validate từng field (REMOVED department)
   // ========================================
   static List<CsvValidationResult> _validateStudentRecord(
       Map<String, dynamic> student) {
@@ -196,7 +194,7 @@ class CsvImportService {
 
   // ========================================
   // HÀM: validateCsvStructure()
-  // MÔ TẢ: Kiểm tra cấu trúc file CSV (Step 1)
+  // MÔ TẢ: Kiểm tra cấu trúc file CSV
   // ========================================
   static Map<String, dynamic> validateCsvStructure(
     String csvContent,
@@ -262,7 +260,6 @@ class CsvImportService {
 
   // ========================================
   // HÀM: getImportSummary()
-  // MÔ TẢ: Tính toán thống kê import (Step 4)
   // ========================================
   static Map<String, dynamic> getImportSummary(
     List<StudentImportRecord> records, {

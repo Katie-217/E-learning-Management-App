@@ -1,25 +1,20 @@
 import '../../../data/repositories/student/student_repository.dart';
-import '../../../data/repositories/course/course_student_repository.dart';
-import '../../../data/repositories/group/group_repository.dart';
 import '../../../domain/models/student_model.dart';
-import '../../../domain/models/course_model.dart';
-import '../../../domain/models/group_model.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class BulkImportController {
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   // ========================================
-  // HÀM: importStudents() - FIXED VERSION
-  // MÔ TẢ: Bulk import sinh viên từ CSV parsed data
-  // ✅ FIX: Sử dụng Admin SDK pattern để tránh logout instructor
+  // HÀM: importStudents() - FIXED
   // ========================================
   Future<ImportResult> importStudents(
     List<Map<String, dynamic>> csvData,
   ) async {
     print('🔥 BƯỚC 1: Bắt đầu import sinh viên - ${csvData.length} records');
     
-    // ✅ FIX 1: Lưu current user trước khi import
     final currentUser = _firebaseAuth.currentUser;
     if (currentUser == null) {
       throw Exception('❌ Instructor must be logged in to import students');
@@ -34,10 +29,6 @@ class BulkImportController {
       totalRecords: csvData.length,
     );
 
-    // ✅ FIX 2: Tạo secondary FirebaseAuth instance cho import
-    // Điều này cho phép tạo users mà không logout instructor
-    final secondaryAuth = FirebaseAuth.instanceFor(app: _firebaseAuth.app);
-    
     for (int i = 0; i < csvData.length; i++) {
       final record = csvData[i];
       try {
@@ -48,7 +39,6 @@ class BulkImportController {
         final name = record['name']?.toString().trim() ?? '';
         final studentCode = record['studentCode']?.toString().trim() ?? '';
         final phone = record['phone']?.toString().trim();
-        final department = record['department']?.toString().trim();
 
         if (!_isValidEmail(email)) {
           throw Exception('Invalid email: $email');
@@ -64,49 +54,50 @@ class BulkImportController {
 
         print('✅ BƯỚC 2A: Validate thành công');
 
-        // Kiểm tra email đã tồn tại
-        final methods = await _firebaseAuth.fetchSignInMethodsForEmail(email);
-        if (methods.isNotEmpty) {
-          throw Exception('Email already exists: $email');
+// --- 2.2: KIỂM TRA TRÙNG LẶP TRONG FIRESTORE ---
+        // Chúng ta sẽ dùng studentCode hoặc email để kiểm tra trùng lặp
+        // Kiểm tra email đã tồn tại trong Firestore chưa
+        final existingProfile = await _firestore
+            .collection('users')
+            .where('email', isEqualTo: email)
+            .limit(1)
+            .get();
+
+        if (existingProfile.docs.isNotEmpty) {
+          throw Exception('Hồ sơ Firestore đã tồn tại với email: $email');
         }
 
-        print('✅ Email chưa được đăng ký');
+        print('✅ Email và Mã sinh viên chưa được đăng ký trong Firestore');
 
-        // ✅ FIX 3: Sử dụng secondary auth để tạo user
-        final tempPassword = _generateTempPassword();
-        final userCredential = await secondaryAuth.createUserWithEmailAndPassword(
-          email: email,
-          password: tempPassword,
-        );
+        // --- 2.3: TẠO MỘT UID MỚI VÀ STUDENT MODEL ---
         
-        final uid = userCredential.user!.uid;
-        print('✅ Firebase Auth account created: $uid');
+        // Tạo một Document ID mới (UID) bằng cách tạo một doc ref và lấy id của nó
+        // Điều này đảm bảo mỗi hồ sơ có một ID duy nhất
+        final newDocRef = _firestore.collection('users').doc();
+        final uid = newDocRef.id; 
         
-        // ✅ FIX 4: QUAN TRỌNG - Sign out khỏi secondary auth ngay lập tức
-        await secondaryAuth.signOut();
-        print('✅ Signed out from secondary auth');
-
         // Tạo StudentModel
         final student = StudentModel(
-          uid: uid,
+          uid: uid, // Sử dụng ID Firestore mới tạo làm UID
           email: email,
           name: name,
           displayName: name,
           studentCode: studentCode,
           phone: phone,
-          department: department,
           createdAt: DateTime.now(),
+          // Bỏ qua các trường liên quan đến Auth nếu cần, nhưng giữ lại các trường Profile
           settings: const StudentSettings(
-            language: 'vi',
-            theme: 'light',
-            status: 'active',
+             language: 'vi',
+             theme: 'light',
+             status: 'pending', // Có thể đặt là 'pending' vì chưa có tài khoản Auth
           ),
           role: 'student',
-          isActive: true,
+          isActive: false, // User này chưa có tài khoản Auth để đăng nhập, nên đặt là false
         );
 
-        // Lưu vào Firestore
-        await StudentRepository.createStudent(student);
+        // --- 2.4: LƯU VÀO FIRESTORE ---
+        await newDocRef.set(student.toFirestore());
+        
         print('✅ Student saved to Firestore: $uid');
 
         result.successRecords.add({
@@ -124,11 +115,10 @@ class BulkImportController {
       }
     }
 
-    // ✅ FIX 5: Verify instructor vẫn đăng nhập
+    // Verify instructor vẫn đăng nhập
     final finalUser = _firebaseAuth.currentUser;
     if (finalUser == null || finalUser.uid != instructorUid) {
       print('⚠️ WARNING: Instructor session lost, re-authenticating...');
-      // Có thể thêm logic re-auth ở đây nếu cần
     } else {
       print('✅ Instructor session maintained: ${finalUser.email}');
     }
@@ -141,144 +131,6 @@ class BulkImportController {
   }
 
   // ========================================
-  // HÀM: importCourses()
-  // MÔ TẢ: Bulk import khóa học
-  // ========================================
-  Future<ImportResult> importCourses(
-    List<Map<String, dynamic>> csvData,
-    String instructorUid,
-  ) async {
-    print('🔥 Import courses - ${csvData.length} records');
-    final result = ImportResult(
-      dataType: 'courses',
-      totalRecords: csvData.length,
-    );
-    for (int i = 0; i < csvData.length; i++) {
-      final record = csvData[i];
-      try {
-        final code = record['code']?.toString().trim() ?? '';
-        final name = record['name']?.toString().trim() ?? '';
-        final semester = record['semester']?.toString().trim() ?? '';
-        final credits = int.tryParse(record['credits']?.toString() ?? '3') ?? 3;
-        final maxCapacity =
-            int.tryParse(record['maxCapacity']?.toString() ?? '50') ?? 50;
-        if (code.isEmpty || name.isEmpty || semester.isEmpty) {
-          throw Exception('Missing required fields');
-        }
-        final course = CourseModel(
-          id: '',
-          code: code,
-          name: name,
-          semester: semester,
-          instructor: instructorUid,
-          credits: credits,
-          sessions: 0,
-          students: 0,
-          progress: 0,
-          status: 'active',
-          maxCapacity: maxCapacity,
-        );
-        // Lưu vào Firestore
-        // TODO: Implement course creation
-        result.successRecords.add({
-          'code': code,
-          'name': name,
-        });
-      } catch (e) {
-        result.failedRecords.add({
-          'code': record['code'] ?? 'unknown',
-          'error': e.toString(),
-        });
-      }
-    }
-    return result;
-  }
-
-  // ========================================
-  // HÀM: importGroups()
-  // MÔ TẢ: Bulk import nhóm
-  // ========================================
-  Future<ImportResult> importGroups(
-    List<Map<String, dynamic>> csvData,
-    String courseId,
-  ) async {
-    print('🔥 Import groups - ${csvData.length} records');
-    final result = ImportResult(
-      dataType: 'groups',
-      totalRecords: csvData.length,
-    );
-    for (int i = 0; i < csvData.length; i++) {
-      final record = csvData[i];
-      try {
-        final code = record['code']?.toString().trim() ?? '';
-        final name = record['name']?.toString().trim() ?? '';
-        final maxMembers =
-            int.tryParse(record['maxMembers']?.toString() ?? '30') ?? 30;
-        if (code.isEmpty || name.isEmpty) {
-          throw Exception('Missing required fields');
-        }
-        final group = GroupModel(
-          id: '',
-          courseId: courseId,
-          code: code,
-          name: name,
-          maxMembers: maxMembers,
-          createdAt: DateTime.now(),
-          createdBy: '', // TODO: Get current user
-          isActive: true, 
-          studentIds: [],
-        );
-        // TODO: Implement group creation
-        result.successRecords.add({
-          'code': code,
-          'name': name,
-        });
-      } catch (e) {
-        result.failedRecords.add({
-          'code': record['code'] ?? 'unknown',
-          'error': e.toString(),
-        });
-      }
-    }
-    return result;
-  }
-
-  // ========================================
-  // HÀM: enrollStudentsToCourse()
-  // MÔ TẢ: Ghi danh học sinh vào khóa học từ CSV
-  // ========================================
-  Future<ImportResult> enrollStudentsToCourse(
-    List<Map<String, dynamic>> csvData,
-  ) async {
-    print('🔥 Enroll students to courses - ${csvData.length} records');
-    final result = ImportResult(
-      dataType: 'enrollments',
-      totalRecords: csvData.length,
-    );
-    for (int i = 0; i < csvData.length; i++) {
-      final record = csvData[i];
-      try {
-        final studentCode = record['studentCode']?.toString().trim() ?? '';
-        final courseCode = record['courseCode']?.toString().trim() ?? '';
-        if (studentCode.isEmpty || courseCode.isEmpty) {
-          throw Exception('Missing required fields');
-        }
-        // TODO: Tìm student và course, sau đó enroll
-        result.successRecords.add({
-          'studentCode': studentCode,
-          'courseCode': courseCode,
-        });
-      } catch (e) {
-        result.failedRecords.add({
-          'studentCode': record['studentCode'] ?? 'unknown',
-          'error': e.toString(),
-        });
-      }
-    }
-    return result;
-  }
-
-  // ========================================
   // Helper Methods
   // ========================================
   bool _isValidEmail(String email) {
@@ -287,14 +139,12 @@ class BulkImportController {
   }
 
   String _generateTempPassword() {
-    // Tạo mật khẩu tạm thời (user phải đổi khi đăng nhập lần đầu)
     return 'TempPass${DateTime.now().millisecondsSinceEpoch}@';
   }
 }
 
 // ========================================
 // CLASS: ImportResult
-// MÔ TẢ: Kết quả import
 // ========================================
 class ImportResult {
   final String dataType;

@@ -62,7 +62,6 @@ class StudentController {
         isActive: true,
         studentCode: studentCode,
         phone: phone,
-        department: department,
         photoUrl: photoUrl,
       );
 

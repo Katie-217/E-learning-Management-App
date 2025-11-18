@@ -6,7 +6,13 @@ import 'package:elearning_management_app/presentation/widgets/course/Student_Cou
 import 'package:elearning_management_app/application/controllers/course/course_instructor_provider.dart';
 
 class InstructorCoursesPage extends ConsumerStatefulWidget {
-  const InstructorCoursesPage({super.key});
+  // 🆕 Callback
+  final VoidCallback? onCreateCoursePressed;
+  
+  const InstructorCoursesPage({
+    super.key,
+    this.onCreateCoursePressed,
+  });
 
   @override
   ConsumerState<InstructorCoursesPage> createState() =>
@@ -48,9 +54,7 @@ class _InstructorCoursesPageState extends ConsumerState<InstructorCoursesPage> {
               children: [
                 // Add Course Button
                 ElevatedButton.icon(
-                  onPressed: () {
-                    // TODO: Navigate to create course page
-                  },
+                  onPressed: widget.onCreateCoursePressed,
                   icon: const Icon(Icons.add, size: 18),
                   label: const Text('Create Course'),
                   style: ElevatedButton.styleFrom(

@@ -98,7 +98,6 @@ class _InstructorStudentsPageState extends State<InstructorStudentsPage> {
               _buildDetailRow('📧 Email:', student.email),
               _buildDetailRow('🆔 Student Code:', student.studentCode ?? 'N/A'),
               _buildDetailRow('📱 Phone:', student.phone ?? 'N/A'),
-              _buildDetailRow('🏢 Department:', student.department ?? 'N/A'),
               _buildDetailRow(
                 '📚 Courses:',
                 '${student.courseIds.length} courses',
@@ -152,8 +151,7 @@ class _InstructorStudentsPageState extends State<InstructorStudentsPage> {
   void _showEditStudentDialog(StudentModel student) {
     final nameController = TextEditingController(text: student.name);
     final phoneController = TextEditingController(text: student.phone ?? '');
-    final departmentController =
-        TextEditingController(text: student.department ?? '');
+
 
     showDialog(
       context: context,
@@ -197,21 +195,7 @@ class _InstructorStudentsPageState extends State<InstructorStudentsPage> {
                 ),
               ),
               const SizedBox(height: 12),
-              TextField(
-                controller: departmentController,
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  labelText: '🏢 Department',
-                  labelStyle: const TextStyle(color: Colors.grey),
-                  border: const OutlineInputBorder(),
-                  enabledBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.grey[700]!),
-                  ),
-                  focusedBorder: const OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.blue),
-                  ),
-                ),
-              ),
+
             ],
           ),
         ),
@@ -222,7 +206,7 @@ class _InstructorStudentsPageState extends State<InstructorStudentsPage> {
           ),
           ElevatedButton(
             onPressed: () => _updateStudent(student, nameController,
-                phoneController, departmentController),
+                phoneController),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.green,
               foregroundColor: Colors.white,
@@ -238,14 +222,13 @@ class _InstructorStudentsPageState extends State<InstructorStudentsPage> {
     StudentModel student,
     TextEditingController nameController,
     TextEditingController phoneController,
-    TextEditingController departmentController,
   ) async {
     try {
       final success = await _studentController.updateStudentProfile(
         student.uid,
         name: nameController.text.trim(),
         phone: phoneController.text.trim(),
-        department: departmentController.text.trim(),
+
       );
 
       if (success) {
@@ -397,12 +380,7 @@ class _InstructorStudentsPageState extends State<InstructorStudentsPage> {
             Text(
               '📧 ${student.email}',
               style: TextStyle(color: Colors.grey[400]),
-            ),
-            if (student.department != null)
-              Text(
-                '🏢 ${student.department}',
-                style: TextStyle(color: Colors.grey[400]),
-              ),
+            )
           ],
         ),
         trailing: PopupMenuButton(

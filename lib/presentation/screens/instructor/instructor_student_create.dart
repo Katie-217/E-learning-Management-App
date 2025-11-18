@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:go_router/go_router.dart';
 import '../../../application/controllers/student/student_controller.dart';
 import '../../../data/repositories/auth/auth_repository.dart';
 
 class CreateStudentPage extends StatefulWidget {
-  // 🆕 THÊM: Callbacks để giao tiếp với parent widget
   final VoidCallback? onSuccess;
   final VoidCallback? onCancel;
   
@@ -23,25 +21,16 @@ class _CreateStudentPageState extends State<CreateStudentPage> {
   late StudentController _studentController;
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
 
-  // Form Controllers
+  // Form Controllers - REMOVED department
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _studentCodeController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
-  final TextEditingController _departmentController = TextEditingController();
 
   final _formKey = GlobalKey<FormState>();
   bool isLoading = false;
   bool _obscurePassword = true;
-  String? _selectedDepartment;
-
-  // Danh sách khoa/bộ môn
-  final List<String> departments = [
-    'CNTT',
-    'QTKD',
-    'TCNH',
-  ];
 
   @override
   void initState() {
@@ -87,7 +76,7 @@ class _CreateStudentPageState extends State<CreateStudentPage> {
     setState(() => isLoading = true);
 
     try {
-      print('DEBUG: 🔐 STEP 1 - Create Firebase Auth Account');
+      print('DEBUG: 🔑 STEP 1 - Create Firebase Auth Account');
 
       final email = _emailController.text.trim();
       final password = _passwordController.text;
@@ -101,15 +90,15 @@ class _CreateStudentPageState extends State<CreateStudentPage> {
       final uid = userCredential.user!.uid;
       print('DEBUG: ✅ Firebase Auth Account created successfully: $uid');
 
-      print('DEBUG: 📝 STEP 2 - Create Student Profile');
+      print('DEBUG: 🔑 STEP 2 - Create Student Profile');
 
+      // REMOVED department parameter
       final studentId = await _studentController.createStudent(
         uid: uid,
         email: email,
         name: _nameController.text.trim(),
         studentCode: _studentCodeController.text.trim(),
         phone: _phoneController.text.trim(),
-        department: _selectedDepartment,
       );
 
       print('DEBUG: ✅ Student Profile created successfully: $studentId');
@@ -121,7 +110,6 @@ class _CreateStudentPageState extends State<CreateStudentPage> {
           'Email: $email',
         );
 
-        // 🔥 CALL onSuccess CALLBACK
         await Future.delayed(const Duration(seconds: 1));
         if (mounted && widget.onSuccess != null) {
           widget.onSuccess!();
@@ -138,7 +126,7 @@ class _CreateStudentPageState extends State<CreateStudentPage> {
           errorMessage += '\n📧 Invalid email';
           break;
         case 'weak-password':
-          errorMessage += '\n🔐 Password is too weak';
+          errorMessage += '\n🔒 Password is too weak';
           break;
         case 'operation-not-allowed':
           errorMessage += '\n🚫 Account type not allowed';
@@ -189,7 +177,6 @@ class _CreateStudentPageState extends State<CreateStudentPage> {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              // 🔥 CALL onSuccess CALLBACK
               if (widget.onSuccess != null) {
                 widget.onSuccess!();
               }
@@ -206,7 +193,6 @@ class _CreateStudentPageState extends State<CreateStudentPage> {
   }
 
   void _handleCancel() {
-    // 🔥 CALL onCancel CALLBACK
     if (widget.onCancel != null) {
       widget.onCancel!();
     }
@@ -314,7 +300,6 @@ class _CreateStudentPageState extends State<CreateStudentPage> {
                           controller: _emailController,
                           label: 'Email',
                           hint: 'student@example.com',
-                        
                           keyboardType: TextInputType.emailAddress,
                           validator: (value) {
                             if (value == null || value.isEmpty) {
@@ -391,7 +376,6 @@ class _CreateStudentPageState extends State<CreateStudentPage> {
                           controller: _nameController,
                           label: 'Student Name',
                           hint: 'E.g.: Nguyen Van A',
-                        
                           validator: (value) {
                             if (value == null || value.isEmpty) {
                               return 'Please enter name';
@@ -406,7 +390,6 @@ class _CreateStudentPageState extends State<CreateStudentPage> {
                           controller: _studentCodeController,
                           label: 'Student Code',
                           hint: 'E.g.: SV001',
-                        
                           validator: (value) {
                             if (value == null || value.isEmpty) {
                               return 'Please enter student code';
@@ -418,7 +401,6 @@ class _CreateStudentPageState extends State<CreateStudentPage> {
                           controller: _phoneController,
                           label: 'Phone Number',
                           hint: 'E.g.: 0123456789',
-
                           keyboardType: TextInputType.phone,
                           validator: (value) {
                             if (value != null && value.isNotEmpty) {
@@ -428,84 +410,6 @@ class _CreateStudentPageState extends State<CreateStudentPage> {
                             }
                             return null;
                           },
-                        ),
-                      ],
-                    ),
-
-                    // SECTION 3: Academic Information
-                    _buildSection(
-                      'Academic Information',
-                      [
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 16.0),
-                          child: FormField<String>(
-                            initialValue: _selectedDepartment,
-                            validator: (value) {
-                              return null;
-                            },
-                            builder: (FormFieldState<String> state) {
-                              return Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  DropdownButtonFormField<String>(
-                                    value: _selectedDepartment,
-                                    dropdownColor: const Color(0xFF1F2937),
-                                    style: const TextStyle(color: Colors.white),
-                                    hint: const Text(
-                                      'Select Department',
-                                      style: TextStyle(color: Colors.grey),
-                                    ),
-                                    decoration: InputDecoration(
-                                      border: OutlineInputBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(12),
-                                      ),
-                                      enabledBorder: OutlineInputBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(12),
-                                        borderSide: BorderSide(
-                                          color: Colors.grey[700]!,
-                                        ),
-                                      ),
-                                      focusedBorder: OutlineInputBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(12),
-                                        borderSide: const BorderSide(
-                                          color: Colors.blue,
-                                          width: 2,
-                                        ),
-                                      ),
-                                      filled: true,
-                                      fillColor: const Color(0xFF1F2937),
-                                    ),
-                                    items: departments
-                                        .map((dept) => DropdownMenuItem(
-                                              value: dept,
-                                              child: Text(dept),
-                                            ))
-                                        .toList(),
-                                    onChanged: (value) {
-                                      setState(() {
-                                        _selectedDepartment = value;
-                                      });
-                                      state.didChange(value);
-                                    },
-                                  ),
-                                  if (_selectedDepartment != null)
-                                    Padding(
-                                      padding: const EdgeInsets.only(top: 8.0),
-                                      child: Text(
-                                        'Selected: $_selectedDepartment',
-                                        style: const TextStyle(
-                                          color: Colors.green,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              );
-                            },
-                          ),
                         ),
                       ],
                     ),
@@ -567,7 +471,7 @@ class _CreateStudentPageState extends State<CreateStudentPage> {
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: Color.fromARGB(255, 2, 2, 2),
+                            color: Colors.white,
                           ),
                         ),
                       ),
@@ -575,7 +479,7 @@ class _CreateStudentPageState extends State<CreateStudentPage> {
 
                     const SizedBox(height: 24),
 
-                    // Info box
+                    // Info box - REMOVED department note
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -619,7 +523,6 @@ class _CreateStudentPageState extends State<CreateStudentPage> {
     _nameController.dispose();
     _studentCodeController.dispose();
     _phoneController.dispose();
-    _departmentController.dispose();
     super.dispose();
   }
 }
