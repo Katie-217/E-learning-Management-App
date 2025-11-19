@@ -5,11 +5,17 @@ import 'package:go_router/go_router.dart';
 import 'package:elearning_management_app/presentation/screens/course/course_page.dart';
 import 'package:elearning_management_app/presentation/screens/instructor/instructor_students_page.dart';
 import 'package:elearning_management_app/presentation/screens/assignment/assignments_page.dart';
-import 'package:elearning_management_app/presentation/screens/instructor/instructor_grades_page.dart';
 import 'package:elearning_management_app/application/controllers/instructor/instructor_profile_provider.dart';
 import 'package:elearning_management_app/presentation/widgets/instructor/calendar_widget.dart';
 import 'package:elearning_management_app/presentation/widgets/instructor/task_list_widget.dart';
 import 'package:elearning_management_app/presentation/screens/instructor/instructor_courses/instructor_courses_page.dart';
+import '../../widgets/instructor/sidebar_widget.dart';
+import 'csv_import_screen.dart';
+import 'instructor_student_create.dart';
+import 'instructor_courses/instructor_course_create.dart';
+
+// Typedef cho callback import
+typedef ImportCompleteCallback = void Function(bool success, String message);
 
 class InstructorDashboard extends ConsumerStatefulWidget {
   const InstructorDashboard({super.key});
@@ -21,6 +27,14 @@ class InstructorDashboard extends ConsumerStatefulWidget {
 
 class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
   String _activeTab = 'dashboard';
+  
+  // Trạng thái để quản lý các view trong Students tab
+  bool _isCreatingStudent = false;
+  bool _isImportingCSV = false;
+  
+  // 🆕 Trạng thái để quản lý các view trong Courses tab
+  bool _isCreatingCourse = false;
+
   @override
   Widget build(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 800;
@@ -98,10 +112,17 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
         children: [
           // Sidebar Navigation
           if (!isMobile)
-            Container(
-              width: 220,
-              color: const Color(0xFF111827),
-              child: _buildSidebar(),
+            SidebarWidget(
+              activeTab: _activeTab,
+              onTabSelected: (tab) {
+                setState(() {
+                  _activeTab = tab;
+                  // Reset các trạng thái khi đổi tab
+                  _isCreatingStudent = false;
+                  _isImportingCSV = false;
+                  _isCreatingCourse = false;
+                });
+              },
             ),
           // Main Content
           Expanded(
@@ -115,14 +136,21 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
   Widget _buildMainContent() {
     switch (_activeTab) {
       case 'courses':
-        return const Padding(
-          padding: EdgeInsets.all(18),
-          child: InstructorCoursesPage(),
+        // 🆕 LOGIC MỚI: Kiểm tra trạng thái để hiển thị đúng màn hình
+        return Padding(
+          padding: const EdgeInsets.all(18),
+          child: _isCreatingCourse
+              ? _buildCreateCourseView() // Hiển thị form tạo course
+              : _buildCoursesListView(), // Hiển thị danh sách courses
         );
       case 'students':
-        return const Padding(
-          padding: EdgeInsets.all(18),
-          child: InstructorStudentsPage(),
+        return Padding(
+          padding: const EdgeInsets.all(18),
+          child: _isImportingCSV
+              ? _buildImportCSVView()
+              : _isCreatingStudent
+                  ? _buildCreateStudentView()
+                  : _buildStudentsListView(),
         );
       default: // dashboard
         return SingleChildScrollView(
@@ -170,7 +198,6 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
                     ? Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Left Column
                           Expanded(
                             flex: 2,
                             child: Column(
@@ -182,7 +209,6 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
                             ),
                           ),
                           const SizedBox(width: 12),
-                          // Right Column
                           Expanded(
                             flex: 1,
                             child: Column(
@@ -213,56 +239,199 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
     }
   }
 
-  Widget _buildSidebar() {
-    return ListView(
-      padding: const EdgeInsets.symmetric(vertical: 12),
+  // 🆕 HÀM MỚI: Xây dựng view danh sách courses
+  Widget _buildCoursesListView() {
+    return InstructorCoursesPage(
+      onCreateCoursePressed: () {
+        // 🔥 KHI NHẤN NÚT CREATE COURSE
+        setState(() {
+          _isCreatingCourse = true;
+        });
+      },
+    );
+  }
+
+  // 🆕 HÀM MỚI: Xây dựng view tạo course
+  Widget _buildCreateCourseView() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSidebarItem(
-          'Dashboard',
-          Icons.dashboard,
-          'dashboard',
+        // Header với nút Back
+        Row(
+          children: [
+            // Nút quay lại
+            IconButton(
+              onPressed: () {
+                // 🔥 QUAY LẠI DANH SÁCH COURSES
+                setState(() {
+                  _isCreatingCourse = false;
+                });
+              },
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              tooltip: 'Back to Courses List',
+            ),
+            const SizedBox(width: 12),
+            const Text(
+              'Create New Course',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+          ],
         ),
-        _buildSidebarItem(
-          'Teaching',
-          Icons.book,
-          'courses',
+        const SizedBox(height: 6),
+        Text(
+          'Add a new course to your teaching schedule',
+          style: TextStyle(color: Colors.grey[400], fontSize: 16),
         ),
-        _buildSidebarItem(
-          'Students',
-          Icons.people,
-          'students',
+        const SizedBox(height: 24),
+        // Form tạo course
+        Expanded(
+          child: CreateCoursePage(
+            onSuccess: () {
+              // Callback khi tạo thành công
+              setState(() {
+                _isCreatingCourse = false;
+              });
+            },
+            onCancel: () {
+              // Callback khi hủy
+              setState(() {
+                _isCreatingCourse = false;
+              });
+            },
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildSidebarItem(String label, IconData icon, String tabKey) {
-    final isActive = _activeTab == tabKey;
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: isActive
-            ? Colors.indigo[600]?.withOpacity(0.3)
-            : Colors.transparent,
-        borderRadius: BorderRadius.circular(8),
-        border:
-            isActive ? Border.all(color: Colors.indigo[600]!, width: 1) : null,
-      ),
-      child: ListTile(
-        leading: Icon(icon,
-            color: isActive ? Colors.indigo[400] : Colors.grey[400], size: 20),
-        title: Text(
-          label,
-          style: TextStyle(
-            color: isActive ? Colors.white : Colors.grey[300],
-            fontSize: 14,
-            fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+  // HÀM: Xây dựng view danh sách students
+  Widget _buildStudentsListView() {
+    return InstructorStudentsPage(
+      onCreateStudentPressed: () {
+        setState(() {
+          _isCreatingStudent = true;
+        });
+      },
+      onImportCSVPressed: () {
+        setState(() {
+          _isImportingCSV = true;
+        });
+      },
+    );
+  }
+
+  // HÀM: Xây dựng view tạo student
+  Widget _buildCreateStudentView() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            IconButton(
+              onPressed: () {
+                setState(() {
+                  _isCreatingStudent = false;
+                });
+              },
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              tooltip: 'Back to Students List',
+            ),
+            const SizedBox(width: 12),
+            const Text(
+              'Create New Student',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Add a new student to the system',
+          style: TextStyle(color: Colors.grey[400], fontSize: 16),
+        ),
+        const SizedBox(height: 24),
+        Expanded(
+          child: CreateStudentPage(
+            onSuccess: () {
+              setState(() {
+                _isCreatingStudent = false;
+              });
+            },
+            onCancel: () {
+              setState(() {
+                _isCreatingStudent = false;
+              });
+            },
           ),
         ),
-        onTap: () {
-          setState(() => _activeTab = tabKey);
-        },
-      ),
+      ],
+    );
+  }
+
+  // HÀM: Xây dựng view import CSV
+  Widget _buildImportCSVView() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            IconButton(
+              onPressed: () {
+                setState(() {
+                  _isImportingCSV = false;
+                });
+              },
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              tooltip: 'Back to Students List',
+            ),
+            const SizedBox(width: 12),
+            const Text(
+              'Import Students from CSV',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Bulk import students using CSV file',
+          style: TextStyle(color: Colors.grey[400], fontSize: 16),
+        ),
+        const SizedBox(height: 24),
+        Expanded(
+          child: CsvImportScreen(
+            dataType: 'students',
+            onImportComplete: (bool success, String message) {
+              setState(() {
+                _isImportingCSV = false;
+              });
+              
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(message),
+                  backgroundColor: success ? Colors.green : Colors.red,
+                  duration: const Duration(seconds: 3),
+                ),
+              );
+            },
+            onCancel: () {
+              setState(() {
+                _isImportingCSV = false;
+              });
+            },
+          ),
+        ),
+      ],
     );
   }
 
