@@ -1,6 +1,7 @@
 // ========================================
 // FILE: assignment_repository.dart
-// MÔ TẢ: Repository cho Assignment - Sub-collection trong course_of_study
+// MÔ TẢ: Repository cho Assignment - Root Collection
+// REFACTORED: Di chuyển từ Sub-collection sang Root Collection
 // ========================================
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -9,27 +10,26 @@ import '../../../domain/models/assignment_model.dart';
 
 class AssignmentRepository {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  static const String _courseCollectionName = 'course_of_study';
-  static const String _assignmentSubCollectionName = 'assignments';
+  // ✅ NEW: Root Collection instead of Sub-collection
+  static const String _assignmentCollectionName = 'assignments';
 
   // ========================================
   // HÀM: getAssignmentsByCourse
-  // MÔ TẢ: Lấy assignments từ sub-collection trong course_of_study
+  // MÔ TẢ: Lấy assignments từ Root Collection với where filter
   // ========================================
   static Future<List<Assignment>> getAssignmentsByCourse(
       String courseId) async {
     try {
       print('DEBUG: ========== FETCHING ASSIGNMENTS ==========');
       print('DEBUG: 🔍 Fetching assignments for course: $courseId');
-      print(
-          'DEBUG: 📂 Collection path: $_courseCollectionName/$courseId/$_assignmentSubCollectionName');
+      print('DEBUG: 📂 Root Collection: $_assignmentCollectionName');
 
       QuerySnapshot snapshot;
       try {
+        // ✅ NEW: Root Collection with where filter
         snapshot = await _firestore
-            .collection(_courseCollectionName)
-            .doc(courseId)
-            .collection(_assignmentSubCollectionName)
+            .collection(_assignmentCollectionName)
+            .where('courseId', isEqualTo: courseId)
             .orderBy('deadline', descending: false)
             .get();
       } catch (e) {
@@ -37,18 +37,15 @@ class AssignmentRepository {
         print('DEBUG: ⚠️ Query with orderBy failed: $e');
         print('DEBUG: 💡 Trying without orderBy...');
         snapshot = await _firestore
-            .collection(_courseCollectionName)
-            .doc(courseId)
-            .collection(_assignmentSubCollectionName)
+            .collection(_assignmentCollectionName)
+            .where('courseId', isEqualTo: courseId)
             .get();
       }
 
       print('DEBUG: 📋 Found ${snapshot.docs.length} assignment documents');
 
       if (snapshot.docs.isEmpty) {
-        print('DEBUG: ⚠️ No assignments found in sub-collection');
-        print(
-            'DEBUG: 💡 Check if assignments exist in Firestore at: $_courseCollectionName/$courseId/$_assignmentSubCollectionName');
+        print('DEBUG: ⚠️ No assignments found for courseId: $courseId');
         return [];
       }
 
@@ -73,222 +70,182 @@ class AssignmentRepository {
       return assignments;
     } catch (e) {
       print('DEBUG: ❌ Error fetching assignments: $e');
-      print('DEBUG: ❌ Stack trace: ${StackTrace.current}');
       return [];
-    }
-  }
-
-  // ========================================
-  // HÀM: getAllAssignmentsForUser
-  // MÔ TẢ: Lấy tất cả assignments của user từ các course đã enroll
-  // ========================================
-  static Future<List<Assignment>> getAllAssignmentsForUser() async {
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        print('DEBUG: No user logged in for assignments');
-        return [];
-      }
-
-      // Lấy danh sách courses mà user đã enroll
-      final userCoursesSnapshot = await _firestore
-          .collection(_courseCollectionName)
-          .where('students', arrayContains: user.uid)
-          .get();
-
-      List<Assignment> allAssignments = [];
-
-      for (var courseDoc in userCoursesSnapshot.docs) {
-        final courseAssignments = await getAssignmentsByCourse(courseDoc.id);
-        allAssignments.addAll(courseAssignments);
-      }
-
-      // Sort by deadline
-      allAssignments.sort((a, b) => a.deadline.compareTo(b.deadline));
-
-      print('DEBUG: Total assignments for user: ${allAssignments.length}');
-      return allAssignments;
-    } catch (e) {
-      print('DEBUG: Error fetching user assignments: $e');
-      return [];
-    }
-  }
-
-  // ========================================
-  // HÀM: getAssignmentById
-  // MÔ TẢ: Lấy assignment cụ thể từ course và assignment ID
-  // ========================================
-  static Future<Assignment?> getAssignmentById(
-      String courseId, String assignmentId) async {
-    try {
-      final DocumentSnapshot doc = await _firestore
-          .collection(_courseCollectionName)
-          .doc(courseId)
-          .collection(_assignmentSubCollectionName)
-          .doc(assignmentId)
-          .get();
-
-      if (doc.exists) {
-        return Assignment.fromFirestore(doc);
-      }
-      return null;
-    } catch (e) {
-      print('DEBUG: Error fetching assignment by ID: $e');
-      return null;
     }
   }
 
   // ========================================
   // HÀM: createAssignment
-  // MÔ TẢ: Tạo assignment mới trong course (chỉ cho instructor)
-  // UPDATED: Đảm bảo courseId được set cho Collection Group Query
+  // MÔ TẢ: Tạo assignment mới trong Root Collection
+  // IMPORTANT: courseId và semesterId phải được set trước khi gọi
   // ========================================
-  static Future<bool> createAssignment(
-      String courseId, Assignment assignment) async {
+  static Future<String> createAssignment(Assignment assignment) async {
     try {
-      // ✅ CRITICAL: Ensure assignment has courseId for Collection Group Query
-      final assignmentWithCourseId = assignment.copyWith(courseId: courseId);
+      print('DEBUG: 📝 Creating assignment: ${assignment.title}');
+      print('DEBUG: 📝 CourseId: ${assignment.courseId}');
+      print('DEBUG: 📝 SemesterId: ${assignment.semesterId}');
 
-      await _firestore
-          .collection(_courseCollectionName)
-          .doc(courseId)
-          .collection(_assignmentSubCollectionName)
-          .add(assignmentWithCourseId.toFirestore());
+      // ✅ VALIDATION: Đảm bảo courseId và semesterId đã được set
+      if (assignment.courseId.isEmpty) {
+        throw Exception('CourseId is required for Root Collection');
+      }
+      if (assignment.semesterId.isEmpty) {
+        throw Exception('SemesterId is required for Root Collection');
+      }
 
-      print('DEBUG: ✅ Assignment created with courseId: $courseId');
-      return true;
+      // ✅ NEW: Add to Root Collection
+      final docRef = await _firestore
+          .collection(_assignmentCollectionName)
+          .add(assignment.toFirestore());
+
+      print('DEBUG: ✅ Created assignment with ID: ${docRef.id}');
+      return docRef.id;
     } catch (e) {
       print('DEBUG: ❌ Error creating assignment: $e');
-      return false;
+      throw Exception('Failed to create assignment: $e');
     }
   }
 
   // ========================================
   // HÀM: updateAssignment
-  // MÔ TẢ: Cập nhật assignment (chỉ cho instructor)
+  // MÔ TẢ: Cập nhật assignment trong Root Collection
   // ========================================
-  static Future<bool> updateAssignment(
-      String courseId, String assignmentId, Assignment assignment) async {
+  static Future<void> updateAssignment(Assignment assignment) async {
     try {
+      print('DEBUG: 📝 Updating assignment: ${assignment.id}');
+
       await _firestore
-          .collection(_courseCollectionName)
-          .doc(courseId)
-          .collection(_assignmentSubCollectionName)
-          .doc(assignmentId)
+          .collection(_assignmentCollectionName)
+          .doc(assignment.id)
           .update(assignment.toFirestore());
 
-      print('DEBUG: Assignment updated successfully');
-      return true;
+      print('DEBUG: ✅ Updated assignment: ${assignment.id}');
     } catch (e) {
-      print('DEBUG: Error updating assignment: $e');
-      return false;
+      print('DEBUG: ❌ Error updating assignment: $e');
+      throw Exception('Failed to update assignment: $e');
     }
   }
 
   // ========================================
   // HÀM: deleteAssignment
-  // MÔ TẢ: Xóa assignment (chỉ cho instructor)
+  // MÔ TẢ: Xóa assignment từ Root Collection
   // ========================================
-  static Future<bool> deleteAssignment(
-      String courseId, String assignmentId) async {
+  static Future<void> deleteAssignment(String assignmentId) async {
     try {
+      print('DEBUG: 🗑️ Deleting assignment: $assignmentId');
+
       await _firestore
-          .collection(_courseCollectionName)
-          .doc(courseId)
-          .collection(_assignmentSubCollectionName)
+          .collection(_assignmentCollectionName)
           .doc(assignmentId)
           .delete();
 
-      print('DEBUG: Assignment deleted successfully');
-      return true;
+      print('DEBUG: ✅ Deleted assignment: $assignmentId');
     } catch (e) {
-      print('DEBUG: Error deleting assignment: $e');
-      return false;
+      print('DEBUG: ❌ Error deleting assignment: $e');
+      throw Exception('Failed to delete assignment: $e');
     }
   }
 
   // ========================================
-  // COLLECTION GROUP QUERY METHODS - NEW FEATURE
-  // Sử dụng courseId để query cross-course assignments
+  // HÀM: getAssignmentById
+  // MÔ TẢ: Lấy assignment cụ thể theo ID từ Root Collection
   // ========================================
-
-  // ========================================
-  // HÀM: getAllAssignmentsAcrossSystem
-  // MÔ TẢ: Lấy TẤT CẢ assignments trong toàn hệ thống (Collection Group Query)
-  // USE CASE: Admin xuất CSV tất cả assignments, system analytics
-  // ========================================
-  static Future<List<Assignment>> getAllAssignmentsAcrossSystem() async {
+  static Future<Assignment?> getAssignmentById(String assignmentId) async {
     try {
-      print(
-          'DEBUG: 🌐 Fetching ALL assignments across system using Collection Group Query');
+      print('DEBUG: 🔍 Fetching assignment by ID: $assignmentId');
 
-      final QuerySnapshot snapshot = await _firestore
-          .collectionGroup(_assignmentSubCollectionName)
-          .orderBy('deadline', descending: false)
+      final doc = await _firestore
+          .collection(_assignmentCollectionName)
+          .doc(assignmentId)
           .get();
 
-      print(
-          'DEBUG: 📊 Found ${snapshot.docs.length} assignments across all courses');
+      if (!doc.exists) {
+        print('DEBUG: ⚠️ Assignment not found: $assignmentId');
+        return null;
+      }
+
+      final assignment = Assignment.fromFirestore(doc);
+      print('DEBUG: ✅ Found assignment: ${assignment.title}');
+      return assignment;
+    } catch (e) {
+      print('DEBUG: ❌ Error fetching assignment by ID: $e');
+      return null;
+    }
+  }
+
+  // ========================================
+  // HÀM: getAssignmentsBySemester - NEW METHOD
+  // MÔ TẢ: Lấy assignments theo semester (hỗ trợ semester switcher)
+  // ========================================
+  static Future<List<Assignment>> getAssignmentsBySemester(
+      String semesterId) async {
+    try {
+      print('DEBUG: 🔍 Fetching assignments for semester: $semesterId');
+
+      final snapshot = await _firestore
+          .collection(_assignmentCollectionName)
+          .where('semesterId', isEqualTo: semesterId)
+          .orderBy('deadline', descending: false)
+          .get();
 
       final assignments = <Assignment>[];
       for (var doc in snapshot.docs) {
         try {
           final assignment = Assignment.fromFirestore(doc);
           assignments.add(assignment);
-          print(
-              'DEBUG: ✅ Assignment: ${assignment.title} (Course: ${assignment.courseId})');
         } catch (e) {
-          print('DEBUG: ⚠️ Error parsing assignment: $e');
+          print('DEBUG: ⚠️ Error parsing assignment doc ${doc.id}: $e');
         }
       }
 
+      print(
+          'DEBUG: ✅ Found ${assignments.length} assignments for semester $semesterId');
       return assignments;
     } catch (e) {
-      print('DEBUG: ❌ Error in Collection Group Query: $e');
+      print('DEBUG: ❌ Error fetching assignments by semester: $e');
       return [];
     }
   }
 
   // ========================================
-  // HÀM: getUpcomingAssignmentsForStudent
-  // MÔ TẢ: Lấy TẤT CẢ bài tập sắp hết hạn của sinh viên (từ MỌI khóa học)
-  // USE CASE: Student dashboard - "All assignments due soon"
+  // HÀM: getUpcomingAssignments - NEW METHOD
+  // MÔ TẢ: Lấy assignments sắp đến hạn (cho Dashboard)
   // ========================================
-  static Future<List<Assignment>> getUpcomingAssignmentsForStudent({
-    required List<String> enrolledCourseIds,
-    required int daysAhead,
+  static Future<List<Assignment>> getUpcomingAssignments({
+    String? courseId,
+    String? semesterId,
+    int limit = 10,
   }) async {
     try {
-      final DateTime now = DateTime.now();
-      final DateTime futureDate = now.add(Duration(days: daysAhead));
+      print('DEBUG: 🔍 Fetching upcoming assignments');
 
-      print('DEBUG: 📅 Fetching upcoming assignments (next $daysAhead days)');
-      print('DEBUG: 📚 From courses: ${enrolledCourseIds.join(", ")}');
-
-      final QuerySnapshot snapshot = await _firestore
-          .collectionGroup(_assignmentSubCollectionName)
-          .where('courseId',
-              whereIn: enrolledCourseIds) // ✅ Filter by enrolled courses
-          .where('deadline', isGreaterThanOrEqualTo: Timestamp.fromDate(now))
-          .where('deadline',
-              isLessThanOrEqualTo: Timestamp.fromDate(futureDate))
+      Query query = _firestore
+          .collection(_assignmentCollectionName)
+          .where('deadline', isGreaterThan: Timestamp.fromDate(DateTime.now()))
           .orderBy('deadline', descending: false)
-          .get();
+          .limit(limit);
 
-      print('DEBUG: 🎯 Found ${snapshot.docs.length} upcoming assignments');
+      if (courseId != null) {
+        query = query.where('courseId', isEqualTo: courseId);
+      }
+
+      if (semesterId != null) {
+        query = query.where('semesterId', isEqualTo: semesterId);
+      }
+
+      final snapshot = await query.get();
 
       final assignments = <Assignment>[];
       for (var doc in snapshot.docs) {
         try {
           final assignment = Assignment.fromFirestore(doc);
           assignments.add(assignment);
-          print(
-              'DEBUG: ⏰ Upcoming: ${assignment.title} - Due: ${assignment.deadline} (Course: ${assignment.courseId})');
         } catch (e) {
-          print('DEBUG: ⚠️ Error parsing assignment: $e');
+          print('DEBUG: ⚠️ Error parsing assignment doc ${doc.id}: $e');
         }
       }
 
+      print('DEBUG: ✅ Found ${assignments.length} upcoming assignments');
       return assignments;
     } catch (e) {
       print('DEBUG: ❌ Error fetching upcoming assignments: $e');
@@ -297,53 +254,118 @@ class AssignmentRepository {
   }
 
   // ========================================
-  // HÀM: getAssignmentsByMultipleCourses
-  // MÔ TẢ: Lấy assignments từ nhiều courses cùng lúc
-  // USE CASE: Cross-course analytics, bulk operations
+  // HÀM: getAssignmentsForStudent - NEW METHOD
+  // MÔ TẢ: Lấy assignments của student từ enrolled courses (cho Dashboard)
   // ========================================
-  static Future<Map<String, List<Assignment>>> getAssignmentsByMultipleCourses(
-      List<String> courseIds) async {
+  static Future<List<Assignment>> getAssignmentsForStudent(
+    String studentId,
+    List<String> enrolledCourseIds,
+  ) async {
     try {
-      print(
-          'DEBUG: 📋 Fetching assignments from multiple courses: ${courseIds.join(", ")}');
+      print('DEBUG: 🔍 Fetching assignments for student: $studentId');
+      print('DEBUG: 📚 Enrolled courses: $enrolledCourseIds');
 
-      final QuerySnapshot snapshot = await _firestore
-          .collectionGroup(_assignmentSubCollectionName)
-          .where('courseId', whereIn: courseIds)
-          .get();
+      if (enrolledCourseIds.isEmpty) {
+        return [];
+      }
 
-      print(
-          'DEBUG: 📊 Found ${snapshot.docs.length} assignments from ${courseIds.length} courses');
+      // Firebase có giới hạn 10 items trong whereIn
+      final assignments = <Assignment>[];
 
-      // Group assignments by courseId
-      final Map<String, List<Assignment>> assignmentsByCourse = {};
+      // Chia thành chunks nếu > 10 courses
+      for (int i = 0; i < enrolledCourseIds.length; i += 10) {
+        final chunk = enrolledCourseIds.skip(i).take(10).toList();
 
-      for (var doc in snapshot.docs) {
-        try {
-          final assignment = Assignment.fromFirestore(doc);
-          final courseId = assignment.courseId;
+        final snapshot = await _firestore
+            .collection(_assignmentCollectionName)
+            .where('courseId', whereIn: chunk)
+            .orderBy('deadline', descending: false)
+            .get();
 
-          if (!assignmentsByCourse.containsKey(courseId)) {
-            assignmentsByCourse[courseId] = [];
+        for (var doc in snapshot.docs) {
+          try {
+            final assignment = Assignment.fromFirestore(doc);
+            assignments.add(assignment);
+          } catch (e) {
+            print('DEBUG: ⚠️ Error parsing assignment doc ${doc.id}: $e');
           }
-          assignmentsByCourse[courseId]!.add(assignment);
-        } catch (e) {
-          print('DEBUG: ⚠️ Error parsing assignment: $e');
         }
       }
 
-      // Sort assignments within each course by deadline
-      for (var courseId in assignmentsByCourse.keys) {
-        assignmentsByCourse[courseId]!
-            .sort((a, b) => a.deadline.compareTo(b.deadline));
-        print(
-            'DEBUG: ✅ Course $courseId: ${assignmentsByCourse[courseId]!.length} assignments');
+      print('DEBUG: ✅ Found ${assignments.length} assignments for student');
+      return assignments;
+    } catch (e) {
+      print('DEBUG: ❌ Error fetching assignments for student: $e');
+      return [];
+    }
+  }
+
+  // ========================================
+  // HÀM: listenToAssignments - REAL-TIME
+  // MÔ TẢ: Stream để theo dõi assignments real-time
+  // ========================================
+  static Stream<List<Assignment>> listenToAssignments({
+    String? courseId,
+    String? semesterId,
+  }) {
+    Query query = _firestore.collection(_assignmentCollectionName);
+
+    if (courseId != null) {
+      query = query.where('courseId', isEqualTo: courseId);
+    }
+
+    if (semesterId != null) {
+      query = query.where('semesterId', isEqualTo: semesterId);
+    }
+
+    return query
+        .orderBy('deadline', descending: false)
+        .snapshots()
+        .map((snapshot) {
+      final assignments = <Assignment>[];
+      for (var doc in snapshot.docs) {
+        try {
+          final assignment = Assignment.fromFirestore(doc);
+          assignments.add(assignment);
+        } catch (e) {
+          print('DEBUG: ⚠️ Error parsing assignment doc ${doc.id}: $e');
+        }
+      }
+      return assignments;
+    });
+  }
+
+  // ========================================
+  // HÀM: bulkDeleteAssignments - CLEANUP
+  // MÔ TẢ: Xóa hàng loạt assignments (khi xóa course/semester)
+  // ========================================
+  static Future<void> bulkDeleteAssignments({
+    String? courseId,
+    String? semesterId,
+  }) async {
+    try {
+      Query query = _firestore.collection(_assignmentCollectionName);
+
+      if (courseId != null) {
+        query = query.where('courseId', isEqualTo: courseId);
       }
 
-      return assignmentsByCourse;
+      if (semesterId != null) {
+        query = query.where('semesterId', isEqualTo: semesterId);
+      }
+
+      final snapshot = await query.get();
+      final batch = _firestore.batch();
+
+      for (var doc in snapshot.docs) {
+        batch.delete(doc.reference);
+      }
+
+      await batch.commit();
+      print('DEBUG: ✅ Bulk deleted ${snapshot.docs.length} assignments');
     } catch (e) {
-      print('DEBUG: ❌ Error fetching assignments by multiple courses: $e');
-      return {};
+      print('DEBUG: ❌ Error bulk deleting assignments: $e');
+      throw Exception('Failed to bulk delete assignments: $e');
     }
   }
 }

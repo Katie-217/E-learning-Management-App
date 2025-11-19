@@ -5,8 +5,8 @@
 // ========================================
 
 class SemesterTemplateModel {
-  final String id; // Đây sẽ là "HK1", "HK2", "HK_HE"
-  final String name; // "Học kỳ 1", "Học kỳ 2", "Học kỳ Hè"
+  final String id; 
+  final String name; 
   final int startMonth; // Ví dụ: 9 (cho tháng 9)
   final int startDay; // Ví dụ: 5
   final int endMonth; // Ví dụ: 12 (cho tháng 12)
@@ -160,33 +160,33 @@ class SemesterTemplateModel {
 // ========================================
 class SemesterTemplates {
   static const SemesterTemplateModel hk1 = SemesterTemplateModel(
-    id: 'HK1',
-    name: 'Học kỳ 1',
+    id: 'S1',
+    name: 'Semester 1',
     startMonth: 9,
     startDay: 5,
     endMonth: 12,
     endDay: 30,
-    description: 'Học kỳ 1 - Từ tháng 9 đến tháng 12',
+    description: 'Semester 1 - From September to December',
   );
 
   static const SemesterTemplateModel hk2 = SemesterTemplateModel(
-    id: 'HK2',
-    name: 'Học kỳ 2',
+    id: 'S2',
+    name: 'Semester 2',
     startMonth: 1,
     startDay: 15,
     endMonth: 5,
     endDay: 31,
-    description: 'Học kỳ 2 - Từ tháng 1 đến tháng 5',
+    description: 'Semester 2 - From January to May',
   );
 
   static const SemesterTemplateModel hkHe = SemesterTemplateModel(
-    id: 'HK_HE',
-    name: 'Học kỳ Hè',
+    id: 'S3',
+    name: 'Summer Semester',
     startMonth: 6,
     startDay: 1,
     endMonth: 8,
     endDay: 31,
-    description: 'Học kỳ Hè - Từ tháng 6 đến tháng 8',
+    description: 'Summer Semester - From June to August',
   );
 
   static const List<SemesterTemplateModel> allTemplates = [

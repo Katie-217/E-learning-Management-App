@@ -4,6 +4,7 @@ import 'package:elearning_management_app/presentation/screens/instructor/instruc
 import 'package:elearning_management_app/domain/models/course_model.dart';
 import 'package:elearning_management_app/presentation/widgets/course/Student_Course/cards/course_card_widget.dart';
 import 'package:elearning_management_app/application/controllers/course/course_instructor_provider.dart';
+import 'package:elearning_management_app/presentation/widgets/course/Instructor_Course/widget/semester_filter_instructor.dart';
 
 class InstructorCoursesPage extends ConsumerStatefulWidget {
   const InstructorCoursesPage({super.key});
@@ -14,7 +15,7 @@ class InstructorCoursesPage extends ConsumerStatefulWidget {
 }
 
 class _InstructorCoursesPageState extends ConsumerState<InstructorCoursesPage> {
-  String _selectedSemester = 'HK1/24-25';
+  String? _selectedSemesterId;
 
   @override
   void initState() {
@@ -64,42 +65,18 @@ class _InstructorCoursesPageState extends ConsumerState<InstructorCoursesPage> {
                   ),
                 ),
                 const SizedBox(width: 12),
-                // Semester Dropdown
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1F2937),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.grey[700]!),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: _selectedSemester,
-                      icon: const Icon(Icons.keyboard_arrow_down,
-                          color: Colors.white),
-                      style: const TextStyle(color: Colors.white),
-                      dropdownColor: const Color(0xFF1F2937),
-                      items: ['HK1/24-25', 'HK2/23-24', 'HK1/23-24']
-                          .map((String value) {
-                        return DropdownMenuItem<String>(
-                          value: value,
-                          child: Text(value),
-                        );
-                      }).toList(),
-                      onChanged: (String? newValue) {
-                        if (newValue != null) {
-                          setState(() {
-                            _selectedSemester = newValue;
-                          });
-                          // Filter courses by semester
-                          ref
-                              .read(courseInstructorProvider.notifier)
-                              .filterCoursesBySemester(newValue);
-                        }
-                      },
-                    ),
-                  ),
+                // Semester Filter Widget
+                SemesterFilterInstructor(
+                  selectedSemesterId: _selectedSemesterId,
+                  onSemesterChanged: (String semesterId) {
+                    setState(() {
+                      _selectedSemesterId = semesterId;
+                    });
+                    // Filter courses by semester ID
+                    ref
+                        .read(courseInstructorProvider.notifier)
+                        .filterCoursesBySemester(semesterId);
+                  },
                 ),
               ],
             ),

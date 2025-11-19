@@ -1,18 +1,26 @@
+// ========================================
+// FILE: assignment_detail_page.dart - REFACTORED
+// MÔ TẢ: UI Component cho Assignment Detail với proper architecture
+// ARCHITECTURE: Presentation Layer - chỉ UI logic, không có business logic
+// ========================================
+
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../../../../domain/models/assignment_model.dart';
 import '../../../../../domain/models/course_model.dart';
 import '../../../../../domain/models/submission_model.dart';
-import '../../../../../data/repositories/submission/submission_repository.dart';
+import '../../../../../application/controllers/submission/submission_controller.dart';
+import '../../../../../application/controllers/assignment/assignment_controller.dart';
 import '../../../../../core/theme/app_colors.dart';
 
-// Web imports disabled for Windows compatibility
-// import 'dart:html' as html;
+// ========================================
+// ASSIGNMENT DETAIL VIEW WIDGET
+// ========================================
 
-// View widget for assignment detail (used within same page, no rebuild)
-class AssignmentDetailView extends StatefulWidget {
+class AssignmentDetailView extends ConsumerStatefulWidget {
   final Assignment assignment;
   final CourseModel course;
   final VoidCallback onBack;
@@ -25,91 +33,50 @@ class AssignmentDetailView extends StatefulWidget {
   });
 
   @override
-  State<AssignmentDetailView> createState() => _AssignmentDetailViewState();
+  ConsumerState<AssignmentDetailView> createState() =>
+      _AssignmentDetailViewState();
 }
 
-class _AssignmentDetailViewState extends State<AssignmentDetailView> {
+class _AssignmentDetailViewState extends ConsumerState<AssignmentDetailView> {
+  // ========================================
+  // UI STATE (Only UI-related state, no business logic)
+  // ========================================
   List<PlatformFile> _selectedFiles = [];
   bool _isDragging = false;
-  bool _isSubmitted = false;
   String? _submittedLink;
-  SubmissionModel? _currentSubmission;
-  bool _isLoadingSubmission = true;
 
   @override
   void initState() {
     super.initState();
     _setupDragAndDrop();
-    _loadSubmission();
+    _loadSubmissionData();
   }
 
-  Future<void> _loadSubmission() async {
-    try {
-      setState(() {
-        _isLoadingSubmission = true;
-      });
+  // ========================================
+  // INITIALIZATION METHODS
+  // ========================================
 
-      print('DEBUG: ========== LOADING SUBMISSION ==========');
-      print('DEBUG: Course ID: ${widget.course.id}');
-      print('DEBUG: Assignment ID: ${widget.assignment.id}');
-
-      final submission =
-          await SubmissionRepository.getUserSubmissionForAssignment(
-        widget.course.id,
-        widget.assignment.id,
-      );
-
-      if (submission != null) {
-        print('DEBUG: ✅ Submission loaded: ${submission.id}');
-        print('DEBUG: Status: ${submission.status.name}');
-        print('DEBUG: Submitted at: ${submission.submittedAt}');
-        print('DEBUG: Attachments: ${submission.attachments.length}');
-
-        setState(() {
-          _currentSubmission = submission;
-          _isSubmitted = submission.status == SubmissionStatus.submitted ||
-              submission.status == SubmissionStatus.graded ||
-              submission.status == SubmissionStatus.returned;
-
-          // Load submitted link if available
-          if (submission.attachments.isNotEmpty) {
-            _submittedLink = submission.attachments.first.url;
-          } else if (submission.textContent != null &&
-              submission.textContent!.isNotEmpty) {
-            // Check if textContent is a URL
-            final uri = Uri.tryParse(submission.textContent!);
-            if (uri != null &&
-                (uri.scheme == 'http' || uri.scheme == 'https')) {
-              _submittedLink = submission.textContent;
-            }
-          }
-        });
-      } else {
-        print('DEBUG: ⚠️ No submission found');
-        setState(() {
-          _currentSubmission = null;
-          _isSubmitted = false;
-        });
-      }
-    } catch (e, stackTrace) {
-      print('DEBUG: ❌ Error loading submission: $e');
-      print('DEBUG: Stack trace: $stackTrace');
-    } finally {
-      setState(() {
-        _isLoadingSubmission = false;
+  void _loadSubmissionData() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      // Use controller to load submission data
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref
+            .read(submissionControllerProvider.notifier)
+            .loadSubmissionForAssignment(widget.assignment.id, user.uid);
       });
     }
   }
 
   void _setupDragAndDrop() {
     // Drag and drop only supported on web platform
-    // Non-web platforms will use file picker instead
     if (!kIsWeb) return;
-
-    // Web-specific drag and drop setup would go here
-    // For now, disabled to prevent compilation errors on Windows
     print('Drag and drop setup skipped on non-web platform');
   }
+
+  // ========================================
+  // UI EVENT HANDLERS (Delegate to Controllers)
+  // ========================================
 
   Future<void> _handleFilePick() async {
     try {
@@ -122,20 +89,10 @@ class _AssignmentDetailViewState extends State<AssignmentDetailView> {
         setState(() {
           _selectedFiles.addAll(result.files);
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Selected ${result.files.length} file(s)'),
-            backgroundColor: AppColors.success,
-          ),
-        );
+        _showSuccessMessage('Selected ${result.files.length} file(s)');
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error picking files: $e'),
-          backgroundColor: AppColors.error,
-        ),
-      );
+      _showErrorMessage('Error picking files: $e');
     }
   }
 
@@ -150,20 +107,10 @@ class _AssignmentDetailViewState extends State<AssignmentDetailView> {
         setState(() {
           _selectedFiles.addAll(result.files);
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Selected ${result.files.length} image(s)'),
-            backgroundColor: AppColors.success,
-          ),
-        );
+        _showSuccessMessage('Selected ${result.files.length} image(s)');
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error picking images: $e'),
-          backgroundColor: AppColors.error,
-        ),
-      );
+      _showErrorMessage('Error picking images: $e');
     }
   }
 
@@ -208,18 +155,120 @@ class _AssignmentDetailViewState extends State<AssignmentDetailView> {
                   _submittedLink = link;
                 });
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Link added'),
-                    backgroundColor: AppColors.success,
-                  ),
-                );
+                _showSuccessMessage('Link added');
               }
             },
             child:
                 const Text('Add', style: TextStyle(color: AppColors.primary)),
           ),
         ],
+      ),
+    );
+  }
+
+  // ========================================
+  // SUBMISSION HANDLERS (Use Controllers)
+  // ========================================
+
+  Future<void> _handleSubmit() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      _showErrorMessage('Please login to submit');
+      return;
+    }
+
+    final currentSubmission = ref.read(currentSubmissionProvider);
+    final submissionController =
+        ref.read(submissionControllerProvider.notifier);
+
+    // Prepare attachments from selected files
+    final attachments = <AttachmentModel>[];
+    if (_submittedLink != null && _submittedLink != 'Drive file') {
+      attachments.add(AttachmentModel(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        name: 'Link submission',
+        url: _submittedLink!,
+        mimeType: 'text/plain',
+        sizeInBytes: 0,
+        uploadedAt: DateTime.now(),
+      ));
+    }
+
+    bool success;
+    if (currentSubmission != null) {
+      // Update existing submission
+      success = await submissionController.updateSubmission(
+        assignmentId: widget.assignment.id,
+        studentId: user.uid,
+        attachments: attachments,
+        linkContent: _submittedLink,
+      );
+    } else {
+      // Create new submission
+      success = await submissionController.createSubmission(
+        assignment: widget.assignment,
+        course: widget.course,
+        studentId: user.uid,
+        studentName: user.displayName ?? user.email ?? 'Unknown',
+        attachments: attachments,
+        linkContent: _submittedLink,
+      );
+    }
+
+    if (success) {
+      _showSuccessMessage('Submitted successfully');
+      // Clear UI state
+      setState(() {
+        _selectedFiles.clear();
+        _submittedLink = null;
+      });
+    } else {
+      final error = ref.read(submissionsErrorProvider);
+      _showErrorMessage(error ?? 'Failed to submit. Please try again.');
+    }
+  }
+
+  Future<void> _handleUnsubmit() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final submissionController =
+        ref.read(submissionControllerProvider.notifier);
+    final success = await submissionController.unsubmitAssignment(
+      widget.assignment.id,
+      user.uid,
+    );
+
+    if (success) {
+      _showSuccessMessage('Unsubmitted');
+      setState(() {
+        _selectedFiles.clear();
+        _submittedLink = null;
+      });
+    } else {
+      final error = ref.read(submissionsErrorProvider);
+      _showErrorMessage(error ?? 'Failed to unsubmit');
+    }
+  }
+
+  // ========================================
+  // UI HELPER METHODS
+  // ========================================
+
+  void _showSuccessMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppColors.success,
+      ),
+    );
+  }
+
+  void _showErrorMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppColors.error,
       ),
     );
   }
@@ -250,108 +299,13 @@ class _AssignmentDetailViewState extends State<AssignmentDetailView> {
     return '$displayHour:$minute $period';
   }
 
-  Future<void> _handleSubmit() async {
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please login to submit'),
-            backgroundColor: AppColors.error,
-          ),
-        );
-        return;
-      }
-
-      // Prepare attachments from selected files
-      final attachments = <AttachmentModel>[];
-      if (_submittedLink != null && _submittedLink != 'Drive file') {
-        // If it's a link, create an attachment for it
-        attachments.add(AttachmentModel(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          name: 'Link submission',
-          url: _submittedLink!,
-          mimeType: 'text/plain',
-          sizeInBytes: 0,
-          uploadedAt: DateTime.now(),
-        ));
-      }
-
-      // Determine attempt number
-      final attemptNumber = _currentSubmission != null
-          ? _currentSubmission!.attemptNumber + 1
-          : 1;
-
-      // Check if late
-      final now = DateTime.now();
-      final isLate = now.isAfter(widget.assignment.deadline);
-
-      // Create submission model
-      final submission = SubmissionModel(
-        id: _currentSubmission?.id ?? '',
-        assignmentId: widget.assignment.id,
-        studentId: user.uid,
-        studentName: user.displayName ?? user.email ?? 'Unknown',
-        courseId: widget.course.id,
-        submittedAt: DateTime.now(),
-        status: SubmissionStatus.submitted,
-        attachments: attachments,
-        textContent: _submittedLink,
-        isLate: isLate,
-        attemptNumber: attemptNumber,
-        lastModified: DateTime.now(),
-      );
-
-      // Submit to Firestore
-      bool success;
-      if (_currentSubmission != null) {
-        // Update existing submission
-        success = await SubmissionRepository.updateSubmission(
-          widget.course.id,
-          _currentSubmission!.id,
-          submission,
-        );
-      } else {
-        // Create new submission
-        success = await SubmissionRepository.submitAssignment(
-          widget.course.id,
-          submission,
-        );
-      }
-
-      if (success) {
-        // Reload submission to get updated data
-        await _loadSubmission();
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Submitted successfully'),
-            backgroundColor: AppColors.success,
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to submit. Please try again.'),
-            backgroundColor: AppColors.error,
-          ),
-        );
-      }
-    } catch (e) {
-      print('DEBUG: Error submitting: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: $e'),
-          backgroundColor: AppColors.error,
-        ),
-      );
-    }
-  }
-
-  // Get work status based on deadline and submission
-  String _getWorkStatus() {
+  // Get work status based on deadline and submission (moved from business logic)
+  String _getWorkStatus(SubmissionModel? submission) {
     // If submitted, always show "Turned in"
-    if (_isSubmitted) {
+    if (submission != null &&
+        (submission.status == SubmissionStatus.submitted ||
+            submission.status == SubmissionStatus.graded ||
+            submission.status == SubmissionStatus.returned)) {
       return 'turned_in';
     }
 
@@ -374,14 +328,11 @@ class _AssignmentDetailViewState extends State<AssignmentDetailView> {
       return 'assigned';
     }
 
-    // Default: assigned (not yet submitted)
     return 'assigned';
   }
 
   // Get status display text and color
-  Map<String, dynamic> _getWorkStatusDisplay() {
-    final status = _getWorkStatus();
-
+  Map<String, dynamic> _getWorkStatusDisplay(String status) {
     switch (status) {
       case 'missing':
         return {
@@ -421,8 +372,34 @@ class _AssignmentDetailViewState extends State<AssignmentDetailView> {
     }
   }
 
+  // ========================================
+  // BUILD METHOD (Pure UI)
+  // ========================================
+
   @override
   Widget build(BuildContext context) {
+    // Watch providers for reactive updates
+    final isLoading = ref.watch(submissionsLoadingProvider);
+    final isSubmitting = ref.watch(submissionSubmittingProvider);
+    final currentSubmission = ref.watch(currentSubmissionProvider);
+    final error = ref.watch(submissionsErrorProvider);
+
+    // Show error if exists
+    if (error != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showErrorMessage(error);
+        ref.read(submissionControllerProvider.notifier).clearError();
+      });
+    }
+
+    final isSubmitted = currentSubmission != null &&
+        (currentSubmission.status == SubmissionStatus.submitted ||
+            currentSubmission.status == SubmissionStatus.graded ||
+            currentSubmission.status == SubmissionStatus.returned);
+
+    final status = _getWorkStatus(currentSubmission);
+    final statusDisplay = _getWorkStatusDisplay(status);
+
     return Container(
       color: AppColors.bgDark,
       child: Column(
@@ -453,12 +430,18 @@ class _AssignmentDetailViewState extends State<AssignmentDetailView> {
                         // Main Content Area (Left)
                         Expanded(
                           flex: 3,
-                          child: _buildMainContent(),
+                          child: _buildMainContent(currentSubmission),
                         ),
                         // Sidebar (Right)
                         SizedBox(
                           width: 360,
-                          child: _buildSidebarContent(),
+                          child: _buildSidebarContent(
+                            isLoading,
+                            isSubmitting,
+                            currentSubmission,
+                            isSubmitted,
+                            statusDisplay,
+                          ),
                         ),
                       ],
                     ),
@@ -469,8 +452,14 @@ class _AssignmentDetailViewState extends State<AssignmentDetailView> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildMainContent(),
-                      _buildSidebarContent(),
+                      _buildMainContent(currentSubmission),
+                      _buildSidebarContent(
+                        isLoading,
+                        isSubmitting,
+                        currentSubmission,
+                        isSubmitted,
+                        statusDisplay,
+                      ),
                     ],
                   ),
                 );
@@ -482,7 +471,11 @@ class _AssignmentDetailViewState extends State<AssignmentDetailView> {
     );
   }
 
-  Widget _buildMainContent() {
+  // ========================================
+  // UI COMPONENT BUILDERS
+  // ========================================
+
+  Widget _buildMainContent(SubmissionModel? currentSubmission) {
     return Container(
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(24),
@@ -520,10 +513,8 @@ class _AssignmentDetailViewState extends State<AssignmentDetailView> {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        const Text(
-                          '•',
-                          style: TextStyle(color: AppColors.textMuted),
-                        ),
+                        const Text('•',
+                            style: TextStyle(color: AppColors.textMuted)),
                         const SizedBox(width: 8),
                         Text(
                           _formatDate(widget.assignment.startDate),
@@ -538,20 +529,18 @@ class _AssignmentDetailViewState extends State<AssignmentDetailView> {
                 ),
               ),
               // Points badge - only show when graded
-              if (_currentSubmission != null && _currentSubmission!.isGraded)
+              if (currentSubmission != null && currentSubmission.isGraded)
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   decoration: BoxDecoration(
                     color: AppColors.surfaceVariant,
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    _currentSubmission!.maxScore != null
-                        ? '${_currentSubmission!.score!.toStringAsFixed(0)}/${_currentSubmission!.maxScore!.toStringAsFixed(0)} points'
-                        : '${_currentSubmission!.score!.toStringAsFixed(0)} points',
+                    currentSubmission.maxScore != null
+                        ? '${currentSubmission.score!.toStringAsFixed(0)}/${currentSubmission.maxScore!.toStringAsFixed(0)} points'
+                        : '${currentSubmission.score!.toStringAsFixed(0)} points',
                     style: const TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 14,
@@ -681,10 +670,10 @@ class _AssignmentDetailViewState extends State<AssignmentDetailView> {
             ],
           ),
           const SizedBox(height: 16),
-          Center(
+          const Center(
             child: Text(
               'No comments yet',
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppColors.textMuted,
                 fontSize: 14,
               ),
@@ -695,7 +684,13 @@ class _AssignmentDetailViewState extends State<AssignmentDetailView> {
     );
   }
 
-  Widget _buildSidebarContent() {
+  Widget _buildSidebarContent(
+    bool isLoading,
+    bool isSubmitting,
+    SubmissionModel? currentSubmission,
+    bool isSubmitted,
+    Map<String, dynamic> statusDisplay,
+  ) {
     return Container(
       margin: const EdgeInsets.only(top: 16, right: 16, bottom: 16),
       child: SingleChildScrollView(
@@ -720,12 +715,7 @@ class _AssignmentDetailViewState extends State<AssignmentDetailView> {
                   _isDragging = false;
                   _selectedFiles.addAll(data);
                 });
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Added ${data.length} file(s)'),
-                    backgroundColor: AppColors.success,
-                  ),
-                );
+                _showSuccessMessage('Added ${data.length} file(s)');
               },
               builder: (context, candidateData, rejectedData) {
                 return Container(
@@ -752,12 +742,12 @@ class _AssignmentDetailViewState extends State<AssignmentDetailView> {
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(color: AppColors.primary),
                           ),
-                          child: Row(
+                          child: const Row(
                             children: [
-                              const Icon(Icons.cloud_upload,
+                              Icon(Icons.cloud_upload,
                                   color: AppColors.primary),
-                              const SizedBox(width: 8),
-                              const Text(
+                              SizedBox(width: 8),
+                              Text(
                                 'Drop files here',
                                 style: TextStyle(
                                   color: AppColors.primary,
@@ -768,475 +758,464 @@ class _AssignmentDetailViewState extends State<AssignmentDetailView> {
                           ),
                         ),
                       // Header with status
-                      Builder(
-                        builder: (context) {
-                          final statusDisplay = _getWorkStatusDisplay();
-                          return Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Your work',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                  color: AppColors.textPrimary,
-                                ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Your work',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: statusDisplay['bgColor'] as Color,
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: statusDisplay['borderColor'] as Color,
+                                width: 1,
                               ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: statusDisplay['bgColor'] as Color,
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(
-                                    color:
-                                        statusDisplay['borderColor'] as Color,
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Text(
-                                  statusDisplay['text'] as String,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: statusDisplay['color'] as Color,
-                                    letterSpacing: 0.3,
-                                  ),
-                                ),
+                            ),
+                            child: Text(
+                              statusDisplay['text'] as String,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: statusDisplay['color'] as Color,
+                                letterSpacing: 0.3,
                               ),
-                            ],
-                          );
-                        },
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 16),
                       Divider(color: AppColors.border),
                       const SizedBox(height: 16),
-                      // Show submitted file/link if submitted
-                      if (_isLoadingSubmission)
+
+                      // Loading indicator
+                      if (isLoading)
                         const Center(
                           child: Padding(
                             padding: EdgeInsets.all(16.0),
                             child: CircularProgressIndicator(),
                           ),
                         )
-                      else if (_isSubmitted && _currentSubmission != null) ...[
-                        if (_currentSubmission!.attachments.isNotEmpty)
-                          ..._currentSubmission!.attachments
-                              .map((attachment) => Container(
-                                    margin: const EdgeInsets.only(bottom: 8),
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.surfaceVariant,
-                                      borderRadius: BorderRadius.circular(8),
-                                      border:
-                                          Border.all(color: AppColors.border),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Icon(
-                                          attachment.url.contains('drive') ||
-                                                  attachment.url
-                                                      .contains('google')
-                                              ? Icons.drive_file_move
-                                              : Icons.link,
-                                          color: AppColors.primary,
-                                          size: 24,
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                attachment.name,
-                                                style: const TextStyle(
-                                                  color: AppColors.primary,
-                                                  fontWeight: FontWeight.w500,
-                                                  decoration:
-                                                      TextDecoration.underline,
-                                                ),
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                              const SizedBox(height: 4),
-                                              Text(
-                                                attachment.sizeInBytes > 0
-                                                    ? '${(attachment.sizeInBytes / 1024).toStringAsFixed(1)} KB'
-                                                    : 'Link',
-                                                style: const TextStyle(
-                                                  color:
-                                                      AppColors.textSecondary,
-                                                  fontSize: 12,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ))
-                              .toList()
-                        else if (_currentSubmission!.textContent != null &&
-                            _currentSubmission!.textContent!.isNotEmpty)
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: AppColors.surfaceVariant,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: AppColors.border),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.link,
-                                  color: AppColors.primary,
-                                  size: 24,
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        _currentSubmission!.textContent!,
-                                        style: const TextStyle(
-                                          color: AppColors.primary,
-                                          fontWeight: FontWeight.w500,
-                                          decoration: TextDecoration.underline,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        'Submitted ${_formatDate(_currentSubmission!.submittedAt)}',
-                                        style: const TextStyle(
-                                          color: AppColors.textSecondary,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                      // Show submitted content if submitted
+                      else if (isSubmitted && currentSubmission != null) ...[
+                        _buildSubmittedContent(currentSubmission),
                         const SizedBox(height: 12),
                       ],
-                      // Add or Create Button with Dropdown (only show if not submitted and no files)
-                      if (!_isSubmitted &&
+
+                      // Add or Create Button with Dropdown (only show if not submitted)
+                      if (!isSubmitted &&
+                          !isLoading &&
                           _selectedFiles.isEmpty &&
                           _submittedLink == null)
-                        Center(
-                          child: PopupMenuButton<String>(
-                            offset: const Offset(0, 50),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              side: BorderSide(color: AppColors.border),
-                            ),
-                            color: AppColors.surface,
-                            child: Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 12),
-                              decoration: BoxDecoration(
-                                border: Border.all(color: AppColors.primary),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(Icons.add,
-                                      size: 18, color: AppColors.primary),
-                                  const SizedBox(width: 8),
-                                  const Text(
-                                    'Add or create',
-                                    style: TextStyle(color: AppColors.primary),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  const Icon(Icons.arrow_drop_down,
-                                      color: AppColors.primary),
-                                ],
-                              ),
-                            ),
-                            itemBuilder: (BuildContext context) => [
-                              PopupMenuItem<String>(
-                                value: 'file',
-                                child: Row(
-                                  children: [
-                                    const Icon(Icons.insert_drive_file,
-                                        size: 20, color: AppColors.textPrimary),
-                                    const SizedBox(width: 12),
-                                    const Text('File',
-                                        style: TextStyle(
-                                            color: AppColors.textPrimary)),
-                                  ],
-                                ),
-                              ),
-                              PopupMenuItem<String>(
-                                value: 'link',
-                                child: Row(
-                                  children: [
-                                    const Icon(Icons.link,
-                                        size: 20, color: AppColors.textPrimary),
-                                    const SizedBox(width: 12),
-                                    const Text('Link',
-                                        style: TextStyle(
-                                            color: AppColors.textPrimary)),
-                                  ],
-                                ),
-                              ),
-                              PopupMenuItem<String>(
-                                value: 'image',
-                                child: Row(
-                                  children: [
-                                    const Icon(Icons.image,
-                                        size: 20, color: AppColors.textPrimary),
-                                    const SizedBox(width: 12),
-                                    const Text('Hình',
-                                        style: TextStyle(
-                                            color: AppColors.textPrimary)),
-                                  ],
-                                ),
-                              ),
-                            ],
-                            onSelected: (String value) {
-                              if (value == 'file') {
-                                _handleFilePick();
-                              } else if (value == 'link') {
-                                _handleLinkAdd();
-                              } else if (value == 'image') {
-                                _handleImagePick();
-                              }
-                            },
-                          ),
-                        ),
+                        _buildAddCreateButton(),
+
                       // Selected Files Display (only show if not submitted)
-                      if (!_isSubmitted && _selectedFiles.isNotEmpty) ...[
+                      if (!isSubmitted && _selectedFiles.isNotEmpty) ...[
                         const SizedBox(height: 12),
-                        ..._selectedFiles
-                            .map((file) => Container(
-                                  margin: const EdgeInsets.only(bottom: 8),
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.surfaceVariant,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: AppColors.border),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      const Icon(Icons.insert_drive_file,
-                                          color: AppColors.primary, size: 24),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              file.name,
-                                              style: const TextStyle(
-                                                color: AppColors.textPrimary,
-                                                fontWeight: FontWeight.w500,
-                                              ),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                            Text(
-                                              '${(file.size / 1024).toStringAsFixed(1)} KB',
-                                              style: const TextStyle(
-                                                color: AppColors.textSecondary,
-                                                fontSize: 12,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      IconButton(
-                                        icon: const Icon(Icons.close,
-                                            color: AppColors.textSecondary,
-                                            size: 20),
-                                        onPressed: () {
-                                          setState(() {
-                                            _selectedFiles.remove(file);
-                                          });
-                                        },
-                                      ),
-                                    ],
-                                  ),
-                                ))
-                            .toList(),
+                        ..._selectedFiles.map((file) => _buildFileItem(file)),
                       ],
+
                       const SizedBox(height: 12),
+
                       // Submit/Unsubmit Button
-                      Center(
-                        child: _isSubmitted
-                            ? OutlinedButton(
-                                onPressed: () {
-                                  setState(() {
-                                    _isSubmitted = false;
-                                    _submittedLink = null;
-                                    _selectedFiles.clear();
-                                  });
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Unsubmitted'),
-                                    ),
-                                  );
-                                },
-                                style: OutlinedButton.styleFrom(
-                                  side: BorderSide(color: AppColors.border),
-                                  minimumSize: const Size(double.infinity, 40),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                ),
-                                child: const Text(
-                                  'Unsubmit',
-                                  style: TextStyle(
-                                    color: AppColors.primary,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              )
-                            : ElevatedButton(
-                                onPressed: (_selectedFiles.isNotEmpty ||
-                                        _submittedLink != null)
-                                    ? () => _handleSubmit()
-                                    : null,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.primary,
-                                  disabledBackgroundColor:
-                                      AppColors.surfaceVariant,
-                                  minimumSize: const Size(double.infinity, 40),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                ),
-                                child: Text(
-                                  (_selectedFiles.isNotEmpty ||
-                                          _submittedLink != null)
-                                      ? 'Submit'
-                                      : 'Mark as done',
-                                  style: TextStyle(
-                                    color: (_selectedFiles.isNotEmpty ||
-                                            _submittedLink != null)
-                                        ? AppColors.textPrimary
-                                        : AppColors.textSecondary,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                      ),
+                      _buildSubmitButton(isSubmitted, isSubmitting),
                     ],
                   ),
                 );
               },
             ),
             const SizedBox(height: 16),
-            // Private Comments Section (separate card)
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: AppColors.border),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+            _buildPrivateCommentsSection(),
+            const SizedBox(height: 16),
+            _buildDetailsSection(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSubmittedContent(SubmissionModel submission) {
+    if (submission.attachments.isNotEmpty) {
+      return Column(
+        children: submission.attachments
+            .map((attachment) => Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceVariant,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Row(
                     children: [
-                      const Icon(
-                        Icons.person_outline,
-                        size: 18,
-                        color: AppColors.textPrimary,
+                      Icon(
+                        attachment.url.contains('drive') ||
+                                attachment.url.contains('google')
+                            ? Icons.drive_file_move
+                            : Icons.link,
+                        color: AppColors.primary,
+                        size: 24,
                       ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'Private comments',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: AppColors.textPrimary,
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              attachment.name,
+                              style: const TextStyle(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w500,
+                                decoration: TextDecoration.underline,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              attachment.sizeInBytes > 0
+                                  ? '${(attachment.sizeInBytes / 1024).toStringAsFixed(1)} KB'
+                                  : 'Link',
+                              style: const TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  Divider(color: AppColors.border),
-                  const SizedBox(height: 8),
-                  TextButton(
-                    onPressed: () {
-                      // TODO: Add private comment
-                    },
-                    style: TextButton.styleFrom(
-                      padding: EdgeInsets.zero,
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                    child: Text(
-                      'Add comment to ${widget.course.instructor}',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w400,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            // Assignment Details Card
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: AppColors.border),
-              ),
+                ))
+            .toList(),
+      );
+    } else if (submission.textContent != null &&
+        submission.textContent!.isNotEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceVariant,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.link, color: AppColors.primary, size: 24),
+            const SizedBox(width: 12),
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Details',
-                    style: TextStyle(
-                      fontSize: 14,
+                  Text(
+                    submission.textContent!,
+                    style: const TextStyle(
+                      color: AppColors.primary,
                       fontWeight: FontWeight.w500,
-                      color: AppColors.textPrimary,
+                      decoration: TextDecoration.underline,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Submitted ${_formatDate(submission.submittedAt)}',
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  _buildDetailItem(
-                    'Due',
-                    '${_formatDate(widget.assignment.deadline)} at ${_formatTime(widget.assignment.deadline)}',
-                    Icons.calendar_today,
-                  ),
-                  const SizedBox(height: 12),
-                  _buildDetailItem(
-                    'Attempts',
-                    '${widget.assignment.maxSubmissionAttempts}',
-                    Icons.repeat,
-                  ),
-                  if (widget.assignment.allowLateSubmissions) ...[
-                    const SizedBox(height: 12),
-                    _buildDetailItem(
-                      'Late submission',
-                      'Allowed',
-                      Icons.schedule,
-                    ),
-                  ],
                 ],
               ),
             ),
           ],
         ),
+      );
+    }
+    return const SizedBox.shrink();
+  }
+
+  Widget _buildAddCreateButton() {
+    return Center(
+      child: PopupMenuButton<String>(
+        offset: const Offset(0, 50),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+          side: BorderSide(color: AppColors.border),
+        ),
+        color: AppColors.surface,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            border: Border.all(color: AppColors.primary),
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.add, size: 18, color: AppColors.primary),
+              SizedBox(width: 8),
+              Text('Add or create', style: TextStyle(color: AppColors.primary)),
+              SizedBox(width: 8),
+              Icon(Icons.arrow_drop_down, color: AppColors.primary),
+            ],
+          ),
+        ),
+        itemBuilder: (BuildContext context) => [
+          const PopupMenuItem<String>(
+            value: 'file',
+            child: Row(
+              children: [
+                Icon(Icons.insert_drive_file,
+                    size: 20, color: AppColors.textPrimary),
+                SizedBox(width: 12),
+                Text('File', style: TextStyle(color: AppColors.textPrimary)),
+              ],
+            ),
+          ),
+          const PopupMenuItem<String>(
+            value: 'link',
+            child: Row(
+              children: [
+                Icon(Icons.link, size: 20, color: AppColors.textPrimary),
+                SizedBox(width: 12),
+                Text('Link', style: TextStyle(color: AppColors.textPrimary)),
+              ],
+            ),
+          ),
+          const PopupMenuItem<String>(
+            value: 'image',
+            child: Row(
+              children: [
+                Icon(Icons.image, size: 20, color: AppColors.textPrimary),
+                SizedBox(width: 12),
+                Text('Hình', style: TextStyle(color: AppColors.textPrimary)),
+              ],
+            ),
+          ),
+        ],
+        onSelected: (String value) {
+          switch (value) {
+            case 'file':
+              _handleFilePick();
+              break;
+            case 'link':
+              _handleLinkAdd();
+              break;
+            case 'image':
+              _handleImagePick();
+              break;
+          }
+        },
+      ),
+    );
+  }
+
+  Widget _buildFileItem(PlatformFile file) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceVariant,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.insert_drive_file,
+              color: AppColors.primary, size: 24),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  file.name,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  '${(file.size / 1024).toStringAsFixed(1)} KB',
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close,
+                color: AppColors.textSecondary, size: 20),
+            onPressed: () {
+              setState(() {
+                _selectedFiles.remove(file);
+              });
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSubmitButton(bool isSubmitted, bool isSubmitting) {
+    return Center(
+      child: isSubmitted
+          ? OutlinedButton(
+              onPressed: isSubmitting ? null : _handleUnsubmit,
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(color: AppColors.border),
+                minimumSize: const Size(double.infinity, 40),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              child: Text(
+                isSubmitting ? 'Processing...' : 'Unsubmit',
+                style: const TextStyle(
+                  color: AppColors.primary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            )
+          : ElevatedButton(
+              onPressed: isSubmitting
+                  ? null
+                  : (_selectedFiles.isNotEmpty || _submittedLink != null)
+                      ? _handleSubmit
+                      : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                disabledBackgroundColor: AppColors.surfaceVariant,
+                minimumSize: const Size(double.infinity, 40),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              child: Text(
+                isSubmitting
+                    ? 'Submitting...'
+                    : (_selectedFiles.isNotEmpty || _submittedLink != null)
+                        ? 'Submit'
+                        : 'Mark as done',
+                style: TextStyle(
+                  color: (_selectedFiles.isNotEmpty || _submittedLink != null)
+                      ? AppColors.textPrimary
+                      : AppColors.textSecondary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+    );
+  }
+
+  Widget _buildPrivateCommentsSection() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.person_outline,
+                  size: 18, color: AppColors.textPrimary),
+              SizedBox(width: 8),
+              Text(
+                'Private comments',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Divider(color: AppColors.border),
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: () {
+              // TODO: Add private comment
+            },
+            style: TextButton.styleFrom(
+              padding: EdgeInsets.zero,
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: Text(
+              'Add comment to ${widget.course.instructor}',
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w400,
+                color: AppColors.primary,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailsSection() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Details',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 16),
+          _buildDetailItem(
+            'Due',
+            '${_formatDate(widget.assignment.deadline)} at ${_formatTime(widget.assignment.deadline)}',
+            Icons.calendar_today,
+          ),
+          const SizedBox(height: 12),
+          _buildDetailItem(
+            'Attempts',
+            '${widget.assignment.maxSubmissionAttempts}',
+            Icons.repeat,
+          ),
+          if (widget.assignment.allowLateSubmissions) ...[
+            const SizedBox(height: 12),
+            _buildDetailItem(
+              'Late submission',
+              'Allowed',
+              Icons.schedule,
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -1274,8 +1253,11 @@ class _AssignmentDetailViewState extends State<AssignmentDetailView> {
   }
 }
 
-// Full page version (for navigation if needed)
-class AssignmentDetailPage extends StatelessWidget {
+// ========================================
+// FULL PAGE VERSION (for navigation)
+// ========================================
+
+class AssignmentDetailPage extends ConsumerWidget {
   final Assignment assignment;
   final CourseModel course;
 
@@ -1286,7 +1268,7 @@ class AssignmentDetailPage extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       backgroundColor: AppColors.bgDark,
       appBar: AppBar(

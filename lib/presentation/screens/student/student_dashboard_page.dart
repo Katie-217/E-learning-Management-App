@@ -36,14 +36,14 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
 
   String? _selectedSemesterId;
   String _userName = 'User';
-  
+
   // Summary metrics data
   int _coursesCount = 0;
   int _assignmentsCount = 0;
   int _pendingLateCount = 0;
   int _quizzesCount = 0;
   bool _isLoadingMetrics = true;
-  
+
   // Pie chart data
   double _assignmentsCompleted = 0.0;
   double _assignmentsPending = 0.0;
@@ -106,11 +106,13 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
 
       // Load all assignments from all courses
       List<Assignment> allAssignments = [];
-      Map<String, String> assignmentToCourseMap = {}; // assignmentId -> courseId
-      
+      Map<String, String> assignmentToCourseMap =
+          {}; // assignmentId -> courseId
+
       for (var course in courses) {
         try {
-          final assignments = await AssignmentRepository.getAssignmentsByCourse(course.id);
+          final assignments =
+              await AssignmentRepository.getAssignmentsByCourse(course.id);
           allAssignments.addAll(assignments);
           // Map assignment IDs to course IDs
           for (var assignment in assignments) {
@@ -122,35 +124,38 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
       }
 
       final now = DateTime.now();
-      
+
       // Count assignments
       final assignmentsCount = allAssignments.length;
-      
+
       // Load submissions for all assignments
-      Map<String, bool> assignmentSubmittedMap = {}; // assignmentId -> isSubmitted
+      Map<String, bool> assignmentSubmittedMap =
+          {}; // assignmentId -> isSubmitted
       int assignmentsCompleted = 0;
       int assignmentsPending = 0;
-      
+
       for (var assignment in allAssignments) {
         final courseId = assignmentToCourseMap[assignment.id];
         if (courseId != null) {
           try {
-            final submission = await SubmissionRepository.getUserSubmissionForAssignment(
-              courseId,
+            final submission =
+                await SubmissionRepository.getStudentSubmissionForAssignment(
               assignment.id,
+              user.uid, // studentId
             );
-            final isSubmitted = submission != null && 
-                                (submission.status == SubmissionStatus.submitted || 
-                                 submission.status == SubmissionStatus.graded);
+            final isSubmitted = submission != null &&
+                (submission.status == SubmissionStatus.submitted ||
+                    submission.status == SubmissionStatus.graded);
             assignmentSubmittedMap[assignment.id] = isSubmitted;
-            
+
             if (isSubmitted) {
               assignmentsCompleted++;
             } else {
               assignmentsPending++;
             }
           } catch (e) {
-            print('Error checking submission for assignment ${assignment.id}: $e');
+            print(
+                'Error checking submission for assignment ${assignment.id}: $e');
             assignmentSubmittedMap[assignment.id] = false;
             assignmentsPending++;
           }
@@ -159,17 +164,17 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
           assignmentsPending++;
         }
       }
-      
+
       // Count pending/late assignments (not submitted and deadline passed or upcoming)
       final pendingLate = allAssignments.where((a) {
         final isSubmitted = assignmentSubmittedMap[a.id] ?? false;
         if (isSubmitted) return false; // Exclude submitted assignments
-        
+
         // Pending: deadline in future
         // Late: deadline in past
         return a.deadline.isAfter(now) || a.deadline.isBefore(now);
       }).length;
-      
+
       // For now, quizzes count = 0 (need quiz repository or check assignment type)
       // TODO: Implement quiz repository or check assignment type field
       final quizzesCount = 0;
@@ -188,7 +193,8 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
         _isLoadingMetrics = false;
       });
 
-      print('DEBUG: Summary metrics loaded - Courses: $coursesCount, Assignments: $assignmentsCount, Completed: $assignmentsCompleted, Pending: $assignmentsPending, Pending/Late: $pendingLate');
+      print(
+          'DEBUG: Summary metrics loaded - Courses: $coursesCount, Assignments: $assignmentsCount, Completed: $assignmentsCompleted, Pending: $assignmentsPending, Pending/Late: $pendingLate');
     } catch (e) {
       print('Error loading summary metrics: $e');
       setState(() {
@@ -224,39 +230,39 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
   bool get _isReadonlySemester => _activeSemester.isReadonly;
 
   List<_SummaryMetric> get _summaryMetrics => [
-    _SummaryMetric(
-      icon: Icons.menu_book_outlined,
-      title: 'Courses',
-      value: _isLoadingMetrics ? '...' : '$_coursesCount',
-      bgStart: const Color(0xFF6366F1),
-      bgEnd: const Color(0xFF8B5CF6),
-      iconColor: const Color(0xFFACAFFF),
-    ),
-    _SummaryMetric(
-      icon: Icons.assignment_outlined,
-      title: 'Assignments',
-      value: _isLoadingMetrics ? '...' : '$_assignmentsCount',
-      bgStart: const Color(0xFFF97316),
-      bgEnd: const Color(0xFFFFB347),
-      iconColor: const Color(0xFFFFE0B5),
-    ),
-    _SummaryMetric(
-      icon: Icons.pending_actions_outlined,
-      title: 'Pending / Late',
-      value: _isLoadingMetrics ? '...' : '$_pendingLateCount',
-      bgStart: const Color(0xFFFF6B6B),
-      bgEnd: const Color(0xFFFF8E72),
-      iconColor: const Color(0xFFFFD6D6),
-    ),
-    _SummaryMetric(
-      icon: Icons.quiz_outlined,
-      title: 'Quizzes',
-      value: _isLoadingMetrics ? '...' : '$_quizzesCount',
-      bgStart: const Color(0xFF0EA5E9),
-      bgEnd: const Color(0xFF38BDF8),
-      iconColor: const Color(0xFFBEE8FF),
-    ),
-  ];
+        _SummaryMetric(
+          icon: Icons.menu_book_outlined,
+          title: 'Courses',
+          value: _isLoadingMetrics ? '...' : '$_coursesCount',
+          bgStart: const Color(0xFF6366F1),
+          bgEnd: const Color(0xFF8B5CF6),
+          iconColor: const Color(0xFFACAFFF),
+        ),
+        _SummaryMetric(
+          icon: Icons.assignment_outlined,
+          title: 'Assignments',
+          value: _isLoadingMetrics ? '...' : '$_assignmentsCount',
+          bgStart: const Color(0xFFF97316),
+          bgEnd: const Color(0xFFFFB347),
+          iconColor: const Color(0xFFFFE0B5),
+        ),
+        _SummaryMetric(
+          icon: Icons.pending_actions_outlined,
+          title: 'Pending / Late',
+          value: _isLoadingMetrics ? '...' : '$_pendingLateCount',
+          bgStart: const Color(0xFFFF6B6B),
+          bgEnd: const Color(0xFFFF8E72),
+          iconColor: const Color(0xFFFFD6D6),
+        ),
+        _SummaryMetric(
+          icon: Icons.quiz_outlined,
+          title: 'Quizzes',
+          value: _isLoadingMetrics ? '...' : '$_quizzesCount',
+          bgStart: const Color(0xFF0EA5E9),
+          bgEnd: const Color(0xFF38BDF8),
+          iconColor: const Color(0xFFBEE8FF),
+        ),
+      ];
 
   final List<_SubmissionItem> _recentSubmissions = const [
     _SubmissionItem(
@@ -307,7 +313,8 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
 
   Widget _buildQuizExamList(List<TaskModel> tasks) {
     final relevantTasks = tasks
-        .where((task) => task.type == TaskType.quiz || task.type == TaskType.exam)
+        .where(
+            (task) => task.type == TaskType.quiz || task.type == TaskType.exam)
         .toList()
       ..sort((a, b) => a.dateTime.compareTo(b.dateTime));
     if (relevantTasks.isEmpty) {
@@ -347,7 +354,6 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
           .toList(),
     );
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -446,131 +452,131 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
               const SidebarWidget(),
             Expanded(
               child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(18),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Hello $_userName',
-                                  style: const TextStyle(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.white,
-                                  ),
+                padding: const EdgeInsets.all(18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Hello $_userName',
+                                style: const TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
                                 ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  _isReadonlySemester
-                                      ? 'Viewing past semester (read-only)'
-                                      : "Let's learn something new today!",
-                                  style: TextStyle(color: Colors.grey[400]),
-                                ),
-                              ],
-                            ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _isReadonlySemester
+                                    ? 'Viewing past semester (read-only)'
+                                    : "Let's learn something new today!",
+                                style: TextStyle(color: Colors.grey[400]),
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 16),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 10),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF111827),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.grey[800]!),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.school_outlined, size: 20),
-                                const SizedBox(width: 8),
-                                DropdownButtonHideUnderline(
-                                  child: DropdownButton<String>(
-                                    dropdownColor: const Color(0xFF1F2937),
-                                    value:
-                                        _selectedSemesterId ?? _activeSemester.id,
-                                    borderRadius: BorderRadius.circular(12),
-                                    icon: const Icon(
-                                      Icons.expand_more,
-                                      color: Colors.white70,
-                                    ),
-                                    items: _semesters
-                                        .map(
-                                          (semester) => DropdownMenuItem(
-                                            value: semester.id,
-                                            child: Text(
-                                              semester.label,
-                                              style: const TextStyle(
-                                                color: Colors.white,
-                                                fontWeight: FontWeight.w500,
-                                              ),
+                        ),
+                        const SizedBox(width: 16),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF111827),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey[800]!),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.school_outlined, size: 20),
+                              const SizedBox(width: 8),
+                              DropdownButtonHideUnderline(
+                                child: DropdownButton<String>(
+                                  dropdownColor: const Color(0xFF1F2937),
+                                  value:
+                                      _selectedSemesterId ?? _activeSemester.id,
+                                  borderRadius: BorderRadius.circular(12),
+                                  icon: const Icon(
+                                    Icons.expand_more,
+                                    color: Colors.white70,
+                                  ),
+                                  items: _semesters
+                                      .map(
+                                        (semester) => DropdownMenuItem(
+                                          value: semester.id,
+                                          child: Text(
+                                            semester.label,
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.w500,
                                             ),
                                           ),
-                                        )
-                                        .toList(),
-                                    onChanged: (value) {
-                                      if (value == null) return;
-                                      setState(() {
-                                        _selectedSemesterId = value;
-                                      });
-                                    },
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      LayoutBuilder(builder: (context, cons) {
-                        final isNarrow = cons.maxWidth < 600;
-                        return isNarrow
-                            ? Column(
-                                children: _summaryMetrics
-                                    .map((metric) => Padding(
-                                          padding: const EdgeInsets.only(bottom: 12),
-                                          child: StatsCard(
-                                            icon: metric.icon,
-                                            title: metric.title,
-                                            value: metric.value,
-                                            bgStart: metric.bgStart,
-                                            bgEnd: metric.bgEnd,
-                                            iconColor: metric.iconColor,
-                                          ),
-                                        ))
-                                    .toList(),
-                              )
-                            : Row(
-                                children: _summaryMetrics
-                                    .asMap()
-                                    .entries
-                                    .map((entry) {
-                                      final index = entry.key;
-                                      final metric = entry.value;
-                                      return Expanded(
-                                        child: Padding(
-                                          padding: EdgeInsets.only(
-                                            right: index < _summaryMetrics.length - 1 ? 12 : 0,
-                                          ),
-                                          child: StatsCard(
-                                            icon: metric.icon,
-                                            title: metric.title,
-                                            value: metric.value,
-                                            bgStart: metric.bgStart,
-                                            bgEnd: metric.bgEnd,
-                                            iconColor: metric.iconColor,
-                                          ),
                                         ),
-                                      );
-                                    })
-                                    .toList(),
-                              );
-                      }),
+                                      )
+                                      .toList(),
+                                  onChanged: (value) {
+                                    if (value == null) return;
+                                    setState(() {
+                                      _selectedSemesterId = value;
+                                    });
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    LayoutBuilder(builder: (context, cons) {
+                      final isNarrow = cons.maxWidth < 600;
+                      return isNarrow
+                          ? Column(
+                              children: _summaryMetrics
+                                  .map((metric) => Padding(
+                                        padding:
+                                            const EdgeInsets.only(bottom: 12),
+                                        child: StatsCard(
+                                          icon: metric.icon,
+                                          title: metric.title,
+                                          value: metric.value,
+                                          bgStart: metric.bgStart,
+                                          bgEnd: metric.bgEnd,
+                                          iconColor: metric.iconColor,
+                                        ),
+                                      ))
+                                  .toList(),
+                            )
+                          : Row(
+                              children:
+                                  _summaryMetrics.asMap().entries.map((entry) {
+                                final index = entry.key;
+                                final metric = entry.value;
+                                return Expanded(
+                                  child: Padding(
+                                    padding: EdgeInsets.only(
+                                      right: index < _summaryMetrics.length - 1
+                                          ? 12
+                                          : 0,
+                                    ),
+                                    child: StatsCard(
+                                      icon: metric.icon,
+                                      title: metric.title,
+                                      value: metric.value,
+                                      bgStart: metric.bgStart,
+                                      bgEnd: metric.bgEnd,
+                                      iconColor: metric.iconColor,
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                            );
+                    }),
                     const SizedBox(height: 18),
                     LayoutBuilder(builder: (context, constraints) {
                       final isWide = constraints.maxWidth > 960;
@@ -599,33 +605,41 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
                                   title: 'Progress Overview & Completion Rate',
                                   child: LayoutBuilder(
                                     builder: (context, constraints) {
-                                      final isNarrow = constraints.maxWidth < 600;
+                                      final isNarrow =
+                                          constraints.maxWidth < 600;
                                       return isNarrow
                                           ? Column(
                                               children: [
                                                 PieChartWidget(
-                                                  completed: _assignmentsCompleted,
+                                                  completed:
+                                                      _assignmentsCompleted,
                                                   pending: _assignmentsPending,
                                                   title: 'Assignments',
-                                                  completedColor: const Color(0xFF22C55E),
-                                                  pendingColor: const Color(0xFFFF6B6B),
+                                                  completedColor:
+                                                      const Color(0xFF22C55E),
+                                                  pendingColor:
+                                                      const Color(0xFFFF6B6B),
                                                   trendPercent: 5.0,
                                                   trendLabel: 'vs last month',
                                                 ),
                                                 Container(
                                                   width: double.infinity,
                                                   height: 1,
-                                                  margin: const EdgeInsets.symmetric(vertical: 16),
+                                                  margin: const EdgeInsets
+                                                      .symmetric(vertical: 16),
                                                   color: Colors.grey[800],
                                                 ),
                                                 PieChartWidget(
                                                   completed: _quizzesCompleted,
                                                   pending: _quizzesPending,
                                                   title: 'Quizzes',
-                                                  completedColor: const Color(0xFF0EA5E9),
-                                                  pendingColor: const Color(0xFFFFB347),
+                                                  completedColor:
+                                                      const Color(0xFF0EA5E9),
+                                                  pendingColor:
+                                                      const Color(0xFFFFB347),
                                                   trendPercent: -12.0,
-                                                  trendLabel: 'vs previous semester',
+                                                  trendLabel:
+                                                      'vs previous semester',
                                                 ),
                                               ],
                                             )
@@ -633,29 +647,39 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
                                               children: [
                                                 Expanded(
                                                   child: PieChartWidget(
-                                                    completed: _assignmentsCompleted,
-                                                    pending: _assignmentsPending,
+                                                    completed:
+                                                        _assignmentsCompleted,
+                                                    pending:
+                                                        _assignmentsPending,
                                                     title: 'Assignments',
-                                                    completedColor: const Color(0xFF22C55E),
-                                                    pendingColor: const Color(0xFFFF6B6B),
+                                                    completedColor:
+                                                        const Color(0xFF22C55E),
+                                                    pendingColor:
+                                                        const Color(0xFFFF6B6B),
                                                   ),
                                                 ),
                                                 Container(
                                                   width: 2,
                                                   height: 200,
-                                                  margin: const EdgeInsets.symmetric(horizontal: 8),
+                                                  margin: const EdgeInsets
+                                                      .symmetric(horizontal: 8),
                                                   decoration: BoxDecoration(
                                                     color: Colors.grey[700],
-                                                    borderRadius: BorderRadius.circular(1),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            1),
                                                   ),
                                                 ),
                                                 Expanded(
                                                   child: PieChartWidget(
-                                                    completed: _quizzesCompleted,
+                                                    completed:
+                                                        _quizzesCompleted,
                                                     pending: _quizzesPending,
                                                     title: 'Quizzes',
-                                                    completedColor: const Color(0xFF0EA5E9),
-                                                    pendingColor: const Color(0xFFFFB347),
+                                                    completedColor:
+                                                        const Color(0xFF0EA5E9),
+                                                    pendingColor:
+                                                        const Color(0xFFFFB347),
                                                   ),
                                                 ),
                                               ],
@@ -691,7 +715,8 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
                               ],
                             ),
                           ),
-                          SizedBox(width: isWide ? 12 : 0, height: isWide ? 0 : 12),
+                          SizedBox(
+                              width: isWide ? 12 : 0, height: isWide ? 0 : 12),
                           Expanded(
                             flex: 1,
                             child: Column(
@@ -837,7 +862,8 @@ class _SubmissionTile extends StatelessWidget {
                   children: [
                     Text(
                       item.timeLabel,
-                      style: const TextStyle(color: Colors.white70, fontSize: 12),
+                      style:
+                          const TextStyle(color: Colors.white70, fontSize: 12),
                     ),
                     const SizedBox(width: 8),
                     Text(
@@ -970,7 +996,7 @@ class _TaskTile extends StatelessWidget {
         color: Colors.white.withOpacity(0.04),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: task.isPriority 
+          color: task.isPriority
               ? const Color(0xFFFF6B6B).withOpacity(0.8)
               : Colors.white.withOpacity(0.12),
           width: task.isPriority ? 1.5 : 1,
@@ -1039,7 +1065,8 @@ class _TaskTile extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: const Color(0xFFFF6B6B), // Red background for high priority
+                color:
+                    const Color(0xFFFF6B6B), // Red background for high priority
                 borderRadius: BorderRadius.circular(8),
                 boxShadow: [
                   BoxShadow(
@@ -1242,12 +1269,3 @@ class _CompletedQuizTile extends StatelessWidget {
     );
   }
 }
-
-
-
-
-
-
-
-
-
