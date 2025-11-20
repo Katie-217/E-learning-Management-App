@@ -21,40 +21,87 @@ class AssignmentRepository {
     try {
       print('DEBUG: ========== FETCHING ASSIGNMENTS ==========');
       print('DEBUG: 🔍 Fetching assignments for course: $courseId');
-      print(
-          'DEBUG: 📂 Collection path: $_courseCollectionName/$courseId/$_assignmentSubCollectionName');
+      print('DEBUG: 📂 Primary path: $_assignmentSubCollectionName (root)');
 
-      QuerySnapshot snapshot;
+      QuerySnapshot<Map<String, dynamic>>? snapshot;
+      bool usedRootCollection = false;
+
+      // 1. Try new root-level `assignments` collection
       try {
         snapshot = await _firestore
-            .collection(_courseCollectionName)
-            .doc(courseId)
             .collection(_assignmentSubCollectionName)
+            .where('courseId', isEqualTo: courseId)
             .orderBy('deadline', descending: false)
             .get();
+        usedRootCollection = true;
+        print(
+            'DEBUG: ✅ Root collection query succeeded with ${snapshot.docs.length} docs');
       } catch (e) {
-        // Nếu orderBy fail (có thể do thiếu index), thử query không orderBy
-        print('DEBUG: ⚠️ Query with orderBy failed: $e');
-        print('DEBUG: 💡 Trying without orderBy...');
-        snapshot = await _firestore
-            .collection(_courseCollectionName)
-            .doc(courseId)
-            .collection(_assignmentSubCollectionName)
-            .get();
+        print(
+            'DEBUG: ⚠️ Root collection query with orderBy failed: $e — retrying without orderBy');
+        try {
+          snapshot = await _firestore
+              .collection(_assignmentSubCollectionName)
+              .where('courseId', isEqualTo: courseId)
+              .get();
+          usedRootCollection = true;
+        } catch (e2) {
+          print('DEBUG: ❌ Root collection query failed: $e2');
+          snapshot = null;
+        }
       }
 
-      print('DEBUG: 📋 Found ${snapshot.docs.length} assignment documents');
+      // 2. Fallback to legacy sub-collection path inside course document
+      if (snapshot == null || snapshot.docs.isEmpty) {
+        print(
+            'DEBUG: ⚠️ Root collection returned no documents, trying legacy course path...');
+        try {
+          snapshot = await _firestore
+              .collection(_courseCollectionName)
+              .doc(courseId)
+              .collection(_assignmentSubCollectionName)
+              .orderBy('deadline', descending: false)
+              .get();
+          usedRootCollection = false;
+        } catch (e) {
+          print(
+              'DEBUG: ⚠️ Legacy path query with orderBy failed: $e — retrying without orderBy');
+          snapshot = await _firestore
+              .collection(_courseCollectionName)
+              .doc(courseId)
+              .collection(_assignmentSubCollectionName)
+              .get();
+          usedRootCollection = false;
+        }
+      }
 
-      if (snapshot.docs.isEmpty) {
+      // 3. Final fallback: collectionGroup query (covers nested structures)
+      if (snapshot == null || snapshot.docs.isEmpty) {
+        print(
+            'DEBUG: ⚠️ Legacy path also empty. Trying collectionGroup fallback...');
+        try {
+          snapshot = await _firestore
+              .collectionGroup(_assignmentSubCollectionName)
+              .where('courseId', isEqualTo: courseId)
+              .get();
+        } catch (e) {
+          print('DEBUG: ❌ CollectionGroup fallback failed: $e');
+        }
+      }
+
+      final docs = snapshot?.docs ?? [];
+      print('DEBUG: 📋 Found ${docs.length} assignment documents');
+
+      if (docs.isEmpty) {
         print('DEBUG: ⚠️ No assignments found in sub-collection');
         print(
-            'DEBUG: 💡 Check if assignments exist in Firestore at: $_courseCollectionName/$courseId/$_assignmentSubCollectionName');
+            'DEBUG: 💡 Checked paths -> root: $usedRootCollection, legacy: ${!usedRootCollection}');
         return [];
       }
 
       // Parse assignments
       final assignments = <Assignment>[];
-      for (var doc in snapshot.docs) {
+      for (var doc in docs) {
         try {
           final assignment = Assignment.fromFirestore(doc);
           assignments.add(assignment);
@@ -121,12 +168,21 @@ class AssignmentRepository {
   static Future<Assignment?> getAssignmentById(
       String courseId, String assignmentId) async {
     try {
-      final DocumentSnapshot doc = await _firestore
-          .collection(_courseCollectionName)
-          .doc(courseId)
+      // Try root-level assignment document first (new storage)
+      DocumentSnapshot doc = await _firestore
           .collection(_assignmentSubCollectionName)
           .doc(assignmentId)
           .get();
+
+      if (!doc.exists) {
+        // Fallback to legacy course sub-collection path
+        doc = await _firestore
+            .collection(_courseCollectionName)
+            .doc(courseId)
+            .collection(_assignmentSubCollectionName)
+            .doc(assignmentId)
+            .get();
+      }
 
       if (doc.exists) {
         return Assignment.fromFirestore(doc);

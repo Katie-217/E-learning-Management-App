@@ -10,7 +10,7 @@ import '../presentation/screens/instructor/instructor_dashboard.dart';
 import '../presentation/screens/instructor/instructor_students_page.dart';
 import '../presentation/screens/instructor/instructor_grades_page.dart';
 import '../presentation/screens/profile/profile_view.dart';
-import '../presentation/screens/course/course_page.dart';
+import '../presentation/screens/student/course/course_page.dart';
 import '../presentation/screens/instructor/instructor_courses/instructor_courses_page.dart';
 import '../presentation/screens/instructor/instructor_courses/instructor_course_detail_page.dart';
 import '../presentation/screens/assignment/assignments_page.dart';

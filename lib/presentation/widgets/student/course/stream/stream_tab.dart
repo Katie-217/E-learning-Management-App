@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:elearning_management_app/domain/models/course_model.dart';
 import 'package:elearning_management_app/presentation/widgets/student/course/stream/upcoming_widget.dart';
+import 'package:elearning_management_app/core/theme/app_colors.dart';
 
-class InstructorStreamTab extends StatelessWidget {
+class StreamTab extends StatelessWidget {
   final CourseModel course;
-  const InstructorStreamTab({super.key, required this.course});
+  const StreamTab({super.key, required this.course});
 
   @override
   Widget build(BuildContext context) {
@@ -24,7 +25,7 @@ class InstructorStreamTab extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _InstructorAnnouncementComposer(),
+                        _AnnouncementComposer(),
                         const SizedBox(height: 12),
                         _PostItem(
                           title: 'Welcome to ${course.name}',
@@ -56,7 +57,7 @@ class InstructorStreamTab extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _InstructorAnnouncementComposer(),
+                  _AnnouncementComposer(),
                   const SizedBox(height: 12),
                   _PostItem(
                     title: 'Welcome to ${course.name}',
@@ -78,7 +79,7 @@ class InstructorStreamTab extends StatelessWidget {
   }
 }
 
-class _InstructorAnnouncementComposer extends StatelessWidget {
+class _AnnouncementComposer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -165,7 +166,10 @@ class _PostItem extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(title,
-                        style: const TextStyle(fontWeight: FontWeight.w600)),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        )),
                     Text(meta,
                         style:
                             TextStyle(color: Colors.grey[500], fontSize: 12)),
@@ -198,13 +202,42 @@ class _PostItem extends StatelessWidget {
           ),
 
           const SizedBox(height: 8),
-          // View all comments button for instructor
-          TextButton(
-            onPressed: () {},
-            child: Text(
-              'View all comments (15)',
-              style: TextStyle(color: Colors.indigo[400]),
-            ),
+          // Add comment input
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: const BoxDecoration(
+                  gradient:
+                      LinearGradient(colors: [Colors.indigo, Colors.purple]),
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF111827),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.grey[800]!),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  child: const TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Add class comment...',
+                      border: InputBorder.none,
+                    ),
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              ),
+              IconButton(
+                onPressed: () {},
+                icon: const Icon(Icons.send, color: Colors.white70, size: 20),
+              ),
+            ],
           ),
         ],
       ),
@@ -241,7 +274,10 @@ class _CommentItem extends StatelessWidget {
               Row(
                 children: [
                   Text(name,
-                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
+                      )),
                   const SizedBox(width: 8),
                   Text(time,
                       style: TextStyle(color: Colors.grey[500], fontSize: 12)),

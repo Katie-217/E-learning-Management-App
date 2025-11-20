@@ -1,3 +1,5 @@
+import 'dart:math';
+
 class TaskModel {
   final String id;
   final String title;
@@ -8,6 +10,11 @@ class TaskModel {
   final String? courseName;
   final TaskType type;
   final bool isCompleted;
+  final List<String> groupsApplied;
+  final int submittedCount;
+  final int totalCount;
+  final int lateCount;
+  final int notSubmittedCount;
 
   TaskModel({
     required this.id,
@@ -19,6 +26,11 @@ class TaskModel {
     this.courseName,
     this.type = TaskType.other,
     this.isCompleted = false,
+    this.groupsApplied = const [],
+    this.submittedCount = 0,
+    this.totalCount = 0,
+    this.lateCount = 0,
+    this.notSubmittedCount = 0,
   });
 
   factory TaskModel.fromMap(String id, Map<String, dynamic> map) {
@@ -46,6 +58,20 @@ class TaskModel {
       courseName: map['courseName'],
       type: TaskType.fromString(map['type'] ?? 'other'),
       isCompleted: map['isCompleted'] ?? false,
+      groupsApplied: (map['groupApplied'] as List? ??
+                  map['groupsApplied'] as List?)
+              ?.map((group) => group.toString())
+              .toList() ??
+          const [],
+      submittedCount: (map['submittedCount'] as num?)?.toInt() ?? 0,
+      totalCount: (map['totalCount'] as num?)?.toInt() ?? 0,
+      lateCount: (map['lateCount'] as num?)?.toInt() ?? 0,
+      notSubmittedCount: (map['notSubmittedCount'] as num?)?.toInt() ??
+          max(
+            0,
+            ((map['totalCount'] as num?)?.toInt() ?? 0) -
+                ((map['submittedCount'] as num?)?.toInt() ?? 0),
+          ),
     );
   }
 
@@ -60,6 +86,11 @@ class TaskModel {
       'courseName': courseName,
       'type': type.toString().split('.').last,
       'isCompleted': isCompleted,
+      'groupApplied': groupsApplied,
+      'submittedCount': submittedCount,
+      'totalCount': totalCount,
+      'lateCount': lateCount,
+      'notSubmittedCount': notSubmittedCount,
     };
   }
 
@@ -73,6 +104,11 @@ class TaskModel {
     String? courseName,
     TaskType? type,
     bool? isCompleted,
+    List<String>? groupsApplied,
+    int? submittedCount,
+    int? totalCount,
+    int? lateCount,
+    int? notSubmittedCount,
   }) {
     return TaskModel(
       id: id ?? this.id,
@@ -84,6 +120,11 @@ class TaskModel {
       courseName: courseName ?? this.courseName,
       type: type ?? this.type,
       isCompleted: isCompleted ?? this.isCompleted,
+      groupsApplied: groupsApplied ?? this.groupsApplied,
+      submittedCount: submittedCount ?? this.submittedCount,
+      totalCount: totalCount ?? this.totalCount,
+      lateCount: lateCount ?? this.lateCount,
+      notSubmittedCount: notSubmittedCount ?? this.notSubmittedCount,
     );
   }
 }
