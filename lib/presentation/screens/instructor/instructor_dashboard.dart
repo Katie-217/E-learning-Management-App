@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:fl_chart/fl_chart.dart';
-import 'package:go_router/go_router.dart';
-import 'package:elearning_management_app/presentation/screens/course/course_page.dart';
 import 'package:elearning_management_app/presentation/screens/instructor/instructor_students_page.dart';
-import 'package:elearning_management_app/presentation/screens/assignment/assignments_page.dart';
-import 'package:elearning_management_app/presentation/screens/instructor/instructor_grades_page.dart';
 import 'package:elearning_management_app/application/controllers/instructor/instructor_profile_provider.dart';
-import 'package:elearning_management_app/presentation/widgets/instructor/calendar_widget.dart';
-import 'package:elearning_management_app/presentation/widgets/instructor/task_list_widget.dart';
 import 'package:elearning_management_app/presentation/screens/instructor/instructor_courses/instructor_courses_page.dart';
+import 'package:elearning_management_app/presentation/widgets/instructor/semester_switcher.dart';
+import 'package:elearning_management_app/presentation/widgets/instructor/instructor_calendar_panel.dart';
+import 'package:elearning_management_app/presentation/widgets/instructor/instructor_progress_charts.dart';
+import 'package:elearning_management_app/presentation/widgets/instructor/assignment_tracking_table.dart';
+import 'package:elearning_management_app/presentation/widgets/instructor/quiz_results_table.dart';
+import 'package:elearning_management_app/application/controllers/instructor/instructor_kpi_provider.dart';
+import 'package:elearning_management_app/presentation/widgets/instructor/kpi_cards.dart';
+import 'package:elearning_management_app/presentation/widgets/common/user_menu_dropdown.dart';
 
 class InstructorDashboard extends ConsumerStatefulWidget {
   const InstructorDashboard({super.key});
@@ -21,6 +22,7 @@ class InstructorDashboard extends ConsumerStatefulWidget {
 
 class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
   String _activeTab = 'dashboard';
+  InstructorSemester? _selectedSemester;
   @override
   Widget build(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 800;
@@ -73,23 +75,27 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
               onPressed: () {}, icon: const Icon(Icons.notifications_none)),
           Padding(
             padding: const EdgeInsets.only(right: 12),
-            child: Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: const BoxDecoration(
-                    gradient:
-                        LinearGradient(colors: [Colors.indigo, Colors.purple]),
-                    shape: BoxShape.circle,
+            child: Consumer(
+              builder: (context, ref, child) {
+                final profileAsync = ref.watch(instructorProfileProvider);
+                return profileAsync.when(
+                  data: (profile) => UserMenuDropdown(
+                    userName: profile?['name'] ?? profile?['displayName'] ?? 'Dr. Johnson',
+                    userEmail: profile?['email'] ?? 'dr.johnson@university.edu',
+                    userPhotoUrl: profile?['photoUrl'],
                   ),
-                  child: const Icon(Icons.person, color: Colors.white),
-                ),
-                if (!isMobile) ...[
-                  const SizedBox(width: 8),
-                  const Text('Dr. Johnson'),
-                ]
-              ],
+                  loading: () => const UserMenuDropdown(
+                    userName: 'Dr. Johnson',
+                    userEmail: 'dr.johnson@university.edu',
+                    userPhotoUrl: null,
+                  ),
+                  error: (_, __) => const UserMenuDropdown(
+                    userName: 'Dr. Johnson',
+                    userEmail: 'dr.johnson@university.edu',
+                    userPhotoUrl: null,
+                  ),
+                );
+              },
             ),
           )
         ],
@@ -125,43 +131,70 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
           child: InstructorStudentsPage(),
         );
       default: // dashboard
+        final semesterName = _selectedSemester?.name ?? 'Fall 2024';
+        final kpiStatsAsync = ref.watch(instructorKPIStatsProvider(semesterName));
         return SingleChildScrollView(
           padding: const EdgeInsets.all(18),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Welcome back, Dr. Johnson',
-                  style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white)),
-              const SizedBox(height: 4),
-              Text("Ready to inspire your students today?",
-                  style: TextStyle(color: Colors.grey[400], fontSize: 16)),
+              // Welcome and Semester Switcher in same row
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Left: Welcome message
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Welcome back, Dr. Johnson',
+                            style: TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white)),
+                        const SizedBox(height: 4),
+                        Text("Ready to inspire your students today?",
+                            style: TextStyle(color: Colors.grey[400], fontSize: 16)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  // Right: Semester Switcher
+                  InstructorSemesterSwitcher(
+                    initialSemester: _selectedSemester,
+                    onSemesterChanged: (semester) {
+                      setState(() {
+                        _selectedSemester = semester;
+                      });
+                    },
+                  ),
+                ],
+              ),
               const SizedBox(height: 20),
-              // Stats Grid
-              LayoutBuilder(builder: (context, cons) {
-                final cross =
-                    cons.maxWidth > 900 ? 4 : (cons.maxWidth > 600 ? 2 : 1);
-                return GridView.count(
-                  crossAxisCount: cross,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  childAspectRatio: 1.4,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  children: [
-                    _buildStatCard('Students', '156', Icons.people, Colors.blue,
-                        Colors.blueAccent),
-                    _buildStatCard('Active Courses', '5', Icons.book,
-                        Colors.green, Colors.greenAccent),
-                    _buildStatCard('Pending Assignments', '23',
-                        Icons.assignment, Colors.orange, Colors.orangeAccent),
-                    _buildStatCard('Avg. Class Score', '85%', Icons.trending_up,
-                        Colors.purple, Colors.purpleAccent),
-                  ],
-                );
-              }),
+              // KPI Cards - 5 cards bắt buộc
+              kpiStatsAsync.when(
+                data: (stats) => InstructorKPICards(stats: stats),
+                loading: () => const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(20.0),
+                    child: CircularProgressIndicator(),
+                  ),
+                ),
+                error: (error, _) => Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF111827),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.red.withOpacity(0.3)),
+                  ),
+                  child: Text(
+                    'Unable to load KPI stats: $error',
+                    style:
+                        const TextStyle(color: Colors.redAccent, fontSize: 12),
+                  ),
+                ),
+              ),
               const SizedBox(height: 20),
               // Two Column Layout
               LayoutBuilder(builder: (context, constraints) {
@@ -170,40 +203,87 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
                     ? Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Left Column
+                          // Left Column: Charts + Assignment Tracking Table
                           Expanded(
                             flex: 2,
                             child: Column(
                               children: [
-                                _buildProgressOverview(),
+                                // 2 Charts in a row
+                                Row(
+                                  children: [
+                                    const Expanded(
+                                      child: AssignmentSubmissionChart(),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    const Expanded(
+                                      child: QuizCompletionChart(),
+                                    ),
+                                  ],
+                                ),
                                 const SizedBox(height: 12),
-                                _buildMyCoursesSection(),
+                                // Assignment Tracking Table
+                                const SizedBox(
+                                  height: 400,
+                                  child: AssignmentTrackingTable(),
+                                ),
+                                const SizedBox(height: 12),
+                                // Quiz Results Table
+                                const SizedBox(
+                                  height: 400,
+                                  child: QuizResultsTable(),
+                                ),
                               ],
                             ),
                           ),
                           const SizedBox(width: 12),
-                          // Right Column
+                          // Right Column: Calendar Panel
                           Expanded(
                             flex: 1,
-                            child: Column(
-                              children: [
-                                _buildCalendarSection(),
-                                const SizedBox(height: 12),
-                                _buildUpcomingTasksSection(),
-                              ],
-                            ),
+                            child: _buildCalendarTasksPanel(),
                           ),
                         ],
                       )
                     : Column(
                         children: [
-                          _buildProgressOverview(),
+                          // Charts in a row on mobile if space allows
+                          LayoutBuilder(
+                            builder: (context, constraints) {
+                              final canFitTwoCharts = constraints.maxWidth > 600;
+                              return canFitTwoCharts
+                                  ? Row(
+                                      children: [
+                                        const Expanded(
+                                          child: AssignmentSubmissionChart(),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        const Expanded(
+                                          child: QuizCompletionChart(),
+                                        ),
+                                      ],
+                                    )
+                                  : Column(
+                                      children: [
+                                        const AssignmentSubmissionChart(),
+                                        const SizedBox(height: 12),
+                                        const QuizCompletionChart(),
+                                      ],
+                                    );
+                            },
+                          ),
                           const SizedBox(height: 12),
-                          _buildMyCoursesSection(),
+                          _buildCalendarTasksPanel(),
                           const SizedBox(height: 12),
-                          _buildCalendarSection(),
+                          // Assignment Tracking Table
+                          const SizedBox(
+                            height: 400,
+                            child: AssignmentTrackingTable(),
+                          ),
                           const SizedBox(height: 12),
-                          _buildUpcomingTasksSection(),
+                          // Quiz Results Table
+                          const SizedBox(
+                            height: 400,
+                            child: QuizResultsTable(),
+                          ),
                         ],
                       );
               }),
@@ -318,7 +398,7 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
     );
   }
 
-  Widget _buildProgressOverview() {
+  Widget _buildCalendarTasksPanel() {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -327,325 +407,7 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey[800]!),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Progress Overview',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _buildProgressItem(
-                  'Assignments Graded',
-                  '156',
-                  '180',
-                  0.87,
-                  Colors.blue,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildProgressItem(
-                  'Quiz Completion',
-                  '142',
-                  '156',
-                  0.91,
-                  Colors.teal,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProgressItem(String label, String current, String total,
-      double percentage, Color color) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 13,
-            color: Colors.grey,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        const SizedBox(height: 8),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: LinearProgressIndicator(
-            value: percentage,
-            minHeight: 8,
-            backgroundColor: Colors.grey[700],
-            valueColor: AlwaysStoppedAnimation<Color>(color),
-          ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          '$current / $total',
-          style: const TextStyle(
-            fontSize: 12,
-            color: Colors.grey,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildMyCoursesSection() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF111827),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[800]!),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'My Courses',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 12),
-          _buildCourseCard(
-              'CS450', 'Advanced Web Development', 45, Colors.blue),
-          const SizedBox(height: 8),
-          _buildCourseCard('CS380', 'Database Systems', 38, Colors.green),
-          const SizedBox(height: 8),
-          _buildCourseCard('CS420', 'Software Engineering', 32, Colors.purple),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCourseCard(
-      String code, String title, int students, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [color.withOpacity(0.3), color.withOpacity(0.1)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  code,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '$students students',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[400],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          ElevatedButton.icon(
-            onPressed: () {},
-            icon: const Icon(Icons.arrow_forward, size: 16),
-            label: const Text('Manage', style: TextStyle(fontSize: 12)),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: color,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCalendarSection() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF111827),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[800]!),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          const Text(
-            'February 2025',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 12),
-          GridView.count(
-            crossAxisCount: 7,
-            childAspectRatio: 1,
-            crossAxisSpacing: 4,
-            mainAxisSpacing: 4,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            children: List.generate(
-              28,
-              (index) => Container(
-                decoration: BoxDecoration(
-                  color: index == 14 ? Colors.indigo[600] : Colors.grey[800],
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Center(
-                  child: Text(
-                    '${index + 1}',
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildUpcomingTasksSection() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF111827),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[800]!),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Upcoming Tasks',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 12),
-          _buildTaskItem('Grade Assignment #5', 'CS450', Colors.blue, true),
-          const SizedBox(height: 8),
-          _buildTaskItem('Prepare Lecture Notes', 'CS380', Colors.green, false),
-          const SizedBox(height: 8),
-          _buildTaskItem(
-              'Review Student Submissions', 'CS420', Colors.purple, false),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTaskItem(
-      String title, String course, Color color, bool isUrgent) {
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: isUrgent ? color : color.withOpacity(0.2),
-          width: isUrgent ? 2 : 1,
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
-                ),
-                Text(
-                  course,
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Colors.grey[400],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (isUrgent)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: color,
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: const Text(
-                'Urgent',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-        ],
-      ),
+      child: InstructorCalendarPanel(selectedSemester: _selectedSemester),
     );
   }
 }
