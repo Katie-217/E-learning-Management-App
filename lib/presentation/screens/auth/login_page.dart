@@ -52,7 +52,7 @@ class _LoginPageState extends State<LoginPage> {
             fit: BoxFit.cover,
           ),
           Container(
-            color: Colors.black.withOpacity(0.55),
+            color: Colors.black.withValues(alpha: 0.55),
           ),
           SafeArea(
             child: Center(
@@ -72,13 +72,13 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(28),
-                          color: Colors.white.withOpacity(0.12),
+                          color: Colors.white.withValues(alpha: 0.12),
                           border: Border.all(
-                            color: Colors.white.withOpacity(0.25),
+                            color: Colors.white.withValues(alpha: 0.25),
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.35),
+                              color: Colors.black.withValues(alpha: 0.35),
                               blurRadius: 30,
                               offset: const Offset(0, 20),
                             ),
@@ -95,11 +95,11 @@ class _LoginPageState extends State<LoginPage> {
                                   IconButton(
                                     onPressed: () => Navigator.pop(context),
                                     icon: const Icon(Icons.arrow_back_ios_new),
-                                    color: Colors.white.withOpacity(0.9),
+                                    color: Colors.white.withValues(alpha: 0.9),
                                   ),
                                   Icon(
                                     widget.userRole.icon,
-                                    color: Colors.white.withOpacity(0.9),
+                                    color: Colors.white.withValues(alpha: 0.9),
                                     size: 32,
                                   ),
                                 ],
@@ -108,7 +108,7 @@ class _LoginPageState extends State<LoginPage> {
                               Text(
                                 'Login',
                                 style: TextStyle(
-                                  color: Colors.white.withOpacity(0.95),
+                                  color: Colors.white.withValues(alpha: 0.95),
                                   fontSize: 30,
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -117,7 +117,7 @@ class _LoginPageState extends State<LoginPage> {
                               Text(
                                 'Log in to continue experiencing the E-learning system',
                                 style: TextStyle(
-                                  color: Colors.white.withOpacity(0.75),
+                                  color: Colors.white.withValues(alpha: 0.75),
                                   fontSize: 14,
                                 ),
                               ),
@@ -152,7 +152,7 @@ class _LoginPageState extends State<LoginPage> {
                                         decoration: BoxDecoration(
                                           borderRadius: BorderRadius.circular(4),
                                           border: Border.all(
-                                            color: Colors.white.withOpacity(0.7),
+                                            color: Colors.white.withValues(alpha: 0.7),
                                           ),
                                         ),
                                       ),
@@ -160,7 +160,7 @@ class _LoginPageState extends State<LoginPage> {
                                       Text(
                                         'Remember me',
                                         style: TextStyle(
-                                          color: Colors.white.withOpacity(0.7),
+                                          color: Colors.white.withValues(alpha: 0.7),
                                           fontSize: 12,
                                         ),
                                       ),
@@ -180,7 +180,7 @@ class _LoginPageState extends State<LoginPage> {
                                     child: Text(
                                       'Forgot password?',
                                       style: TextStyle(
-                                        color: Colors.white.withOpacity(0.85),
+                                        color: Colors.white.withValues(alpha: 0.85),
                                         fontSize: 12,
                                       ),
                                     ),
@@ -224,7 +224,7 @@ class _LoginPageState extends State<LoginPage> {
                                 child: Text(
                                   'Don’t have an account? Contact admin',
                                   style: TextStyle(
-                                    color: Colors.white.withOpacity(0.7),
+                                    color: Colors.white.withValues(alpha: 0.7),
                                     fontSize: 12,
                                   ),
                                 ),
@@ -262,7 +262,7 @@ class _LoginPageState extends State<LoginPage> {
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
-            color: Colors.white.withOpacity(0.8),
+            color: Colors.white.withValues(alpha: 0.8),
           ),
         ),
         const SizedBox(height: 8),
@@ -275,33 +275,33 @@ class _LoginPageState extends State<LoginPage> {
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: TextStyle(
-              color: Colors.white.withOpacity(0.6),
+              color: Colors.white.withValues(alpha: 0.6),
             ),
             filled: true,
-            fillColor: Colors.white.withOpacity(0.12),
+            fillColor: Colors.white.withValues(alpha: 0.12),
             prefixIcon: icon != null
                 ? Icon(
                     icon,
-                    color: Colors.white.withOpacity(0.8),
+                    color: Colors.white.withValues(alpha: 0.8),
                     size: 24,
                   )
                 : null,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
               borderSide: BorderSide(
-                color: Colors.white.withOpacity(0.25),
+                color: Colors.white.withValues(alpha: 0.25),
               ),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
               borderSide: BorderSide(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withValues(alpha: 0.2),
               ),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
               borderSide: BorderSide(
-                color: Colors.white.withOpacity(0.5),
+                color: Colors.white.withValues(alpha: 0.5),
                 width: 1.5,
               ),
             ),

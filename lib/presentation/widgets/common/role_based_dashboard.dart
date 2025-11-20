@@ -27,10 +27,10 @@ class RoleBasedDashboard extends StatelessWidget {
           final data = snapshot.data?.data();
           final role = (data?['role'] ?? '').toString().toLowerCase();
           if (role == 'teacher' || role == 'instructor') {
-            return const InstructorDashboard();
+            return InstructorDashboard();
           }
           // Sử dụng MainShell cho student để có navigation
-          return const MainShell();
+          return MainShell();
         },
       ),
     );

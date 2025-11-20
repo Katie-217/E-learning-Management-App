@@ -91,7 +91,7 @@ class UserSessionService {
       print('DEBUG: 🗑️ Clearing user session from SharedPreferences');
       final prefs = await SharedPreferences.getInstance();
 
-      await prefs.remove(_isLoggedInKey);
+      await prefs.setBool(_isLoggedInKey, false);
       await prefs.remove(_userEmailKey);
       await prefs.remove(_userDisplayNameKey);
       await prefs.remove(_userUidKey);

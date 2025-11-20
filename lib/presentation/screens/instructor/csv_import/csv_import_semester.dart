@@ -370,7 +370,7 @@ class _CsvImportSemesterScreenState extends State<CsvImportSemesterScreen> {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.blue[900]?.withOpacity(0.2),
+            color: Colors.blue[900]?.withValues(alpha: 0.2),
             border: Border.all(color: Colors.blue[700]!),
             borderRadius: BorderRadius.circular(8),
           ),
@@ -430,7 +430,7 @@ class _CsvImportSemesterScreenState extends State<CsvImportSemesterScreen> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.green[900]?.withOpacity(0.3),
+              color: Colors.green[900]?.withValues(alpha: 0.3),
               border: Border.all(color: Colors.green[700]!),
               borderRadius: BorderRadius.circular(8),
             ),
@@ -531,7 +531,7 @@ class _CsvImportSemesterScreenState extends State<CsvImportSemesterScreen> {
           Container(
             constraints: const BoxConstraints(maxHeight: 150),
             decoration: BoxDecoration(
-              color: Colors.red[900]?.withOpacity(0.2),
+              color: Colors.red[900]?.withValues(alpha: 0.2),
               border: Border.all(color: Colors.red[700]!),
               borderRadius: BorderRadius.circular(8),
             ),
@@ -568,7 +568,7 @@ class _CsvImportSemesterScreenState extends State<CsvImportSemesterScreen> {
           Container(
             constraints: const BoxConstraints(maxHeight: 120),
             decoration: BoxDecoration(
-              color: Colors.orange[900]?.withOpacity(0.2),
+              color: Colors.orange[900]?.withValues(alpha: 0.2),
               border: Border.all(color: Colors.orange[700]!),
               borderRadius: BorderRadius.circular(8),
             ),
@@ -604,7 +604,7 @@ class _CsvImportSemesterScreenState extends State<CsvImportSemesterScreen> {
         // Full-width data table for better visualization
         Container(
           decoration: BoxDecoration(
-            color: Colors.green[900]?.withOpacity(0.1),
+            color: Colors.green[900]?.withValues(alpha: 0.1),
             border: Border.all(color: Colors.green[700]!),
             borderRadius: BorderRadius.circular(8),
           ),
@@ -614,7 +614,7 @@ class _CsvImportSemesterScreenState extends State<CsvImportSemesterScreen> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.green[800]?.withOpacity(0.3),
+                  color: Colors.green[800]?.withValues(alpha: 0.3),
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(8),
                     topRight: Radius.circular(8),
@@ -678,7 +678,7 @@ class _CsvImportSemesterScreenState extends State<CsvImportSemesterScreen> {
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: isEven
-                            ? Colors.green[900]?.withOpacity(0.1)
+                            ? Colors.green[900]?.withValues(alpha: 0.1)
                             : Colors.transparent,
                       ),
                       child: Row(
@@ -742,7 +742,7 @@ class _CsvImportSemesterScreenState extends State<CsvImportSemesterScreen> {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.blue[900]?.withOpacity(0.2),
+            color: Colors.blue[900]?.withValues(alpha: 0.2),
             border: Border.all(color: Colors.blue[700]!),
             borderRadius: BorderRadius.circular(8),
           ),
@@ -949,8 +949,8 @@ class _CsvImportSemesterScreenState extends State<CsvImportSemesterScreen> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.2),
-        border: Border.all(color: color.withOpacity(0.5)),
+        color: color.withValues(alpha: 0.2),
+        border: Border.all(color: color.withValues(alpha: 0.5)),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
@@ -991,8 +991,8 @@ class _CsvImportSemesterScreenState extends State<CsvImportSemesterScreen> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.2),
-            border: Border.all(color: color.withOpacity(0.5)),
+            color: color.withValues(alpha: 0.2),
+            border: Border.all(color: color.withValues(alpha: 0.5)),
             borderRadius: BorderRadius.circular(6),
           ),
           child: Text(
@@ -1013,8 +1013,8 @@ class _CsvImportSemesterScreenState extends State<CsvImportSemesterScreen> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.2),
-            border: Border.all(color: color.withOpacity(0.5)),
+            color: color.withValues(alpha: 0.2),
+            border: Border.all(color: color.withValues(alpha: 0.5)),
             borderRadius: BorderRadius.circular(6),
           ),
           child: Text(

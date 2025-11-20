@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:elearning_management_app/domain/models/course_model.dart';
-import '../Student_Course/widgets/upcoming_widget.dart';
+import 'package:elearning_management_app/presentation/widgets/student/course/stream/upcoming_widget.dart';
 
 class InstructorStreamTab extends StatelessWidget {
   final CourseModel course;

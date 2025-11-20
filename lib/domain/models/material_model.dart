@@ -43,9 +43,6 @@ class MaterialModel {
   factory MaterialModel.fromFirestore(DocumentSnapshot doc) {
     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
 
-    print('DEBUG: 📄 Parsing material doc ${doc.id}');
-    print('DEBUG: 📄 Raw data: $data');
-
     // Parse dates - handle both Timestamp and DateTime
     DateTime? parseDate(dynamic dateData) {
       if (dateData == null) {
@@ -64,38 +61,67 @@ class MaterialModel {
       }
     }
 
-    // Parse attachment - có thể là 'attachment' hoặc 'files'
-    AttachmentModel? attachment;
-    if (data['attachment'] != null) {
+    // Helper to build attachment from Map
+    AttachmentModel? buildAttachmentFromMap(Map<String, dynamic>? map) {
+      if (map == null) return null;
       try {
-        attachment = AttachmentModel.fromMap(
-          Map<String, dynamic>.from(data['attachment'] as Map),
+        return AttachmentModel(
+          id: map['id']?.toString() ?? map['fileId']?.toString() ?? doc.id,
+          name: map['name']?.toString() ??
+              map['fileName']?.toString() ??
+              'Attachment',
+          url: map['url']?.toString() ?? '',
+          mimeType: map['mimeType']?.toString() ??
+              map['type']?.toString() ??
+              'application/octet-stream',
+          sizeInBytes: (map['sizeInBytes'] as int?) ??
+              (map['size'] as int?) ??
+              ((map['sizeInBytes'] as num?)?.toInt()) ??
+              ((map['size'] as num?)?.toInt()) ??
+              0,
+          uploadedAt: parseDate(map['uploadedAt']) ??
+              parseDate(data['createdAt']) ??
+              DateTime.now(),
         );
       } catch (e) {
-        print('DEBUG: ⚠️ Error parsing attachment: $e');
-      }
-    } else if (data['files'] != null) {
-      // Nếu có 'files' object, convert sang attachment
-      try {
-        final filesData = data['files'] as Map<String, dynamic>;
-        attachment = AttachmentModel(
-          id: filesData['fileId']?.toString() ?? doc.id,
-          name: filesData['name']?.toString() ?? 'Unknown',
-          url: filesData['url']?.toString() ?? '',
-          mimeType: filesData['type']?.toString() ?? 'application/octet-stream',
-          sizeInBytes: (filesData['size'] as int?) ?? 0,
-          uploadedAt: parseDate(data['createdAt']) ?? DateTime.now(),
-        );
-      } catch (e) {
-        print('DEBUG: ⚠️ Error parsing files: $e');
+        return null;
       }
     }
 
-    // Lấy title từ files.title hoặc data.title
+    // Parse attachment - hỗ trợ nhiều định dạng ('attachment', 'files', 'attachments')
+    AttachmentModel? attachment = buildAttachmentFromMap(
+        (data['attachment'] as Map?)?.cast<String, dynamic>());
+
+    if (attachment == null && data['files'] != null) {
+      attachment = buildAttachmentFromMap(
+          (data['files'] as Map?)?.cast<String, dynamic>());
+    }
+
+    if (attachment == null && data['attachments'] != null) {
+      final attachmentsData = data['attachments'];
+      if (attachmentsData is List && attachmentsData.isNotEmpty) {
+        final firstAttachment = attachmentsData.first;
+        if (firstAttachment is Map<String, dynamic>) {
+          attachment = buildAttachmentFromMap(firstAttachment);
+        } else if (firstAttachment is Map) {
+          attachment =
+              buildAttachmentFromMap(firstAttachment.cast<String, dynamic>());
+        }
+      }
+    }
+
+    // Lấy title từ nhiều field khác nhau
     String title = data['title']?.toString() ??
         (data['files'] != null && data['files'] is Map
-            ? (data['files'] as Map)['title']?.toString() ?? 'Untitled Material'
-            : 'Untitled Material');
+            ? (data['files'] as Map)['title']?.toString()
+            : null) ??
+        (data['name']?.toString()) ??
+        'Untitled Material';
+
+    // Lấy description từ nhiều field (description, details, content)
+    String? description = data['description']?.toString();
+    description ??= data['details']?.toString();
+    description ??= data['content']?.toString();
 
     // Lấy type từ files.type hoặc data.type
     String typeStr = data['type']?.toString() ??
@@ -125,7 +151,7 @@ class MaterialModel {
       courseId: data['courseId']?.toString() ??
           '', // Có thể cần lấy từ parent collection
       title: title,
-      description: data['description']?.toString(),
+      description: description,
       type: _parseMaterialType(typeStr),
       url: url,
       filePath: data['filePath']?.toString(),

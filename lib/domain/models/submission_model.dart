@@ -54,16 +54,8 @@ class SubmissionModel {
   // MÔ TẢ: Tạo SubmissionModel từ Map (Firebase data)
   // ========================================
   factory SubmissionModel.fromMap(Map<String, dynamic> map) {
-    print('DEBUG: 📄 Parsing SubmissionModel from map');
-    print('DEBUG: 📄 Map keys: ${map.keys.toList()}');
-    print('DEBUG: 📄 attachments field: ${map['attachments']}');
-    print('DEBUG: 📄 attachments type: ${map['attachments']?.runtimeType}');
-
     final attachments = _parseAttachments(map['attachments']);
-    print('DEBUG: 📄 Parsed ${attachments.length} attachment(s)');
-
     final submittedAt = _parseDateTime(map['submittedAt']);
-    print('DEBUG: 📄 submittedAt: $submittedAt');
 
     final submission = SubmissionModel(
       id: map['id'] ?? '',
@@ -87,8 +79,6 @@ class SubmissionModel {
       lastModified: _parseDateTime(map['lastModified']),
     );
 
-    print(
-        'DEBUG: ✅ Created SubmissionModel: id=${submission.id}, status=${submission.status.name}, attachments=${submission.attachments.length}');
     return submission;
   }
 
@@ -236,32 +226,21 @@ class SubmissionModel {
   // ========================================
   static List<AttachmentModel> _parseAttachments(dynamic attachmentsData) {
     if (attachmentsData == null) {
-      print('DEBUG: 📎 attachmentsData is null');
       return [];
     }
 
-    print(
-        'DEBUG: 📎 Parsing attachments, type: ${attachmentsData.runtimeType}');
-    print('DEBUG: 📎 attachmentsData: $attachmentsData');
-
     // If it's a List (array)
     if (attachmentsData is List) {
-      print(
-          'DEBUG: 📎 attachmentsData is List with ${attachmentsData.length} items');
       return attachmentsData
           .map((item) {
             try {
               if (item is Map) {
                 final map = Map<String, dynamic>.from(item);
                 final attachment = AttachmentModel.fromMap(map);
-                print(
-                    'DEBUG: ✅ Parsed attachment from list: ${attachment.name}');
                 return attachment;
               }
-              print('DEBUG: ⚠️ Item in list is not Map: ${item.runtimeType}');
               return null;
             } catch (e) {
-              print('DEBUG: ⚠️ Error parsing attachment from list: $e');
               return null;
             }
           })
@@ -272,24 +251,14 @@ class SubmissionModel {
     // If it's a Map (object) - convert to list with single item
     if (attachmentsData is Map) {
       try {
-        print(
-            'DEBUG: 📎 attachmentsData is Map, converting to AttachmentModel');
         final map = Map<String, dynamic>.from(attachmentsData);
         final attachment = AttachmentModel.fromMap(map);
-        print(
-            'DEBUG: ✅ Successfully parsed attachment from object: ${attachment.name}');
-        print(
-            'DEBUG: ✅ Attachment details: url=${attachment.url}, size=${attachment.sizeInBytes}, mimeType=${attachment.mimeType}');
         return [attachment];
-      } catch (e, stackTrace) {
-        print('DEBUG: ⚠️ Error parsing attachment from object: $e');
-        print('DEBUG: ⚠️ Stack trace: $stackTrace');
+      } catch (e) {
         return [];
       }
     }
 
-    print(
-        'DEBUG: ⚠️ attachmentsData is neither List nor Map: ${attachmentsData.runtimeType}');
     return [];
   }
 
@@ -310,31 +279,23 @@ class SubmissionModel {
 
   static DateTime? _parseDateTime(dynamic dateData) {
     if (dateData == null) {
-      print('DEBUG: ⏰ dateData is null');
       return null;
     }
 
-    print(
-        'DEBUG: ⏰ Parsing date, type: ${dateData.runtimeType}, value: $dateData');
-
     if (dateData is DateTime) {
-      print('DEBUG: ⏰ dateData is already DateTime');
       return dateData;
     }
 
     // Handle Firestore Timestamp
     if (dateData is Timestamp) {
       final date = dateData.toDate();
-      print('DEBUG: ⏰ Converted Timestamp to DateTime: $date');
       return date;
     }
 
     try {
       final parsed = DateTime.parse(dateData.toString());
-      print('DEBUG: ⏰ Parsed string to DateTime: $parsed');
       return parsed;
     } catch (e) {
-      print('DEBUG: ⚠️ Error parsing date: $e');
       return null;
     }
   }
@@ -429,12 +390,9 @@ class AttachmentModel {
       try {
         return DateTime.parse(dateData.toString());
       } catch (e) {
-        print('DEBUG: ⚠️ Error parsing uploadedAt: $e');
         return DateTime.now();
       }
     }
-
-    print('DEBUG: 📎 Parsing AttachmentModel from map: $map');
 
     final attachment = AttachmentModel(
       id: map['id']?.toString() ?? '',
@@ -449,8 +407,6 @@ class AttachmentModel {
       uploadedAt: parseUploadedAt(map['uploadedAt']),
     );
 
-    print(
-        'DEBUG: ✅ Created AttachmentModel: name=${attachment.name}, url=${attachment.url}, size=${attachment.sizeInBytes}');
     return attachment;
   }
 

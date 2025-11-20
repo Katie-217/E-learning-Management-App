@@ -33,7 +33,7 @@ class SidebarWidget extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: isActive
-            ? Colors.indigo[600]?.withOpacity(0.3)
+            ? Colors.indigo[600]?.withValues(alpha: 0.3)
             : Colors.transparent,
         borderRadius: BorderRadius.circular(8),
         border: isActive

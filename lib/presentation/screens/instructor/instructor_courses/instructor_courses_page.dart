@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:elearning_management_app/presentation/screens/instructor/instructor_courses/instructor_course_detail_page.dart';
-import 'package:elearning_management_app/presentation/widgets/course/Student_Course/cards/course_card_widget.dart';
+import 'package:elearning_management_app/presentation/widgets/course/Instructor_Course/widget/course_widget.dart';
 import 'package:elearning_management_app/application/controllers/course/course_instructor_provider.dart';
 import 'package:elearning_management_app/presentation/widgets/course/Instructor_Course/widget/semester_filter_instructor.dart';
 import 'package:elearning_management_app/presentation/screens/instructor/csv_import/csv_import_semester.dart';
@@ -187,7 +187,7 @@ class _InstructorCoursesPageState extends ConsumerState<InstructorCoursesPage> {
                         ),
                         tooltip: 'Create Course',
                         style: IconButton.styleFrom(
-                          backgroundColor: Colors.indigo.withOpacity(0.1),
+                          backgroundColor: Colors.indigo.withValues(alpha: 0.1),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8),
                           ),
@@ -253,7 +253,7 @@ class _InstructorCoursesPageState extends ConsumerState<InstructorCoursesPage> {
                         ),
                         tooltip: 'Create Course',
                         style: IconButton.styleFrom(
-                          backgroundColor: Colors.indigo.withOpacity(0.1),
+                          backgroundColor: Colors.indigo.withValues(alpha: 0.1),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8),
                           ),
@@ -412,7 +412,7 @@ class _InstructorCoursesPageState extends ConsumerState<InstructorCoursesPage> {
           itemCount: state.filteredCourses.length,
           itemBuilder: (context, index) {
             final course = state.filteredCourses[index];
-            return CourseCardWidget(
+            return CourseCard(
               course: course,
               onTap: () {
                 // Navigate to instructor course detail

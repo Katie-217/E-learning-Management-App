@@ -483,7 +483,7 @@ class _CreateStudentPageState extends State<CreateStudentPage> {
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: Colors.blue[900]?.withOpacity(0.3),
+                        color: Colors.blue[900]?.withValues(alpha: 0.3),
                         border: Border.all(color: Colors.blue[700]!),
                         borderRadius: BorderRadius.circular(8),
                       ),
