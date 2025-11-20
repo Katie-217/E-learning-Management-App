@@ -1,32 +1,63 @@
 // ========================================
 // FILE: validation_result.dart
-// MÔ TẢ: Model cho kết quả validation
+// PURPOSE: Model for validation results from business logic
+// Clean Architecture: Domain Layer
 // ========================================
 
 class ValidationResult {
-  final bool isValid;
+  final bool isSuccess;
+  final String?
+      fieldError; // null if general error, field name if specific field error
+  final String message;
+
+  // Semester-specific validation errors (for backward compatibility)
   final String? templateError;
   final String? yearError;
   final String? nameError;
 
   const ValidationResult({
-    required this.isValid,
+    required this.isSuccess,
+    this.fieldError,
+    this.message = '',
     this.templateError,
     this.yearError,
     this.nameError,
   });
 
-  ValidationResult copyWith({
-    bool? isValid,
-    String? templateError,
-    String? yearError,
-    String? nameError,
-  }) {
+  // Backward compatibility getter
+  bool get isValid => isSuccess;
+
+  // Named constructor for semester validation (original pattern)
+  const ValidationResult.semester({
+    required bool isValid,
+    this.templateError,
+    this.yearError,
+    this.nameError,
+  })  : isSuccess = isValid,
+        fieldError = null,
+        message = '';
+
+  // Factory constructors for common cases (new generic pattern)
+  factory ValidationResult.success(
+      [String message = 'Operation completed successfully']) {
     return ValidationResult(
-      isValid: isValid ?? this.isValid,
-      templateError: templateError ?? this.templateError,
-      yearError: yearError ?? this.yearError,
-      nameError: nameError ?? this.nameError,
+      isSuccess: true,
+      message: message,
+    );
+  }
+
+  factory ValidationResult.fieldError(String field, String message) {
+    return ValidationResult(
+      isSuccess: false,
+      fieldError: field,
+      message: message,
+    );
+  }
+
+  factory ValidationResult.generalError(String message) {
+    return ValidationResult(
+      isSuccess: false,
+      message: message,
     );
   }
 }

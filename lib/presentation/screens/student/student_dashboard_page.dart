@@ -10,7 +10,6 @@ import 'package:elearning_management_app/data/repositories/assignment/assignment
 import 'package:elearning_management_app/data/repositories/submission/submission_repository.dart';
 import 'package:elearning_management_app/domain/models/submission_model.dart';
 import 'package:elearning_management_app/presentation/widgets/student/stats_card.dart';
-import 'package:elearning_management_app/presentation/widgets/student/circular_progress_widget.dart';
 import 'package:elearning_management_app/presentation/widgets/student/pie_chart_widget.dart';
 import 'package:elearning_management_app/presentation/widgets/student/student_calendar_panel.dart';
 import 'package:elearning_management_app/presentation/widgets/common/sidebar_model.dart';

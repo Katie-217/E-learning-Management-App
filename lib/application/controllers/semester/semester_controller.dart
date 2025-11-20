@@ -98,7 +98,7 @@ class SemesterController {
       }
     }
 
-    return ValidationResult(
+    return ValidationResult.semester(
       isValid: isValid,
       templateError: templateError,
       yearError: yearError,
@@ -169,9 +169,12 @@ class SemesterController {
 
       // Kiểm tra trùng lặp trước khi tạo
       final existingSemesters = await _semesterRepository.getAllSemesters();
-      final isDuplicate = existingSemesters.any((s) => s.code == finalCode);
-      if (isDuplicate) {
-        throw Exception('Semester với mã "$finalCode" đã tồn tại');
+      final existingSemester =
+          existingSemesters.where((s) => s.code == finalCode).firstOrNull;
+      if (existingSemester != null) {
+        // Return human-readable error with existing semester's display name
+        throw Exception(
+            'Semester already exists with name: "${existingSemester.name}"');
       }
 
       // Tạo đối tượng SemesterModel với TOÀN BỘ dữ liệu đã xử lý

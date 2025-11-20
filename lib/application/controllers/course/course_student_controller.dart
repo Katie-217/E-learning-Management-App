@@ -158,7 +158,6 @@ class CourseStudentController {
       final validation = await _enrollmentController.validateEnrollment(
         courseId: courseId,
         userId: user.uid,
-        maxCapacity: course.maxCapacity,
       );
 
       if (!validation['isValid']) {

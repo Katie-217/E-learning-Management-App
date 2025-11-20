@@ -6,30 +6,15 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../../application/controllers/semester/semester_controller.dart';
-import '../../../../../data/repositories/semester/semester_repository.dart';
 import '../../../../../data/repositories/semester/semester_template_repository.dart';
 import '../../../../../domain/models/semester_model.dart';
 import '../../../../../domain/models/semester_template_model.dart';
 import '../../../../../domain/models/validation_result.dart';
+import '../../../../../application/controllers/semester/semester_provider.dart';
 
 // ========================================
-// PROVIDERS
+// Using global providers from semester_provider.dart
 // ========================================
-final semesterControllerProvider = Provider<SemesterController>((ref) {
-  return SemesterController();
-});
-
-final semesterListProvider = FutureProvider<List<SemesterModel>>((ref) async {
-  final repository = SemesterRepository();
-  return await repository.getAllSemesters();
-});
-
-final semesterTemplateListProvider =
-    FutureProvider<List<SemesterTemplateModel>>((ref) async {
-  final repository = SemesterTemplateRepository();
-  return await repository.getSemesterTemplates();
-});
 
 // ========================================
 // MAIN WIDGET: SemesterFilterInstructor
@@ -64,52 +49,60 @@ class _SemesterFilterInstructorState
     final semesterListAsync = ref.watch(semesterListProvider);
 
     return Container(
+      height: 50, // Fixed height to match action buttons
       decoration: BoxDecoration(
         color: const Color(0xFF1F2937),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: Colors.grey[700]!),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          // Fixed-width Dropdown Semester List
-          SizedBox(
-            width: 200,
-            child: semesterListAsync.when(
-              data: (semesters) => _buildAnchoredDropdown(
-                context,
-                semesters,
-                _selectedSemesterId,
-                'Select Semester',
-                (String? newValue) {
-                  if (newValue != null && newValue != _selectedSemesterId) {
-                    setState(() {
-                      _selectedSemesterId = newValue;
-                    });
-                    widget.onSemesterChanged(newValue);
-                  }
-                },
-              ),
-              loading: () => const SizedBox(
-                height: 40,
-                child: Center(
-                  child: SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.indigo),
+          // Flexible Dropdown Semester List (Takes remaining space)
+          Expanded(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final dropdownWidth = constraints.maxWidth;
+
+                return semesterListAsync.when(
+                  data: (semesters) => _buildConstrainedDropdown(
+                    context,
+                    semesters,
+                    _selectedSemesterId,
+                    'Select Semester',
+                    dropdownWidth, // Pass the exact width
+                    (String? newValue) {
+                      if (newValue != null && newValue != _selectedSemesterId) {
+                        setState(() {
+                          _selectedSemesterId = newValue;
+                        });
+                        widget.onSemesterChanged(newValue);
+                      }
+                    },
+                  ),
+                  loading: () => const SizedBox(
+                    height: 40,
+                    child: Center(
+                      child: SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.indigo),
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ),
-              error: (error, stack) => const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 12),
-                child: Text(
-                  'Error loading semesters',
-                  style: TextStyle(color: Colors.red),
-                ),
-              ),
+                  error: (error, stack) => const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 12),
+                    child: Text(
+                      'Error loading semesters',
+                      style: TextStyle(color: Colors.red),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                );
+              },
             ),
           ),
           // Separator
@@ -118,19 +111,23 @@ class _SemesterFilterInstructorState
             height: 32,
             color: Colors.grey[700],
           ),
-          // Add Button
-          InkWell(
-            onTap: () => _showCreateSemesterDialog(context),
-            borderRadius: const BorderRadius.only(
-              topRight: Radius.circular(8),
-              bottomRight: Radius.circular(8),
-            ),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              child: const Icon(
-                Icons.add,
-                color: Colors.white,
-                size: 20,
+          // Fixed Add Button (48px width)
+          SizedBox(
+            width: 48,
+            child: InkWell(
+              onTap: () => _showCreateSemesterDialog(context),
+              borderRadius: const BorderRadius.only(
+                topRight: Radius.circular(8),
+                bottomRight: Radius.circular(8),
+              ),
+              child: Container(
+                height: 40, // Fixed height to match dropdown
+                alignment: Alignment.center,
+                child: const Icon(
+                  Icons.add,
+                  color: Colors.white,
+                  size: 20,
+                ),
               ),
             ),
           ),
@@ -139,17 +136,18 @@ class _SemesterFilterInstructorState
     );
   }
 
-  Widget _buildAnchoredDropdown(
+  Widget _buildConstrainedDropdown(
     BuildContext context,
     List<SemesterModel> items,
     String? selectedValue,
     String hint,
+    double constrainedWidth, // Add constrained width parameter
     Function(String?) onChanged,
   ) {
     return DropdownMenu<String>(
       initialSelection: selectedValue,
       hintText: hint,
-      width: 200,
+      // Remove fixed width to allow flexible sizing
       enableSearch: true,
       enableFilter: true,
       textStyle: const TextStyle(color: Colors.white, fontSize: 14),
@@ -163,15 +161,16 @@ class _SemesterFilterInstructorState
         hintStyle: TextStyle(color: Colors.grey, fontSize: 14),
       ),
       menuStyle: MenuStyle(
-        backgroundColor: const WidgetStatePropertyAll(Color(0xFF1F2937)),
-        elevation: const WidgetStatePropertyAll(8),
-        shape: WidgetStatePropertyAll(
-          RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+          backgroundColor: const WidgetStatePropertyAll(Color(0xFF1F2937)),
+          elevation: const WidgetStatePropertyAll(8),
+          shape: WidgetStatePropertyAll(
+            RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
-        ),
-        maximumSize: const WidgetStatePropertyAll(Size.fromWidth(200)),
-      ),
+          // Constrain menu width to match dropdown width exactly
+          fixedSize:
+              WidgetStatePropertyAll(Size(constrainedWidth, double.infinity))),
       trailingIcon:
           const Icon(Icons.keyboard_arrow_down, color: Colors.white, size: 20),
       selectedTrailingIcon:
@@ -186,14 +185,36 @@ class _SemesterFilterInstructorState
         return DropdownMenuEntry<String>(
           value: item.id,
           label: item.name,
-          trailingIcon: InkWell(
-            onTap: () => _showEditSemesterDialog(context, item),
-            child: const Icon(Icons.more_vert, color: Colors.white, size: 16),
+          labelWidget: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    item.name,
+                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                    maxLines: 3, // Allow up to 3 lines
+                    overflow: TextOverflow.visible, // Show full text
+                  ),
+                ),
+                InkWell(
+                  onTap: () => _showEditSemesterDialog(context, item),
+                  child: const Padding(
+                    padding: EdgeInsets.only(left: 8),
+                    child: Icon(Icons.more_vert, color: Colors.white, size: 16),
+                  ),
+                ),
+              ],
+            ),
           ),
           style: MenuItemButton.styleFrom(
             foregroundColor: Colors.white,
             backgroundColor: Colors.transparent,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: EdgeInsets
+                .zero, // Remove default padding since we handle it in labelWidget
+            fixedSize: null, // Allow flexible height
+            minimumSize: const Size(double.infinity, 48),
           ),
         );
       }).toList(),
@@ -273,6 +294,7 @@ class _CreateSemesterDialogState extends ConsumerState<CreateSemesterDialog> {
   String? _templateError;
   String? _yearError;
   String? _nameError;
+  String? _creationError; // Inline error for semester creation duplication
 
   @override
   void dispose() {
@@ -283,10 +305,22 @@ class _CreateSemesterDialogState extends ConsumerState<CreateSemesterDialog> {
   }
 
   void _onInputChanged() {
+    // Clear creation error immediately when user makes changes
+    _clearCreationError();
+
     _debounceTimer?.cancel();
     _debounceTimer = Timer(const Duration(seconds: 2), () {
       _generatePreview();
     });
+  }
+
+  // Helper method to clear creation error
+  void _clearCreationError() {
+    if (_creationError != null) {
+      setState(() {
+        _creationError = null;
+      });
+    }
   }
 
   Future<void> _generatePreview() async {
@@ -395,6 +429,7 @@ class _CreateSemesterDialogState extends ConsumerState<CreateSemesterDialog> {
                               _selectedTemplateId = value;
                               _templateError = null; // Clear error on selection
                             });
+                            _clearCreationError(); // Clear creation error immediately
                             _onInputChanged();
                           },
                         ),
@@ -423,6 +458,7 @@ class _CreateSemesterDialogState extends ConsumerState<CreateSemesterDialog> {
                         setState(() {
                           _yearError = null; // Clear error on change
                         });
+                        _clearCreationError(); // Clear creation error immediately
                         _onInputChanged();
                       },
                     ),
@@ -443,6 +479,31 @@ class _CreateSemesterDialogState extends ConsumerState<CreateSemesterDialog> {
                   _yearError!,
                   style: const TextStyle(color: Colors.red, fontSize: 12),
                 ),
+            ],
+            // Creation Error (Inline display for duplication errors)
+            if (_creationError != null) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.red[900]?.withOpacity(0.3),
+                  border: Border.all(color: Colors.red, width: 1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.error_outline,
+                        color: Colors.red, size: 16),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _creationError!,
+                        style: const TextStyle(color: Colors.red, fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
             // Preview Time (moved up)
             if (_previewText != null) ...[
@@ -502,6 +563,7 @@ class _CreateSemesterDialogState extends ConsumerState<CreateSemesterDialog> {
                 setState(() {
                   _nameError = null; // Clear error on change
                 });
+                _clearCreationError(); // Clear creation error immediately
               },
             ),
             // Display Name Error Message
@@ -671,12 +733,40 @@ class _CreateSemesterDialogState extends ConsumerState<CreateSemesterDialog> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error creating semester: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        // Clean error message - remove all technical prefixes comprehensively
+        String errorMessage = e.toString();
+
+        // Remove common technical prefixes (order matters - most specific first)
+        final prefixesToRemove = [
+          'Exception: Lỗi tạo semester: Exception: ',
+          'Lỗi tạo semester: Exception: ',
+          'Error creating semester: Exception: ',
+          'Exception: Lỗi tạo semester: ',
+          'Error creating semester: ',
+          'Lỗi tạo semester: ',
+          'Exception: ',
+          'Error: ',
+          'FirebaseException: ',
+        ];
+
+        // Apply prefix removal iteratively until no more prefixes are found
+        bool foundPrefix;
+        do {
+          foundPrefix = false;
+          for (final prefix in prefixesToRemove) {
+            if (errorMessage.startsWith(prefix)) {
+              errorMessage = errorMessage.substring(prefix.length);
+              foundPrefix = true;
+              break; // Only remove one prefix per iteration
+            }
+          }
+        } while (foundPrefix);
+
+        setState(() {
+          _creationError = errorMessage.trim();
+        });
+
+        // Error will persist until user interacts with input fields
       }
     } finally {
       if (mounted) {

@@ -185,7 +185,6 @@ class EnrollmentController {
   Future<Map<String, dynamic>> validateEnrollment({
     required String courseId,
     required String userId,
-    required int maxCapacity,
   }) async {
     try {
       // Kiểm tra đã ghi danh chưa
@@ -198,19 +197,10 @@ class EnrollmentController {
         };
       }
 
-      // Kiểm tra capacity
-      final currentCount = await _repository.countStudentsInCourse(courseId);
-      if (currentCount >= maxCapacity) {
-        return {
-          'isValid': false,
-          'reason': 'Khóa học đã đầy (${currentCount}/${maxCapacity})'
-        };
-      }
-
+      // No capacity limits - validation passes
       return {
         'isValid': true,
-        'currentCount': currentCount,
-        'maxCapacity': maxCapacity,
+        'reason': 'Validation successful',
       };
     } catch (e) {
       return {'isValid': false, 'reason': 'Lỗi validation: $e'};

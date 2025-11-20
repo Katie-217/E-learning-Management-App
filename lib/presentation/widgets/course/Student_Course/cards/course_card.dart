@@ -160,12 +160,12 @@ class CourseCard extends StatelessWidget {
                           .onSurface
                           .withOpacity(0.6))),
               Spacer(),
-              Icon(Icons.credit_card,
+              Icon(Icons.schedule,
                   size: 14,
                   color:
                       Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
               SizedBox(width: 4),
-              Text('${course.credits} credits',
+              Text('${course.sessions} sessions',
                   style: TextStyle(
                       fontSize: 12,
                       color: Theme.of(context)
@@ -183,22 +183,31 @@ class CourseCard extends StatelessWidget {
                 Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Progress',
+                      Text('Status',
                           style: TextStyle(
                               fontSize: 12, fontWeight: FontWeight.w500)),
-                      Text('${course.progress.toInt()}%',
+                      Container(
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: course.status == 'active'
+                              ? Colors.green.shade100
+                              : Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          course.status == 'active' ? 'Active' : 'Archived',
                           style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: _getProgressColor())),
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: course.status == 'active'
+                                ? Colors.green.shade700
+                                : Colors.grey.shade600,
+                          ),
+                        ),
+                      ),
                     ]),
                 SizedBox(height: 4),
-                LinearProgressIndicator(
-                  value: course.progress / 100,
-                  backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
-                  valueColor: AlwaysStoppedAnimation(_getProgressColor()),
-                  minHeight: 4,
-                ),
               ],
             ),
           ],
@@ -294,11 +303,5 @@ class CourseCard extends StatelessWidget {
       default:
         return 'Active';
     }
-  }
-
-  Color _getProgressColor() {
-    if (course.progress >= 80) return Colors.green;
-    if (course.progress >= 50) return Colors.orange;
-    return Colors.blue;
   }
 }

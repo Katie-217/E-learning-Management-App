@@ -1,6 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:elearning_management_app/domain/models/course_model.dart';
+import 'package:elearning_management_app/domain/models/semester_model.dart';
+import 'package:elearning_management_app/domain/models/validation_result.dart';
+import 'package:elearning_management_app/application/controllers/course/course_instructor_provider.dart';
+import 'package:elearning_management_app/application/controllers/semester/semester_provider.dart';
 
-class CreateCoursePage extends StatefulWidget {
+// Using global semester providers from semester_provider.dart
+
+class CreateCoursePage extends ConsumerStatefulWidget {
   final VoidCallback? onSuccess;
   final VoidCallback? onCancel;
 
@@ -11,80 +19,164 @@ class CreateCoursePage extends StatefulWidget {
   });
 
   @override
-  State<CreateCoursePage> createState() => _CreateCoursePageState();
+  ConsumerState<CreateCoursePage> createState() => _CreateCoursePageState();
 }
 
-class _CreateCoursePageState extends State<CreateCoursePage> {
+class _CreateCoursePageState extends ConsumerState<CreateCoursePage> {
   final TextEditingController _courseCodeController = TextEditingController();
   final TextEditingController _courseNameController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
-  final TextEditingController _creditsController = TextEditingController(text: '3');
 
   final _formKey = GlobalKey<FormState>();
-  bool isLoading = false;
-  
-  String? _selectedSemester;
-  int _selectedSessions = 10;
-  String _selectedStatus = 'active';
-  int _maxCapacity = 50;
+  // Removed direct repository access - use provider instead
+  final TextEditingController _semesterController = TextEditingController();
+  final TextEditingController _sessionsController =
+      TextEditingController(text: '10');
 
-  // Mock data for semesters - replace with actual data
-  final List<String> _semesters = [
-    'HK1/24-25',
-    'HK2/24-25',
-    'HK3/24-25',
-    'HK1/25-26',
-  ];
+  bool isLoading = false;
+  // Removed _semestersLoading - using provider loading state
+
+  String? _selectedSemester;
+  // Removed local semester lists - using provider instead
+
+  // Form validation states
+  String? _courseCodeError;
+  String? _courseNameError;
+  String? _semesterError;
+  String? _sessionsError;
+  String? _descriptionError;
 
   @override
   void initState() {
     super.initState();
-    _selectedSemester = _semesters.first;
+    // Semester loading handled by provider
   }
 
-  bool _validateForm() {
-    if (!_formKey.currentState!.validate()) {
-      return false;
-    }
+  // Removed _loadSemesters - using provider directly in UI
 
+  // Removed _filterSemesters - not needed with DropdownMenu's built-in filtering
+
+  // Basic form validation - only check if required fields are empty
+  bool _validateBasicForm() {
+    bool isValid = true;
+
+    // Validate course code
     if (_courseCodeController.text.trim().isEmpty) {
-      _showError('⚠️ Please enter course code');
-      return false;
+      setState(() => _courseCodeError = 'Please enter course code');
+      isValid = false;
     }
 
+    // Validate course name
     if (_courseNameController.text.trim().isEmpty) {
-      _showError('⚠️ Please enter course name');
-      return false;
+      setState(() => _courseNameError = 'Please enter course name');
+      isValid = false;
     }
 
-    return true;
+    // Validate semester selection
+    if (_selectedSemester == null || _selectedSemester!.isEmpty) {
+      setState(() => _semesterError = 'Please select semester');
+      isValid = false;
+    }
+
+    // Validate sessions - only check if empty and if it's a valid number
+    final sessionsText = _sessionsController.text.trim();
+    if (sessionsText.isEmpty) {
+      setState(() => _sessionsError = 'Please enter number of sessions');
+      isValid = false;
+    } else {
+      final sessions = int.tryParse(sessionsText);
+      if (sessions == null) {
+        setState(() => _sessionsError = 'Please enter a valid number');
+        isValid = false;
+      }
+    }
+
+    return isValid;
   }
+
+  // Removed old validation method - business rules moved to Controller layer
 
   Future<void> _createCourse() async {
-    if (!_validateForm()) {
+    // Clear previous errors
+    setState(() {
+      _courseCodeError = null;
+      _courseNameError = null;
+      _semesterError = null;
+      _sessionsError = null;
+      _descriptionError = null;
+    });
+
+    // Basic UI validation (only check if fields are empty)
+    if (!_validateBasicForm()) {
       return;
     }
 
     setState(() => isLoading = true);
 
     try {
-      // TODO: Implement actual course creation logic
-      await Future.delayed(const Duration(seconds: 2)); // Simulate API call
+      final course = CourseModel(
+        id: '', // Will be generated by Firestore
+        code: _courseCodeController.text.trim(),
+        name: _courseNameController.text.trim(),
+        instructor: '', // Will be set by repository
+        semester: _selectedSemester!,
+        sessions: int.parse(_sessionsController.text.trim()),
+        description: _descriptionController.text.trim(),
+        status: 'active', // Always active for new courses
+      );
 
-      if (mounted) {
-        _showSuccess(
-          '✅ Course created successfully!\n'
-          'Code: ${_courseCodeController.text}\n'
-          'Name: ${_courseNameController.text}',
-        );
+      // Create course using provider - now returns ValidationResult
+      final notifier = ref.read(courseInstructorProvider.notifier);
+      final result = await notifier.createCourse(course);
 
-        await Future.delayed(const Duration(seconds: 1));
-        if (mounted && widget.onSuccess != null) {
-          widget.onSuccess!();
+      if (result.isSuccess) {
+        // Auto-refresh course list
+        ref.invalidate(courseInstructorProvider);
+
+        if (mounted) {
+          _showSuccess(
+            '✅ Course created successfully!\n'
+            'Code: ${_courseCodeController.text}\n'
+            'Name: ${_courseNameController.text}',
+          );
+
+          await Future.delayed(const Duration(seconds: 1));
+          if (mounted && widget.onSuccess != null) {
+            widget.onSuccess!();
+          }
+        }
+      } else {
+        // Handle validation errors - display specific field errors
+        if (result.fieldError != null) {
+          setState(() {
+            switch (result.fieldError) {
+              case 'courseCode':
+                _courseCodeError = result.message;
+                break;
+              case 'courseName':
+                _courseNameError = result.message;
+                break;
+              case 'semester':
+                _semesterError = result.message;
+                break;
+              case 'sessions':
+                _sessionsError = result.message;
+                break;
+              case 'description':
+                _descriptionError = result.message;
+                break;
+              default:
+                // General error - show as snackbar
+                _showError('❌ ${result.message}');
+            }
+          });
+        } else {
+          // General error - show as snackbar
+          _showError('❌ ${result.message}');
         }
       }
     } catch (e) {
-      _showError('❌ Error: $e');
+      _showError('❌ An unexpected error occurred: ${e.toString()}');
     } finally {
       setState(() => isLoading = false);
     }
@@ -172,6 +264,7 @@ class _CreateCoursePageState extends State<CreateCoursePage> {
     int minLines = 1,
     int? maxLines,
     String? Function(String?)? validator,
+    String? errorText,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
@@ -186,6 +279,8 @@ class _CreateCoursePageState extends State<CreateCoursePage> {
           labelStyle: const TextStyle(color: Colors.grey),
           hintText: hint,
           hintStyle: const TextStyle(color: Colors.grey),
+          errorText: errorText,
+          errorStyle: const TextStyle(color: Colors.red),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
           ),
@@ -195,59 +290,110 @@ class _CreateCoursePageState extends State<CreateCoursePage> {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Colors.blue, width: 2),
+            borderSide: const BorderSide(color: Colors.indigo, width: 2),
           ),
           filled: true,
-          fillColor: const Color(0xFF1F2937),
+          fillColor: Colors.grey[900],
         ),
         validator: validator,
       ),
     );
   }
 
-  Widget _buildDropdown<T>({
-    required String label,
-    required T value,
-    required List<T> items,
-    required void Function(T?) onChanged,
-    required String Function(T) itemLabel,
-  }) {
+  Widget _buildSemesterDropdownMenu() {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
-      child: InputDecorator(
-        decoration: InputDecoration(
-          labelText: label,
-          labelStyle: const TextStyle(color: Colors.grey),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.grey[700]!),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Colors.blue, width: 2),
-          ),
-          filled: true,
-          fillColor: const Color(0xFF1F2937),
-        ),
-        child: DropdownButtonHideUnderline(
-          child: DropdownButton<T>(
-            value: value,
-            isExpanded: true,
-            icon: const Icon(Icons.arrow_drop_down, color: Colors.white),
-            style: const TextStyle(color: Colors.white),
-            dropdownColor: const Color(0xFF1F2937),
-            items: items.map((T item) {
-              return DropdownMenuItem<T>(
-                value: item,
-                child: Text(itemLabel(item)),
-              );
-            }).toList(),
-            onChanged: onChanged,
-          ),
-        ),
+      child: Consumer(
+        builder: (context, ref, child) {
+          final semestersAsync = ref.watch(semesterListProvider);
+
+          return semestersAsync.when(
+            data: (semesters) => LayoutBuilder(
+              builder: (context, constraints) {
+                return DropdownMenu<String>(
+                  controller: _semesterController,
+                  width: constraints.maxWidth, // Fix width to match parent
+                  label: const Text('Semester'),
+                  hintText: 'Select semester...',
+                  enableFilter: true,
+                  requestFocusOnTap: true,
+                  errorText: _semesterError,
+                  textStyle: const TextStyle(color: Colors.white),
+                  inputDecorationTheme: InputDecorationTheme(
+                    labelStyle: const TextStyle(color: Colors.grey),
+                    hintStyle: const TextStyle(color: Colors.grey),
+                    errorStyle: const TextStyle(color: Colors.red),
+                    filled: true,
+                    fillColor: Colors.grey[900],
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey[700]!),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey[700]!),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Colors.indigo),
+                    ),
+                    errorBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Colors.red),
+                    ),
+                    focusedErrorBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Colors.red),
+                    ),
+                  ),
+                  menuHeight: semesters.length <= 3
+                      ? semesters.length * 48.0 +
+                          16 // Dynamic height for <= 3 items
+                      : 160.0, // Fixed height for > 3 items with scroll
+                  menuStyle: MenuStyle(
+                    backgroundColor: WidgetStateProperty.all(Colors.grey[900]!),
+                    surfaceTintColor:
+                        WidgetStateProperty.all(Colors.transparent),
+                    shape: WidgetStateProperty.all(RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    )),
+                  ),
+                  onSelected: (String? value) {
+                    if (value != null) {
+                      setState(() {
+                        _selectedSemester = value;
+                        _semesterError =
+                            null; // Clear error when selection is made
+                      });
+                    }
+                  },
+                  dropdownMenuEntries: semesters.map<DropdownMenuEntry<String>>(
+                    (SemesterModel semester) {
+                      return DropdownMenuEntry<String>(
+                        value: semester.name,
+                        label: semester.name, // Only show name, no description
+                        style: MenuItemButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          backgroundColor: Colors.grey[900],
+                        ),
+                      );
+                    },
+                  ).toList(),
+                );
+              },
+            ),
+            loading: () => const Center(
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation(Colors.indigo),
+              ),
+            ),
+            error: (error, stack) => Text(
+              'Error loading semesters: $error',
+              style: const TextStyle(color: Colors.red),
+            ),
+          );
+        },
       ),
     );
   }
@@ -286,7 +432,7 @@ class _CreateCoursePageState extends State<CreateCoursePage> {
                       padding: const EdgeInsets.all(16),
                       margin: const EdgeInsets.only(bottom: 16),
                       decoration: BoxDecoration(
-                        color: Colors.blue[900]?.withOpacity(0.3),
+                        color: Colors.blue[900]?.withValues(alpha: 0.3),
                         border: Border.all(color: Colors.blue[700]!),
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -323,6 +469,7 @@ class _CreateCoursePageState extends State<CreateCoursePage> {
                           controller: _courseCodeController,
                           label: 'Course Code',
                           hint: 'E.g.: CS101',
+                          errorText: _courseCodeError,
                           validator: (value) {
                             if (value == null || value.isEmpty) {
                               return 'Please enter course code';
@@ -337,6 +484,7 @@ class _CreateCoursePageState extends State<CreateCoursePage> {
                           controller: _courseNameController,
                           label: 'Course Name',
                           hint: 'E.g.: Introduction to Programming',
+                          errorText: _courseNameError,
                           validator: (value) {
                             if (value == null || value.isEmpty) {
                               return 'Please enter course name';
@@ -353,6 +501,7 @@ class _CreateCoursePageState extends State<CreateCoursePage> {
                           hint: 'Brief description of the course...',
                           minLines: 3,
                           maxLines: 5,
+                          errorText: _descriptionError,
                         ),
                       ],
                     ),
@@ -360,91 +509,27 @@ class _CreateCoursePageState extends State<CreateCoursePage> {
                     _buildSection(
                       '⚙️ Course Settings',
                       [
-                        _buildDropdown<String>(
-                          label: 'Semester',
-                          value: _selectedSemester!,
-                          items: _semesters,
-                          onChanged: (value) {
-                            if (value != null) {
-                              setState(() => _selectedSemester = value);
-                            }
-                          },
-                          itemLabel: (item) => item,
-                        ),
-                        _buildDropdown<int>(
-                          label: 'Number of Sessions',
-                          value: _selectedSessions,
-                          items: const [10, 15, 20],
-                          onChanged: (value) {
-                            if (value != null) {
-                              setState(() => _selectedSessions = value);
-                            }
-                          },
-                          itemLabel: (item) => '$item sessions',
-                        ),
+                        _buildSemesterDropdownMenu(),
                         _buildTextField(
-                          controller: _creditsController,
-                          label: 'Credits',
-                          hint: 'E.g.: 3',
+                          controller: _sessionsController,
+                          label: 'Number of Sessions',
+                          hint: 'E.g.: 10, 15, 20',
                           keyboardType: TextInputType.number,
+                          errorText: _sessionsError,
                           validator: (value) {
+                            // UI validation: Only check format and empty - business rules in Controller
                             if (value == null || value.isEmpty) {
-                              return 'Please enter credits';
+                              return 'Please enter number of sessions';
                             }
-                            final credits = int.tryParse(value);
-                            if (credits == null || credits < 1 || credits > 6) {
-                              return 'Credits must be between 1 and 6';
+                            final sessions = int.tryParse(value);
+                            if (sessions == null) {
+                              return 'Please enter a valid number';
                             }
                             return null;
                           },
                         ),
-                        _buildDropdown<String>(
-                          label: 'Status',
-                          value: _selectedStatus,
-                          items: const ['active', 'draft', 'archived'],
-                          onChanged: (value) {
-                            if (value != null) {
-                              setState(() => _selectedStatus = value);
-                            }
-                          },
-                          itemLabel: (item) => item[0].toUpperCase() + item.substring(1),
-                        ),
                       ],
                     ),
-
-                    _buildSection(
-                      '👥 Capacity',
-                      [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                'Maximum Students: $_maxCapacity',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Slider(
-                          value: _maxCapacity.toDouble(),
-                          min: 10,
-                          max: 200,
-                          divisions: 38,
-                          label: _maxCapacity.toString(),
-                          activeColor: Colors.blue,
-                          inactiveColor: Colors.grey[700],
-                          onChanged: (value) {
-                            setState(() => _maxCapacity = value.toInt());
-                          },
-                        ),
-                      ],
-                    ),
-
-                    const Divider(height: 32, color: Colors.grey),
 
                     SizedBox(
                       width: double.infinity,
@@ -517,7 +602,8 @@ class _CreateCoursePageState extends State<CreateCoursePage> {
     _courseCodeController.dispose();
     _courseNameController.dispose();
     _descriptionController.dispose();
-    _creditsController.dispose();
+    _semesterController.dispose();
+    _sessionsController.dispose();
     super.dispose();
   }
 }

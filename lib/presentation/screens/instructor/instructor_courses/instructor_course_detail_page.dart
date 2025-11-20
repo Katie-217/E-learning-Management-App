@@ -29,9 +29,9 @@ class _InstructorCourseDetailPageState
     code: 'IT001',
     instructor: 'Dr. Johnson',
     semester: 'HK1/24-25',
-    sessions: 0,
-    progress: 0,
+    sessions: 15,
     description: 'Cross-platform mobile development with Flutter',
+    status: 'active',
   );
 
   @override

@@ -16,14 +16,11 @@ class CourseModel {
   final String instructor;
   final String semester;
   final int sessions;
-  final int progress;
 
   // Additional properties for compatibility
   final String description;
-  final int credits;
   final String imageUrl;
   final String status;
-  final int maxCapacity; // Maximum number of students allowed
 
   CourseModel({
     required this.id,
@@ -32,12 +29,9 @@ class CourseModel {
     required this.instructor,
     required this.semester,
     required this.sessions,
-    required this.progress,
     this.description = '',
-    this.credits = 3,
     this.imageUrl = '',
     this.status = 'active',
-    this.maxCapacity = 50, // Default capacity
   });
 
   // Factory constructor để tạo từ JSON (cho API calls)
@@ -49,12 +43,9 @@ class CourseModel {
       instructor: json['instructor'] ?? '',
       semester: json['semester'] ?? '',
       sessions: json['session'] ?? 0,
-      progress: json['progress'] ?? 0,
       description: json['description'] ?? '',
-      credits: json['credits'] ?? 3,
       imageUrl: json['imageUrl'] ?? '',
       status: json['status'] ?? 'active',
-      maxCapacity: json['maxCapacity'] ?? 50,
     );
   }
 
@@ -72,12 +63,9 @@ class CourseModel {
       instructor: data['teacherName'] ?? data['instructor'] ?? '',
       semester: data['semester'] ?? '',
       sessions: sessionsCount,
-      progress: _parseProgress(data['progress']),
       description: data['description'] ?? '',
-      credits: data['credits'] ?? 0,
       imageUrl: data['imageUrl'] ?? '',
-      status: data['status'] ?? '',
-      maxCapacity: data['maxCapacity'] ?? 50,
+      status: data['status'] ?? 'active',
     );
   }
 
@@ -116,9 +104,7 @@ class CourseModel {
       'instructor': instructor,
       'semester': semester,
       'sessions': sessions,
-      'progress': progress,
       'description': description,
-      'credits': credits,
       'imageUrl': imageUrl,
       'status': status,
     };
@@ -132,26 +118,10 @@ class CourseModel {
       'instructor': instructor,
       'semester': semester,
       'sessions': sessions,
-      'progress': progress,
       'description': description,
-      'credits': credits,
       'imageUrl': imageUrl,
       'status': status,
     };
-  }
-
-  // Helper method để parse progress từ string hoặc number
-  static int _parseProgress(dynamic progressData) {
-    if (progressData == null) {
-      return 0;
-    }
-    if (progressData is int) {
-      return progressData;
-    }
-    if (progressData is String) {
-      return int.tryParse(progressData) ?? 0;
-    }
-    return 0;
   }
 
   CourseModel copyWith({
@@ -161,11 +131,8 @@ class CourseModel {
     String? instructor,
     String? semester,
     int? sessions,
-    int? progress,
     String? description,
-    int? credits,
     String? imageUrl,
-    int? maxCapacity,
     String? status,
   }) {
     return CourseModel(
@@ -175,11 +142,9 @@ class CourseModel {
       instructor: instructor ?? this.instructor,
       semester: semester ?? this.semester,
       sessions: sessions ?? this.sessions,
-      progress: progress ?? this.progress,
       description: description ?? this.description,
-      credits: credits ?? this.credits,
+      imageUrl: imageUrl ?? this.imageUrl,
       status: status ?? this.status,
-      maxCapacity: maxCapacity ?? this.maxCapacity,
     );
   }
 }

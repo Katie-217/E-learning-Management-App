@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:elearning_management_app/presentation/screens/instructor/instructor_courses/instructor_course_detail_page.dart';
-import 'package:elearning_management_app/domain/models/course_model.dart';
 import 'package:elearning_management_app/presentation/widgets/course/Student_Course/cards/course_card_widget.dart';
 import 'package:elearning_management_app/application/controllers/course/course_instructor_provider.dart';
 import 'package:elearning_management_app/presentation/widgets/course/Instructor_Course/widget/semester_filter_instructor.dart';
+import 'package:elearning_management_app/presentation/screens/instructor/csv_import/csv_import_semester.dart';
+import 'package:elearning_management_app/application/controllers/semester/semester_provider.dart';
 
 class InstructorCoursesPage extends ConsumerStatefulWidget {
   // 🆕 Callback
   final VoidCallback? onCreateCoursePressed;
-  
+
   const InstructorCoursesPage({
     super.key,
     this.onCreateCoursePressed,
@@ -22,6 +23,13 @@ class InstructorCoursesPage extends ConsumerStatefulWidget {
 
 class _InstructorCoursesPageState extends ConsumerState<InstructorCoursesPage> {
   String? _selectedSemesterId;
+  bool _showImportView = false; // State để điều khiển hiển thị import view
+
+  // Constants for uniform sizing
+  static const double kImportButtonWidth = 160.0; // Compact for Import CSV
+  static const double kSemesterDropdownWidth = 280.0; // Wide for semester names
+  static const double kActionButtonHeight =
+      50.0; // Uniform height for all action buttons
 
   @override
   void initState() {
@@ -32,64 +40,255 @@ class _InstructorCoursesPageState extends ConsumerState<InstructorCoursesPage> {
     });
   }
 
+  Widget _buildImportMenu() {
+    return MenuAnchor(
+      builder:
+          (BuildContext context, MenuController controller, Widget? child) {
+        return SizedBox(
+          width: kImportButtonWidth, // Compact width for Import button
+          child: ElevatedButton(
+            onPressed: () {
+              if (controller.isOpen) {
+                controller.close();
+              } else {
+                controller.open();
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green.shade700,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              fixedSize: const Size(double.infinity,
+                  kActionButtonHeight), // Fixed height for alignment
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.file_upload, size: 16), // Added upload icon
+                SizedBox(width: 6),
+                Text('Import CSV'),
+                SizedBox(width: 6),
+                Icon(Icons.keyboard_arrow_down, size: 16),
+              ],
+            ),
+          ),
+        );
+      },
+      menuChildren: [
+        MenuItemButton(
+          onPressed: () {
+            // TODO: Implement Import Courses functionality
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content:
+                    Text('Import Courses functionality will be implemented'),
+                backgroundColor: Colors.indigo,
+              ),
+            );
+          },
+          child: const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.school, size: 16, color: Colors.white),
+                SizedBox(width: 8),
+                Text('Import Courses', style: TextStyle(color: Colors.white)),
+              ],
+            ),
+          ),
+        ),
+        MenuItemButton(
+          onPressed: () {
+            _showSemesterImportView();
+          },
+          child: const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.calendar_today, size: 16, color: Colors.white),
+                SizedBox(width: 8),
+                Text('Import Semesters', style: TextStyle(color: Colors.white)),
+              ],
+            ),
+          ),
+        ),
+      ],
+      style: const MenuStyle(
+        backgroundColor: WidgetStatePropertyAll(Color(0xFF1F2937)),
+        elevation: WidgetStatePropertyAll(8),
+        fixedSize: WidgetStatePropertyAll(
+            Size(180, double.infinity)), // Match button width
+        shape: WidgetStatePropertyAll(
+          RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(8)),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final instructorCoursesState = ref.watch(courseInstructorProvider);
 
+    // If showing import view, return ONLY the import screen (full page replacement)
+    if (_showImportView) {
+      return CsvImportSemesterScreen(
+        onImportComplete: _onImportComplete,
+        onCancel: _hideImportView,
+      );
+    }
+
+    // Normal courses view
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Header Section
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              'My Teaching Courses',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-            Row(
-              children: [
-                // Add Course Button
-                ElevatedButton.icon(
-                  onPressed: widget.onCreateCoursePressed,
-                  icon: const Icon(Icons.add, size: 18),
-                  label: const Text('Create Course'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.indigo[600],
-                    foregroundColor: Colors.white,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+        // Header Section - Block-based responsive layout
+        LayoutBuilder(
+          builder: (context, constraints) {
+            // Calculate available space for action buttons
+            final availableWidth = constraints.maxWidth;
+            final titleBlockWidth = 350; // Approximate width of title + icon
+            final actionBlockWidth = kImportButtonWidth +
+                kSemesterDropdownWidth +
+                12; // 12 = spacing
+            final needsWrapping = availableWidth <
+                (titleBlockWidth + actionBlockWidth + 24); // 24 = margin
+
+            if (needsWrapping) {
+              // Mobile Layout - Stack vertically with blocks
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Left Block: Title + Add Icon (stays together)
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'My Teaching Courses',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        onPressed: widget.onCreateCoursePressed,
+                        icon: const Icon(
+                          Icons.add_circle,
+                          size: 26,
+                          color: Colors.indigo,
+                        ),
+                        tooltip: 'Create Course',
+                        style: IconButton.styleFrom(
+                          backgroundColor: Colors.indigo.withOpacity(0.1),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  // Right Block: Action buttons (move together, wrap when needed)
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Wrap(
+                      spacing: 12,
+                      runSpacing: 8,
+                      alignment: WrapAlignment.end, // Right-align when wrapping
+                      children: [
+                        _buildImportMenu(),
+                        SizedBox(
+                          width: kSemesterDropdownWidth,
+                          height:
+                              kActionButtonHeight, // Fixed height for alignment
+                          child: SemesterFilterInstructor(
+                            selectedSemesterId: _selectedSemesterId,
+                            onSemesterChanged: (String semesterId) {
+                              setState(() {
+                                _selectedSemesterId = semesterId;
+                              });
+                              ref
+                                  .read(courseInstructorProvider.notifier)
+                                  .filterCoursesBySemester(semesterId);
+                            },
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                // Semester Filter Widget
-                SemesterFilterInstructor(
-                  selectedSemesterId: _selectedSemesterId,
-                  onSemesterChanged: (String semesterId) {
-                    setState(() {
-                      _selectedSemesterId = semesterId;
-                    });
-                    // Filter courses by semester ID
-                    ref
-                        .read(courseInstructorProvider.notifier)
-                        .filterCoursesBySemester(semesterId);
-                  },
-                ),
-              ],
-            ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        Text(
-          'Manage and monitor your teaching courses',
-          style: TextStyle(color: Colors.grey[400], fontSize: 16),
+                ],
+              );
+            } else {
+              // Desktop Layout - Two blocks horizontally
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Left Block: Title + Add Icon
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'My Teaching Courses',
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        onPressed: widget.onCreateCoursePressed,
+                        icon: const Icon(
+                          Icons.add_circle,
+                          size: 28,
+                          color: Colors.indigo,
+                        ),
+                        tooltip: 'Create Course',
+                        style: IconButton.styleFrom(
+                          backgroundColor: Colors.indigo.withOpacity(0.1),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  // Right Block: Action buttons
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildImportMenu(),
+                      const SizedBox(width: 12),
+                      SizedBox(
+                        width: kSemesterDropdownWidth,
+                        height:
+                            kActionButtonHeight, // Fixed height for alignment
+                        child: SemesterFilterInstructor(
+                          selectedSemesterId: _selectedSemesterId,
+                          onSemesterChanged: (String semesterId) {
+                            setState(() {
+                              _selectedSemesterId = semesterId;
+                            });
+                            ref
+                                .read(courseInstructorProvider.notifier)
+                                .filterCoursesBySemester(semesterId);
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              );
+            }
+          },
         ),
         const SizedBox(height: 24),
 
@@ -230,5 +429,44 @@ class _InstructorCoursesPageState extends ConsumerState<InstructorCoursesPage> {
         );
       },
     );
+  }
+
+  void _showSemesterImportView() {
+    // Show import screen embedded in current page body (preserve sidebar and header)
+    setState(() {
+      _showImportView = true;
+    });
+  }
+
+  void _hideImportView() {
+    setState(() {
+      _showImportView = false;
+    });
+  }
+
+  void _onImportComplete(bool success, String message) {
+    // Ẩn import view
+    _hideImportView();
+
+    // Hiển thị kết quả
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: success ? Colors.green : Colors.orange,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+
+    // Refresh data nếu thành công
+    if (success && mounted) {
+      // Refresh course data
+      ref.read(courseInstructorProvider.notifier).loadInstructorCourses();
+
+      // IMPORTANT: Refresh semester dropdown để hiển thị semester mới
+      // Invalidate the semesterListProvider to force reload
+      ref.invalidate(semesterListProvider);
+
+      print('DEBUG: 🔄 Refreshed semester list after successful import');
+    }
   }
 }
