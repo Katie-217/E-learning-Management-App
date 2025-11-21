@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:elearning_management_app/presentation/screens/instructor/instructor_students_page.dart';
+import 'package:elearning_management_app/presentation/screens/instructor/manage_student/instructor_students_page.dart';
 import 'package:elearning_management_app/application/controllers/instructor/instructor_profile_provider.dart';
 import 'package:elearning_management_app/presentation/screens/instructor/instructor_courses/instructor_courses_page.dart';
 import 'package:elearning_management_app/presentation/widgets/instructor/semester_switcher.dart';

@@ -3,6 +3,7 @@
 // MÔ TẢ: Repository duy nhất cho Authentication - Tuân thủ Clean Architecture
 // QUAN TRỌNG: File duy nhất được phép import Firebase!
 // ========================================
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -260,3 +261,7 @@ class AuthRepository {
     return _auth.currentUser?.uid;
   }
 }
+
+final authRepositoryProvider = Provider<AuthRepository>((ref) {
+  return AuthRepository.defaultClient();
+});

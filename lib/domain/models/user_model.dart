@@ -11,6 +11,7 @@ class UserModel {
   final String email;
   final String name;
   final String displayName;
+  final String? phoneNumber; // Supplementary field 
   final UserRole role;
   final String? photoUrl;
   final DateTime createdAt;
@@ -24,6 +25,7 @@ class UserModel {
     required this.email,
     required this.name,
     required this.displayName,
+    this.phoneNumber,    // Thêm vào constructor
     required this.role,
     this.photoUrl,
     required this.createdAt,
@@ -44,6 +46,7 @@ class UserModel {
       email: data['email'] ?? '',
       name: data['name'] ?? '',
       displayName: data['displayName'] ?? data['name'] ?? '',
+      phoneNumber: data['phoneNumber'],
       role: _parseUserRole(data['role']),
       photoUrl: data['photoUrl'],
       createdAt: _parseDateTime(data['createdAtLocal'] ?? data['createdAt']),
