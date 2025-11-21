@@ -32,7 +32,6 @@ class InstructorKPICards extends StatelessWidget {
             _InstructorKPICard(
               title: 'Courses',
               value: stats.coursesCount.toString(),
-              description: 'Total number of courses in the selected semester',
               icon: Icons.menu_book_outlined,
               bgStart: const Color(0xFF6366F1),
               bgEnd: const Color(0xFF8B5CF6),
@@ -41,7 +40,6 @@ class InstructorKPICards extends StatelessWidget {
             _InstructorKPICard(
               title: 'Groups',
               value: stats.groupsCount.toString(),
-              description: 'Total groups across all courses this semester',
               icon: Icons.groups_outlined,
               bgStart: const Color(0xFF10B981),
               bgEnd: const Color(0xFF34D399),
@@ -50,7 +48,6 @@ class InstructorKPICards extends StatelessWidget {
             _InstructorKPICard(
               title: 'Students',
               value: stats.studentsCount.toString(),
-              description: 'Total students managed in the current semester',
               icon: Icons.people_outlined,
               bgStart: const Color(0xFFF97316),
               bgEnd: const Color(0xFFFFB347),
@@ -59,8 +56,6 @@ class InstructorKPICards extends StatelessWidget {
             _InstructorKPICard(
               title: 'Assignments',
               value: stats.assignmentsCount.toString(),
-              description:
-                  'Count of all assignments across courses this semester',
               icon: Icons.assignment_outlined,
               bgStart: const Color(0xFFFF6B6B),
               bgEnd: const Color(0xFFFF8E72),
@@ -69,7 +64,6 @@ class InstructorKPICards extends StatelessWidget {
             _InstructorKPICard(
               title: 'Quizzes',
               value: stats.quizzesCount.toString(),
-              description: 'Total number of quizzes for this semester',
               icon: Icons.quiz_outlined,
               bgStart: const Color(0xFF0EA5E9),
               bgEnd: const Color(0xFF38BDF8),
@@ -85,7 +79,6 @@ class InstructorKPICards extends StatelessWidget {
 class _InstructorKPICard extends StatelessWidget {
   final String title;
   final String value;
-  final String description;
   final IconData icon;
   final Color bgStart;
   final Color bgEnd;
@@ -94,7 +87,6 @@ class _InstructorKPICard extends StatelessWidget {
   const _InstructorKPICard({
     required this.title,
     required this.value,
-    required this.description,
     required this.icon,
     required this.bgStart,
     required this.bgEnd,
@@ -142,11 +134,6 @@ class _InstructorKPICard extends StatelessWidget {
           Text(
             value,
             style: const TextStyle(fontSize: 33, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            description,
-            style: TextStyle(color: Colors.grey[400], fontSize: 12),
           ),
         ],
       ),

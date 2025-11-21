@@ -34,12 +34,18 @@ class AuthRepository {
     if (firebaseUser == null) return null;
 
     try {
-      final userDoc =
-          await _firestore.collection('users').doc(firebaseUser.uid).get();
-      if (!userDoc.exists) return null;
+      // Query bằng email vì document ID có thể khác với Firebase Auth UID
+      final userQuery = await _firestore
+          .collection('users')
+          .where('email', isEqualTo: firebaseUser.email)
+          .limit(1)
+          .get();
+      
+      if (userQuery.docs.isEmpty) return null;
 
-      return UserModel.fromFirestore(userDoc);
+      return UserModel.fromFirestore(userQuery.docs.first);
     } catch (e) {
+      print('DEBUG: ❌ Error getting currentUserModel: $e');
       return null;
     }
   }
@@ -65,25 +71,71 @@ class AuthRepository {
 
       print("✅ Auth thành công, đang lấy user data...");
 
-      // 2. Lấy UserModel từ Firestore ngay lập tức (tối ưu)
-      final userDoc =
-          await _firestore.collection('users').doc(credential.user!.uid).get();
-      if (!userDoc.exists) {
+      // 2. Tìm UserModel từ Firestore bằng email (vì doc ID có thể khác với Firebase Auth UID)
+      final userQuery = await _firestore
+          .collection('users')
+          .where('email', isEqualTo: email)
+          .limit(1)
+          .get();
+      
+      if (userQuery.docs.isEmpty) {
         throw Exception('User không tồn tại trong hệ thống');
       }
 
-      // 3. Cập nhật lastLoginAt (async - không chờ)
-      _firestore.collection('users').doc(credential.user!.uid).update({
-        'lastLoginAtLocal': DateTime.now().toString(),
-      }).catchError((e) => print('Warning: Could not update lastLoginAt: $e'));
+      final userDoc = userQuery.docs.first;
+      final firebaseAuthUid = credential.user!.uid;
 
-      print("✅ Đăng nhập hoàn tất - Role: ${userDoc.data()?['role']}");
+      // 3. Đồng bộ UID: Cập nhật document với Firebase Auth UID nếu chưa có
+      final docData = userDoc.data();
+      if (docData['firebaseAuthUid'] != firebaseAuthUid) {
+        await _firestore.collection('users').doc(userDoc.id).update({
+          'firebaseAuthUid': firebaseAuthUid,
+          'lastLoginAtLocal': DateTime.now().toString(),
+        });
+      } else {
+        // Chỉ cập nhật lastLoginAt nếu UID đã đồng bộ
+        _firestore.collection('users').doc(userDoc.id).update({
+          'lastLoginAtLocal': DateTime.now().toString(),
+        }).catchError((e) => print('Warning: Could not update lastLoginAt: $e'));
+      }
 
-      return UserModel.fromFirestore(userDoc);
+      final roleFromFirestore = userDoc.data()?['role'];
+      print("✅ Đăng nhập hoàn tất - Role từ Firestore: $roleFromFirestore");
+      
+      final userModel = UserModel.fromFirestore(userDoc);
+      print("✅ UserModel parsed - Role: ${userModel.role.name}, UID: ${userModel.uid}");
+
+      return userModel;
     } catch (e) {
       print("❌ Lỗi đăng nhập: $e");
       throw Exception('Đăng nhập thất bại: $e');
     }
+  }
+
+  // ========================================
+  // HÀM: signInWithUsernameAndPassword
+  // MÔ TẢ: Đăng nhập bằng username/password (không phụ thuộc email)
+  // ========================================
+  Future<UserModel> signInWithUsernameAndPassword(
+    String username,
+    String password,
+  ) async {
+    final normalizedUsername = username.trim().toLowerCase();
+
+    // 1. Map username -> email (ưu tiên cấu hình cục bộ để không cần truy vấn trước khi auth)
+    final email = await _resolveEmailForUsername(normalizedUsername);
+    if (email == null) {
+      throw Exception('Tài khoản không tồn tại hoặc chưa được cấu hình');
+    }
+
+    // 2. Xử lý password: nếu là "admin" (5 ký tự) thì chuyển thành "admin1" (6 ký tự) để đáp ứng yêu cầu Firebase
+    String normalizedPassword = password.trim();
+    if (normalizedPassword == 'admin' && normalizedUsername == 'admin') {
+      normalizedPassword = 'admin1';
+    }
+
+    // 3. Đăng nhập FirebaseAuth bằng email để lấy token hợp lệ
+    return signInWithEmailAndPassword(email, normalizedPassword);
   }
 
   // ========================================
@@ -258,7 +310,84 @@ class AuthRepository {
   // MÔ TẢ: Lấy user ID hiện tại (cho CourseRepository)
   // ========================================
   Future<String?> getCurrentUserId() async {
-    return _auth.currentUser?.uid;
+    // Thử lấy từ Firebase Auth trước
+    final firebaseUser = _auth.currentUser;
+    if (firebaseUser != null) {
+      print('DEBUG: 🔑 Got Firebase Auth UID from Firebase Auth: ${firebaseUser.uid}');
+      return firebaseUser.uid;
+    }
+    
+    print('DEBUG: ⚠️ Firebase Auth currentUser is null, trying to get from document...');
+    
+    // Nếu Firebase Auth null, lấy từ document user (field firebaseAuthUid)
+    try {
+      final userModel = await currentUserModel;
+      if (userModel != null) {
+        print('DEBUG: 🔍 Got userModel, email: ${userModel.email}');
+        // Query lại document để lấy firebaseAuthUid
+        final userQuery = await _firestore
+            .collection('users')
+            .where('email', isEqualTo: userModel.email)
+            .limit(1)
+            .get();
+        
+        if (userQuery.docs.isNotEmpty) {
+          final docData = userQuery.docs.first.data();
+          final firebaseAuthUid = docData['firebaseAuthUid']?.toString();
+          print('DEBUG: 🔍 Document data - firebaseAuthUid: $firebaseAuthUid');
+          if (firebaseAuthUid != null && firebaseAuthUid.isNotEmpty) {
+            print('DEBUG: 🔑 Got Firebase Auth UID from document: $firebaseAuthUid');
+            return firebaseAuthUid;
+          } else {
+            print('DEBUG: ⚠️ firebaseAuthUid field is empty or null in document');
+          }
+        } else {
+          print('DEBUG: ⚠️ No document found with email: ${userModel.email}');
+        }
+      } else {
+        print('DEBUG: ⚠️ currentUserModel returned null');
+      }
+    } catch (e) {
+      print('DEBUG: ❌ Error getting Firebase Auth UID from document: $e');
+    }
+    
+    return null;
+  }
+
+  // ========================================
+  // ========================================
+  // PRIVATE: _resolveEmailForUsername
+  // MÔ TẢ: Map username -> email trước khi đăng nhập FirebaseAuth
+  // ========================================
+  Future<String?> _resolveEmailForUsername(String username) async {
+    if (username.isEmpty) return null;
+
+    // 1. Map cục bộ cho các tài khoản cố định
+    const localMappings = {
+      'admin': 'admin@gmail.com',
+    };
+    if (localMappings.containsKey(username)) {
+      return localMappings[username];
+    }
+
+    // 2. Thử đọc từ collection "username_index" (public read) nếu được cấu hình
+    try {
+      final doc = await _firestore
+          .collection('username_index')
+          .doc(username)
+          .get(const GetOptions(source: Source.server));
+      if (doc.exists) {
+        final data = doc.data();
+        final email = data?['email']?.toString();
+        if (email != null && email.isNotEmpty) {
+          return email;
+        }
+      }
+    } catch (e) {
+      print('DEBUG: Username index lookup failed: $e');
+    }
+
+    return null;
   }
 }
 

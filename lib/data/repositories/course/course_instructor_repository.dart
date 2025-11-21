@@ -23,6 +23,8 @@ class CourseInstructorRepository {
       String instructorUid) async {
     try {
       print('DEBUG: 🔍 Querying courses for instructor: $instructorUid');
+      print('DEBUG: 🔍 Collection: $_collection');
+      print('DEBUG: 🔍 Query: where("instructor", isEqualTo: "$instructorUid")');
 
       // Query courses where instructor field matches instructorUid
       final querySnapshot = await _firestore
@@ -32,6 +34,24 @@ class CourseInstructorRepository {
 
       print(
           'DEBUG: 📚 Found ${querySnapshot.docs.length} courses for instructor');
+      
+      // Debug: In ra tất cả courses để kiểm tra
+      if (querySnapshot.docs.isEmpty) {
+        print('DEBUG: ⚠️ No courses found! Checking all courses in collection...');
+        final allCourses = await _firestore.collection(_collection).limit(5).get();
+        print('DEBUG: 📋 Sample courses in collection:');
+        for (var doc in allCourses.docs) {
+          final data = doc.data();
+          print('DEBUG:   - Doc ID: ${doc.id}');
+          print('DEBUG:     instructor field: ${data['instructor']}');
+          print('DEBUG:     name: ${data['name']}');
+        }
+      } else {
+        print('DEBUG: ✅ Courses found:');
+        for (var doc in querySnapshot.docs) {
+          print('DEBUG:   - ${doc.data()['name']} (${doc.data()['code']})');
+        }
+      }
 
       final courses = querySnapshot.docs.map((doc) {
         return CourseModel.fromFirestore(doc);
