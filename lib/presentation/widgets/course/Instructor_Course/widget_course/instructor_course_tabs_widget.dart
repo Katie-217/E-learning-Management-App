@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:elearning_management_app/domain/models/course_model.dart';
-import 'instructor_stream_tab.dart';
-import 'instructor_classwork_tab.dart';
-import '../instructor_course_people/instructor_people_tab.dart';
+import '../instructor_stream_tab.dart';
+import '../../../../screens/instructor/classwork_tab/instructor_classwork_tab.dart';
+import '../../instructor_course_people/instructor_people_tab.dart';
 
 class InstructorCourseTabsWidget extends StatelessWidget {
   final TabController tabController;

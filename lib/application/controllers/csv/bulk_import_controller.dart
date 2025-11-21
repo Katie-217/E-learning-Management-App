@@ -1,29 +1,55 @@
-import '../../../data/repositories/student/student_repository.dart';
-import '../../../domain/models/student_model.dart';
+// FILE: bulk_import_controller.dart
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
+import '../../../domain/models/user_model.dart';
+import '../../../core/config/users-role.dart';
 
 class BulkImportController {
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // ========================================
-  // HÀM: importStudents() - FIXED
-  // ========================================
+  // Create Auth user without signing out the current admin
+  Future<String> _createStudentAccountWithoutLogout({
+    required String email,
+    required String password,
+  }) async {
+    FirebaseApp? tempApp;
+    try {
+      final currentOptions = Firebase.app().options;
+      tempApp = await Firebase.initializeApp(
+        name: 'TemporaryRegisterApp',
+        options: currentOptions,
+      );
+
+      final tempAuth = FirebaseAuth.instanceFor(app: tempApp);
+
+      final credential = await tempAuth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      return credential.user!.uid;
+    } catch (e) {
+      rethrow;
+    } finally {
+      await tempApp?.delete();
+    }
+  }
+
+  // Main import function
   Future<ImportResult> importStudents(
     List<Map<String, dynamic>> csvData,
   ) async {
-    print('🔥 BƯỚC 1: Bắt đầu import sinh viên - ${csvData.length} records');
-    
     final currentUser = _firebaseAuth.currentUser;
     if (currentUser == null) {
-      throw Exception('❌ Instructor must be logged in to import students');
+      throw Exception('Instructor must be logged in to import students');
     }
-    
+
     final instructorUid = currentUser.uid;
-    final instructorEmail = currentUser.email;
-    print('✅ Saved current instructor: $instructorEmail');
-    
+    final tempPassword = _generateTempPassword();
+
     final result = ImportResult(
       dataType: 'students',
       totalRecords: csvData.length,
@@ -32,12 +58,9 @@ class BulkImportController {
     for (int i = 0; i < csvData.length; i++) {
       final record = csvData[i];
       try {
-        print('🔥 BƯỚC 2: Xử lý record ${i + 1}/${csvData.length}');
-        
-        // Validate dữ liệu
+        // Extract and validate fields
         final email = record['email']?.toString().trim() ?? '';
         final name = record['name']?.toString().trim() ?? '';
-        final studentCode = record['studentCode']?.toString().trim() ?? '';
         final phone = record['phone']?.toString().trim();
 
         if (!_isValidEmail(email)) {
@@ -48,15 +71,7 @@ class BulkImportController {
           throw Exception('Invalid name: must be at least 2 characters');
         }
 
-        if (studentCode.isEmpty) {
-          throw Exception('Student code cannot be empty');
-        }
-
-        print('✅ BƯỚC 2A: Validate thành công');
-
-// --- 2.2: KIỂM TRA TRÙNG LẶP TRONG FIRESTORE ---
-        // Chúng ta sẽ dùng studentCode hoặc email để kiểm tra trùng lặp
-        // Kiểm tra email đã tồn tại trong Firestore chưa
+        // Check for existing profile by email
         final existingProfile = await _firestore
             .collection('users')
             .where('email', isEqualTo: email)
@@ -64,49 +79,44 @@ class BulkImportController {
             .get();
 
         if (existingProfile.docs.isNotEmpty) {
-          throw Exception('Hồ sơ Firestore đã tồn tại với email: $email');
+          throw Exception('Profile already exists with email: $email');
         }
 
-        print('✅ Email và Mã sinh viên chưa được đăng ký trong Firestore');
+        // Create Auth account using secondary app
+        final authUid = await _createStudentAccountWithoutLogout(
+          email: email,
+          password: tempPassword,
+        );
 
-        // --- 2.3: TẠO MỘT UID MỚI VÀ STUDENT MODEL ---
-        
-        // Tạo một Document ID mới (UID) bằng cách tạo một doc ref và lấy id của nó
-        // Điều này đảm bảo mỗi hồ sơ có một ID duy nhất
-        final newDocRef = _firestore.collection('users').doc();
-        final uid = newDocRef.id; 
-        
-        // Tạo StudentModel
-        final student = StudentModel(
-          uid: uid, // Sử dụng ID Firestore mới tạo làm UID
+        // Create UserModel instance
+        final newUser = UserModel(
+          uid: authUid,
           email: email,
           name: name,
           displayName: name,
-          studentCode: studentCode,
-          phone: phone,
+          phoneNumber: phone,
           createdAt: DateTime.now(),
-          // Bỏ qua các trường liên quan đến Auth nếu cần, nhưng giữ lại các trường Profile
-          settings: const StudentSettings(
-             language: 'vi',
-             theme: 'light',
-             status: 'pending', // Có thể đặt là 'pending' vì chưa có tài khoản Auth
+          settings: const UserSettings(
+            language: 'vi',
+            theme: 'light',
+            status: 'active',
           ),
-          role: 'student',
-          isActive: false, // User này chưa có tài khoản Auth để đăng nhập, nên đặt là false
+          role: UserRole.student,
+          isActive: true,
+          isDefault: false,
         );
 
-        // --- 2.4: LƯU VÀO FIRESTORE ---
-        await newDocRef.set(student.toFirestore());
-        
-        print('✅ Student saved to Firestore: $uid');
+        // Save to Firestore using Auth UID as document ID
+        await _firestore.collection('users').doc(authUid).set(newUser.toFirestore());
 
+        // Record success
         result.successRecords.add({
           'email': email,
           'name': name,
-          'uid': uid,
+          'uid': authUid,
+          'tempPassword': tempPassword,
         });
       } catch (e) {
-        print('❌ Record ${i + 1} failed: $e');
         result.failedRecords.add({
           'email': record['email'] ?? 'unknown',
           'name': record['name'] ?? 'unknown',
@@ -115,52 +125,42 @@ class BulkImportController {
       }
     }
 
-    // Verify instructor vẫn đăng nhập
+    // Optional: verify instructor is still signed in (silent check)
     final finalUser = _firebaseAuth.currentUser;
     if (finalUser == null || finalUser.uid != instructorUid) {
-      print('⚠️ WARNING: Instructor session lost, re-authenticating...');
-    } else {
-      print('✅ Instructor session maintained: ${finalUser.email}');
+      // Session was lost due to external factors (rare with secondary app)
     }
-
-    print('🔥 BƯỚC 3: Kết thúc');
-    print('✅ Thành công: ${result.successRecords.length}');
-    print('❌ Thất bại: ${result.failedRecords.length}');
 
     return result;
   }
 
-  // ========================================
-  // Helper Methods
-  // ========================================
+  // Helper: email validation
   bool _isValidEmail(String email) {
-    return RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
-        .hasMatch(email);
+    return RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$').hasMatch(email);
   }
 
+  // Temporary password (change to stronger generator in production if needed)
   String _generateTempPassword() {
-    return 'TempPass${DateTime.now().millisecondsSinceEpoch}@';
+    return '123456';
   }
 }
 
-// ========================================
-// CLASS: ImportResult
-// ========================================
+// Result container class
 class ImportResult {
   final String dataType;
   final int totalRecords;
   final List<Map<String, dynamic>> successRecords = [];
   final List<Map<String, dynamic>> failedRecords = [];
-  
+
   ImportResult({
     required this.dataType,
     required this.totalRecords,
   });
-  
+
   int get successCount => successRecords.length;
   int get failureCount => failedRecords.length;
-  double get successRate => (successCount / totalRecords) * 100;
-  
+  double get successRate => totalRecords > 0 ? (successCount / totalRecords) * 100 : 0;
+
   Map<String, dynamic> toMap() {
     return {
       'dataType': dataType,
@@ -172,9 +172,9 @@ class ImportResult {
       'failedRecords': failedRecords,
     };
   }
-  
+
   @override
   String toString() {
-    return '✅ $successCount / ❌ $failureCount (${successRate.toStringAsFixed(1)}%)';
+    return 'Success: $successCount / Failed: $failureCount (${successRate.toStringAsFixed(1)}%)';
   }
 }

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:elearning_management_app/presentation/screens/instructor/instructor_courses/instructor_course_detail_page.dart';
-import 'package:elearning_management_app/presentation/widgets/course/Instructor_Course/widget/course_widget.dart';
+import 'package:elearning_management_app/presentation/widgets/course/Instructor_Course/widget_course/course_card_widget.dart';
 import 'package:elearning_management_app/application/controllers/course/course_instructor_provider.dart';
-import 'package:elearning_management_app/presentation/widgets/course/Instructor_Course/widget/semester_filter_instructor.dart';
+import 'package:elearning_management_app/presentation/widgets/course/Instructor_Course/widget_course/semester_filter_instructor.dart';
 import 'package:elearning_management_app/presentation/screens/instructor/csv_import/csv_import_semester.dart';
 import 'package:elearning_management_app/application/controllers/semester/semester_provider.dart';
 

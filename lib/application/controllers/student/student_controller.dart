@@ -1,11 +1,11 @@
 // ========================================
 // FILE: student_controller.dart
-// MÔ TẢ: Controller sinh viên - Business Logic
+// DESCRIPTION: Student Controller - Business Logic (Updated for UserModel)
 // ========================================
 
 import '../../../data/repositories/student/student_repository.dart';
 import '../../../data/repositories/auth/auth_repository.dart';
-import '../../../domain/models/student_model.dart';
+import '../../../domain/models/user_model.dart';
 import '../../../core/config/users-role.dart';
 
 class StudentController {
@@ -16,355 +16,290 @@ class StudentController {
   }) : _authRepository = authRepository;
 
   // ========================================
-  // HÀM: createStudent()
-  // MÔ TẢ: Tạo hồ sơ sinh viên
-  // ⚠️ Lưu ý: User phải được tạo qua Firebase Auth trước
+  // FUNCTION: createStudent()
+  // DESCRIPTION: Create a student profile (using UserModel)
   // ========================================
   Future<String> createStudent({
-    required String uid,             // UID từ Firebase Auth
+    required String uid,             // UID from Firebase Auth
     required String email,
     required String name,
-    String? studentCode,             // Mã sinh viên (tùy chọn)
-    String? phone,
-    String? department,
+    String? phoneNumber,
     String? photoUrl,
   }) async {
     try {
-      // // 1. Kiểm tra quyền - chỉ Instructor được tạo
-      // final user = await _authRepository.currentUserModel;
-      // if (user == null || user.role != UserRole.instructor) {
-      //   throw Exception('❌ Chỉ giáo viên mới có quyền tạo sinh viên');
-      // }
-
-      // print('DEBUG: ✅ Instructor ${user.uid} đang tạo sinh viên');
-
-      // 2. Validate dữ liệu
+      // Validate input data
       if (email.isEmpty || name.isEmpty) {
-        throw Exception('❌ Vui lòng điền đầy đủ thông tin');
+        throw Exception('❌ Please fill in all required information');
       }
 
-      // 3. Tạo StudentSettings
-      const settings = StudentSettings(
+      // Create default UserSettings
+      const settings = UserSettings(
         language: 'vi',
         theme: 'light',
         status: 'active',
       );
 
-      // 4. Tạo đối tượng StudentModel
-      final newStudent = StudentModel(
+      // Create UserModel instance with Student role
+      final newUser = UserModel(
         uid: uid,
         email: email,
         name: name,
         displayName: name,
-        role: 'student',
+        role: UserRole.student,
         createdAt: DateTime.now(),
         settings: settings,
         isActive: true,
-        studentCode: studentCode,
-        phone: phone,
+        phoneNumber: phoneNumber,
         photoUrl: photoUrl,
+        isDefault: false,
       );
 
-      // 5. Lưu vào Firestore
-      final studentId = await StudentRepository.createStudent(newStudent);
-
-      print('DEBUG: ✅ Sinh viên tạo thành công: $studentId');
+      // Save to Firestore via Repository
+      final studentId = await StudentRepository.createStudent(newUser);
       return studentId;
     } catch (e) {
-      print('DEBUG: ❌ Lỗi tạo sinh viên: $e');
       rethrow;
     }
   }
 
   // ========================================
-  // HÀM: getStudentById()
-  // MÔ TẢ: Lấy thông tin chi tiết sinh viên
+  // FUNCTION: getStudentById()
+  // DESCRIPTION: Get detailed student information by UID
   // ========================================
-  Future<StudentModel?> getStudentById(String studentUid) async {
+  Future<UserModel?> getStudentById(String studentUid) async {
     try {
       return await StudentRepository.getStudentById(studentUid);
     } catch (e) {
-      print('DEBUG: ❌ Lỗi lấy sinh viên: $e');
       return null;
     }
   }
 
   // ========================================
-  // HÀM: getAllStudents()
-  // MÔ TẢ: Lấy danh sách tất cả sinh viên
+  // FUNCTION: getAllStudents()
+  // DESCRIPTION: Retrieve all students
   // ========================================
-  Future<List<StudentModel>> getAllStudents() async {
+  Future<List<UserModel>> getAllStudents() async {
     try {
       return await StudentRepository.getAllStudents();
     } catch (e) {
-      print('DEBUG: ❌ Lỗi lấy danh sách sinh viên: $e');
       return [];
     }
   }
 
   // ========================================
-  // HÀM: updateStudent()
-  // MÔ TẢ: Cập nhật thông tin sinh viên
+  // FUNCTION: updateStudent()
+  // DESCRIPTION: Update full student information
   // ========================================
-  Future<bool> updateStudent(StudentModel student) async {
+  Future<bool> updateStudent(UserModel student) async {
     try {
-      // 1. Kiểm tra quyền
+      // Check permission - only instructors allowed
       final user = await _authRepository.currentUserModel;
       if (user == null || user.role != UserRole.instructor) {
-        throw Exception('❌ Chỉ giáo viên mới có quyền cập nhật');
+        throw Exception('❌ Only instructors can update student information');
       }
 
-      // 2. Validate dữ liệu
+      // Validate data
       if (student.name.isEmpty || student.email.isEmpty) {
-        throw Exception('❌ Thông tin không hợp lệ');
+        throw Exception('❌ Invalid information');
       }
 
-      // 3. Cập nhật
       await StudentRepository.updateStudent(student);
-      print('DEBUG: ✅ Cập nhật sinh viên thành công');
       return true;
     } catch (e) {
-      print('DEBUG: ❌ Lỗi cập nhật sinh viên: $e');
       return false;
     }
   }
 
   // ========================================
-  // HÀM: updateStudentProfile()
-  // MÔ TẢ: Cập nhật thông tin profile
+  // FUNCTION: updateStudentProfile()
+  // DESCRIPTION: Partial profile update (name & phone only)
   // ========================================
   Future<bool> updateStudentProfile(
     String studentUid, {
     String? name,
     String? phone,
-    String? department,
-    String? studentCode,
   }) async {
     try {
-      // Kiểm tra quyền
       final user = await _authRepository.currentUserModel;
       if (user == null || user.role != UserRole.instructor) {
-        throw Exception('❌ Chỉ giáo viên mới có quyền cập nhật');
+        throw Exception('❌ Only instructors can update profile');
       }
 
       await StudentRepository.updateStudentProfile(
         studentUid,
         name: name,
         phone: phone,
-        department: department,
-        studentCode: studentCode,
       );
-
-      print('DEBUG: ✅ Cập nhật profile thành công');
       return true;
     } catch (e) {
-      print('DEBUG: ❌ Lỗi cập nhật profile: $e');
       return false;
     }
   }
 
   // ========================================
-  // HÀM: deleteStudent()
-  // MÔ TẢ: Xóa sinh viên (set inactive)
+  // FUNCTION: deleteStudent()
+  // DESCRIPTION: Soft delete student (set inactive)
   // ========================================
   Future<bool> deleteStudent(String studentUid) async {
     try {
-      // 1. Kiểm tra quyền
       final user = await _authRepository.currentUserModel;
       if (user == null || user.role != UserRole.instructor) {
-        throw Exception('❌ Chỉ giáo viên mới có quyền xóa');
+        throw Exception('❌ Only instructors can delete students');
       }
 
-      // 2. Lấy thông tin sinh viên trước khi xóa
       final student = await StudentRepository.getStudentById(studentUid);
       if (student == null) {
-        throw Exception('❌ Sinh viên không tồn tại');
+        throw Exception('❌ Student does not exist');
       }
 
-      // 3. Kiểm tra sinh viên có đang tham gia course nào không (tùy chọn)
-      if (student.courseIds.isNotEmpty) {
-        throw Exception(
-          '❌ Không thể xóa sinh viên đang tham gia ${student.courseIds.length} course',
-        );
-      }
-
-      // 4. Xóa (set inactive)
+      // Enrollment check is now handled in Repository or skipped
       await StudentRepository.deleteStudent(studentUid);
-      print('DEBUG: ✅ Xóa sinh viên thành công');
       return true;
     } catch (e) {
-      print('DEBUG: ❌ Lỗi xóa sinh viên: $e');
       return false;
     }
   }
 
   // ========================================
-  // HÀM: searchStudents()
-  // MÔ TẢ: Tìm kiếm sinh viên
+  // FUNCTION: searchStudents()
+  // DESCRIPTION: Search students by name/email
   // ========================================
-  Future<List<StudentModel>> searchStudents(String query) async {
+  Future<List<UserModel>> searchStudents(String query) async {
     try {
       if (query.isEmpty) {
         return await StudentRepository.getAllStudents();
       }
       return await StudentRepository.searchStudents(query);
     } catch (e) {
-      print('DEBUG: ❌ Lỗi tìm kiếm: $e');
       return [];
     }
   }
 
   // ========================================
-  // HÀM: enrollStudentToCourse()
-  // MÔ TẢ: Thêm sinh viên vào course
+  // FUNCTION: enrollStudentToCourse()
+  // DESCRIPTION: Enroll a student into a course
   // ========================================
   Future<bool> enrollStudentToCourse(
     String studentUid,
     String courseId,
   ) async {
     try {
-      // 1. Kiểm tra quyền
       final user = await _authRepository.currentUserModel;
       if (user == null || user.role != UserRole.instructor) {
-        throw Exception('❌ Chỉ giáo viên mới có quyền enrollment');
+        throw Exception('❌ Only instructors can perform enrollment');
       }
 
-      // 2. Kiểm tra sinh viên tồn tại
-      final student = await StudentRepository.getStudentById(studentUid);
-      if (student == null) {
-        throw Exception('❌ Sinh viên không tồn tại');
-      }
-
-      // 3. Kiểm tra sinh viên đã enroll course này chưa
-      if (student.courseIds.contains(courseId)) {
-        throw Exception('❌ Sinh viên đã đang ở trong course này');
-      }
-
-      // 4. Thêm
       await StudentRepository.enrollStudentToCourse(studentUid, courseId);
-      print('DEBUG: ✅ Enrollment thành công');
       return true;
     } catch (e) {
-      print('DEBUG: ❌ Lỗi enrollment: $e');
       return false;
     }
   }
 
   // ========================================
-  // HÀM: removeStudentFromCourse()
-  // MÔ TẢ: Xóa sinh viên khỏi course
+  // FUNCTION: removeStudentFromCourse()
+  // DESCRIPTION: Remove student from a course
   // ========================================
   Future<bool> removeStudentFromCourse(
     String studentUid,
     String courseId,
   ) async {
     try {
-      // 1. Kiểm tra quyền
       final user = await _authRepository.currentUserModel;
       if (user == null || user.role != UserRole.instructor) {
-        throw Exception('❌ Chỉ giáo viên mới có quyền thay đổi');
+        throw Exception('❌ Only instructors can modify enrollment');
       }
 
-      // 2. Xóa
       await StudentRepository.removeStudentFromCourse(studentUid, courseId);
-      print('DEBUG: ✅ Xóa thành công');
       return true;
     } catch (e) {
-      print('DEBUG: ❌ Lỗi xóa: $e');
       return false;
     }
   }
 
   // ========================================
-  // HÀM: getStudentsByCourse()
-  // MÔ TẢ: Lấy danh sách sinh viên theo course
+  // FUNCTION: getStudentsByCourse()
+  // DESCRIPTION: Get all students enrolled in a specific course
   // ========================================
-  Future<List<StudentModel>> getStudentsByCourse(String courseId) async {
+  Future<List<UserModel>> getStudentsByCourse(String courseId) async {
     try {
       return await StudentRepository.getStudentsByCourse(courseId);
     } catch (e) {
-      print('DEBUG: ❌ Lỗi lấy danh sách: $e');
       return [];
     }
   }
 
   // ========================================
-  // HÀM: getStudentsByGroup()
-  // MÔ TẢ: Lấy danh sách sinh viên theo group
+  // FUNCTION: getStudentsByGroup()
+  // DESCRIPTION: Get all students in a specific group
   // ========================================
-  Future<List<StudentModel>> getStudentsByGroup(String groupId) async {
+  Future<List<UserModel>> getStudentsByGroup(String groupId) async {
     try {
       return await StudentRepository.getStudentsByGroup(groupId);
     } catch (e) {
-      print('DEBUG: ❌ Lỗi lấy danh sách: $e');
       return [];
     }
   }
 
   // ========================================
-  // HÀM: addStudentToGroup()
-  // MÔ TẢ: Thêm sinh viên vào group
+  // FUNCTION: addStudentToGroup()
+  // DESCRIPTION: Add student to a group
   // ========================================
   Future<bool> addStudentToGroup(
     String studentUid,
     String groupId,
   ) async {
     try {
-      // Kiểm tra quyền
       final user = await _authRepository.currentUserModel;
       if (user == null || user.role != UserRole.instructor) {
-        throw Exception('❌ Chỉ giáo viên mới có quyền');
+        throw Exception('❌ Only instructors can manage groups');
       }
 
       await StudentRepository.addStudentToGroup(studentUid, groupId);
       return true;
     } catch (e) {
-      print('DEBUG: ❌ Lỗi: $e');
       return false;
     }
   }
 
   // ========================================
-  // HÀM: removeStudentFromGroup()
-  // MÔ TẢ: Xóa sinh viên khỏi group
+  // FUNCTION: removeStudentFromGroup()
+  // DESCRIPTION: Remove student from a group
   // ========================================
   Future<bool> removeStudentFromGroup(
     String studentUid,
     String groupId,
   ) async {
     try {
-      // Kiểm tra quyền
       final user = await _authRepository.currentUserModel;
       if (user == null || user.role != UserRole.instructor) {
-        throw Exception('❌ Chỉ giáo viên mới có quyền');
+        throw Exception('❌ Only instructors can manage groups');
       }
 
       await StudentRepository.removeStudentFromGroup(studentUid, groupId);
       return true;
     } catch (e) {
-      print('DEBUG: ❌ Lỗi: $e');
       return false;
     }
   }
 
   // ========================================
-  // HÀM: getStudentStatistics()
-  // MÔ TẢ: Lấy thống kê sinh viên
+  // FUNCTION: getStudentStatistics()
+  // DESCRIPTION: Get student statistics (total, active, inactive)
   // ========================================
   Future<Map<String, int>> getStudentStatistics() async {
     try {
       return await StudentRepository.getStudentStatistics();
     } catch (e) {
-      print('DEBUG: ❌ Lỗi lấy thống kê: $e');
       return {'total': 0, 'active': 0, 'inactive': 0};
     }
   }
 
   // ========================================
-  // HÀM: listenToStudents()
-  // MÔ TẢ: Stream theo dõi thay đổi sinh viên
+  // FUNCTION: listenToStudents()
+  // DESCRIPTION: Real-time stream of student list changes
   // ========================================
-  Stream<List<StudentModel>> listenToStudents() {
+  Stream<List<UserModel>> listenToStudents() {
     return StudentRepository.listenToStudents();
   }
 }

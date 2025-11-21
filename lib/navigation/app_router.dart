@@ -7,14 +7,14 @@ import '../data/repositories/auth/user_session_service.dart';
 import '../presentation/screens/auth/auth_overlay_screen.dart';
 import '../core/config/users-role.dart';
 import '../presentation/screens/instructor/instructor_dashboard.dart';
-import '../presentation/screens/instructor/instructor_students_page.dart';
+import '../presentation/screens/instructor/manage_student/instructor_students_page.dart';
 // import '../presentation/screens/instructor/instructor_grades_page.dart';
 import '../presentation/screens/profile/profile_view.dart';
 import '../presentation/screens/student/course/course_page.dart';
 import '../presentation/screens/instructor/instructor_courses/instructor_courses_page.dart';
 import '../presentation/screens/instructor/instructor_courses/instructor_course_detail_page.dart';
 import '../presentation/screens/assignment/assignments_page.dart';
-import '../presentation/screens/instructor/instructor_student_create.dart';
+import '../presentation/screens/instructor/manage_student/instructor_student_create.dart';
 
 class AppRouter {
   AppRouter._();

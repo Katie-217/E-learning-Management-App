@@ -296,6 +296,7 @@ class SubmissionModel {
       final parsed = DateTime.parse(dateData.toString());
       return parsed;
     } catch (e) {
+      print('DEBUG: ⚠️ Error parsing date: $e');
       return null;
     }
   }

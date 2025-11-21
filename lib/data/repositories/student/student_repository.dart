@@ -1,445 +1,177 @@
 // ========================================
-// FILE: student_repository.dart (FIXED)
-// MÔ TẢ: Repository sinh viên - Tránh cần index composite
+// FILE: student_repository.dart (FIXED & UPDATED)
+// MÔ TẢ: Repository sinh viên - Sử dụng UserModel & Client-side filtering
 // ========================================
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../../domain/models/student_model.dart';
+import '../../../domain/models/user_model.dart';
+import '../../../core/config/users-role.dart';
 
 class StudentRepository {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   static const String _collection = 'users';
 
   // ========================================
-  // HÀM: getAllStudents() - FIXED VERSION
-  // MÔ TẢ: Lấy tất cả sinh viên (tránh composite index)
-  // Chiến lược: Query toàn bộ, filter trên client
+  // HÀM: getAllStudents()
+  // MÔ TẢ: Lấy tất cả User có role là Student
+  // Chiến lược: Query toàn bộ -> Filter client để tránh Composite Index
   // ========================================
-  static Future<List<StudentModel>> getAllStudents() async {
+  static Future<List<UserModel>> getAllStudents() async {
     try {
-      print('DEBUG: 📚 Lấy tất cả sinh viên (client-side filtering)');
+      final querySnapshot = await _firestore.collection(_collection).get();
 
-      // ❌ CŨ (gây lỗi index):
-      // final querySnapshot = await _firestore
-      //     .collection(_collection)
-      //     .where('role', isEqualTo: 'student')
-      //     .orderBy('name')
-      //     .get();
-
-      // ✅ MỚI (tránh index):
-      // Bước 1: Lấy toàn bộ documents từ collection
-      final querySnapshot = await _firestore
-          .collection(_collection)
-          .get();
-
-      print('DEBUG: 📊 Tổng documents: ${querySnapshot.docs.length}');
-
-      // Bước 2: Filter và sort trên client (không cần index)
       final students = querySnapshot.docs
           .map((doc) {
             try {
-              return StudentModel.fromFirestore(doc);
+              return UserModel.fromFirestore(doc);
             } catch (e) {
-              print('DEBUG: ⚠️ Lỗi parse document ${doc.id}: $e');
               return null;
             }
           })
-          .where((s) => s != null && s.role == 'student') // Filter trên client
-          .cast<StudentModel>()
+          .where((u) => u != null && u.role == UserRole.student)
+          .cast<UserModel>()
           .toList();
 
-      // Sort theo tên trên client
       students.sort((a, b) => a.name.compareTo(b.name));
-
-      print('DEBUG: ✅ Lấy ${students.length} sinh viên thành công');
       return students;
     } catch (e) {
-      print('DEBUG: ❌ Lỗi lấy danh sách sinh viên: $e');
       return [];
     }
   }
 
   // ========================================
-  // HÀM: getStudentsByCourse() - FIXED
-  // MÔ TẢ: Lấy sinh viên theo course (tránh index)
+  // HÀM: searchStudents()
+  // MÔ TẢ: Tìm kiếm theo Tên hoặc Email (Tránh index)
   // ========================================
-  static Future<List<StudentModel>> getStudentsByCourse(
-    String courseId,
-  ) async {
+  static Future<List<UserModel>> searchStudents(String query) async {
     try {
-      print('DEBUG: 📚 Lấy sinh viên của course: $courseId');
-
-      // ✅ Chiến lược: Lấy toàn bộ, filter trên client
-      final querySnapshot = await _firestore
-          .collection(_collection)
-          .get();
-
-      final students = querySnapshot.docs
-          .map((doc) {
-            try {
-              return StudentModel.fromFirestore(doc);
-            } catch (e) {
-              return null;
-            }
-          })
-          .where((s) =>
-              s != null &&
-              s.role == 'student' &&
-              s.courseIds.contains(courseId))
-          .cast<StudentModel>()
-          .toList();
-
-      students.sort((a, b) => a.name.compareTo(b.name));
-
-      print('DEBUG: ✅ Lấy ${students.length} sinh viên thành công');
-      return students;
-    } catch (e) {
-      print('DEBUG: ❌ Lỗi lấy danh sách: $e');
-      return [];
-    }
-  }
-
-  // ========================================
-  // HÀM: getStudentsByGroup() - FIXED
-  // MÔ TẢ: Lấy sinh viên theo group (tránh index)
-  // ========================================
-  static Future<List<StudentModel>> getStudentsByGroup(
-    String groupId,
-  ) async {
-    try {
-      print('DEBUG: 👥 Lấy sinh viên của group: $groupId');
-
-      final querySnapshot = await _firestore
-          .collection(_collection)
-          .get();
-
-      final students = querySnapshot.docs
-          .map((doc) {
-            try {
-              return StudentModel.fromFirestore(doc);
-            } catch (e) {
-              return null;
-            }
-          })
-          .where((s) =>
-              s != null &&
-              s.role == 'student' &&
-              s.groupIds.contains(groupId))
-          .cast<StudentModel>()
-          .toList();
-
-      students.sort((a, b) => a.name.compareTo(b.name));
-
-      print('DEBUG: ✅ Lấy ${students.length} sinh viên thành công');
-      return students;
-    } catch (e) {
-      print('DEBUG: ❌ Lỗi lấy danh sách: $e');
-      return [];
-    }
-  }
-
-  // ========================================
-  // HÀM: searchStudents() - FIXED
-  // MÔ TẢ: Tìm kiếm sinh viên (tránh index)
-  // ========================================
-  static Future<List<StudentModel>> searchStudents(String query) async {
-    try {
-      print('DEBUG: 🔎 Tìm kiếm: $query');
-
       if (query.isEmpty) {
         return await getAllStudents();
       }
 
-      final querySnapshot = await _firestore
-          .collection(_collection)
-          .get();
-
+      final querySnapshot = await _firestore.collection(_collection).get();
       final queryLower = query.toLowerCase();
+
       final students = querySnapshot.docs
           .map((doc) {
             try {
-              return StudentModel.fromFirestore(doc);
+              return UserModel.fromFirestore(doc);
             } catch (e) {
               return null;
             }
           })
-          .where((s) =>
-              s != null &&
-              s.role == 'student' &&
-              (s.name.toLowerCase().contains(queryLower) ||
-                  (s.studentCode?.toLowerCase().contains(queryLower) ?? false) ||
-                  s.email.toLowerCase().contains(queryLower)))
-          .cast<StudentModel>()
+          .where((u) =>
+              u != null &&
+              u.role == UserRole.student &&
+              (u.name.toLowerCase().contains(queryLower) ||
+                  u.email.toLowerCase().contains(queryLower)))
+          .cast<UserModel>()
           .toList();
 
       students.sort((a, b) => a.name.compareTo(b.name));
-
-      print('DEBUG: ✅ Tìm thấy ${students.length} sinh viên');
       return students;
     } catch (e) {
-      print('DEBUG: ❌ Lỗi tìm kiếm: $e');
       return [];
     }
   }
 
   // ========================================
   // HÀM: createStudent()
-  // MÔ TẢ: Tạo sinh viên mới
+  // MÔ TẢ: Tạo sinh viên mới (Lưu UserModel)
   // ========================================
-  static Future<String> createStudent(StudentModel student) async {
+  static Future<String> createStudent(UserModel user) async {
     try {
-      print('DEBUG: 📝 Tạo sinh viên: ${student.name}');
-
-      await _firestore.collection(_collection).doc(student.uid).set(
-            student.toFirestore(),
-            SetOptions(merge: true),
-          );
-
-      print('DEBUG: ✅ Sinh viên tạo thành công: ${student.uid}');
-      return student.uid;
+      await _firestore
+          .collection(_collection)
+          .doc(user.uid)
+          .set(user.toFirestore(), SetOptions(merge: true));
+      return user.uid;
     } catch (e) {
-      print('DEBUG: ❌ Lỗi tạo sinh viên: $e');
       throw Exception('Lỗi tạo sinh viên: $e');
     }
   }
 
   // ========================================
   // HÀM: getStudentById()
-  // MÔ TẢ: Lấy sinh viên theo ID
+  // MÔ TẢ: Lấy chi tiết sinh viên
   // ========================================
-  static Future<StudentModel?> getStudentById(String studentUid) async {
+  static Future<UserModel?> getStudentById(String uid) async {
     try {
-      print('DEBUG: 🔍 Lấy sinh viên: $studentUid');
+      final docSnapshot =
+          await _firestore.collection(_collection).doc(uid).get();
 
-      final docSnapshot = await _firestore
-          .collection(_collection)
-          .doc(studentUid)
-          .get();
+      if (!docSnapshot.exists) return null;
 
-      if (!docSnapshot.exists) {
-        print('DEBUG: ⚠️ Sinh viên không tìm thấy');
-        return null;
-      }
+      final user = UserModel.fromFirestore(docSnapshot);
+      if (user.role != UserRole.student) return null;
 
-      final data = docSnapshot.data() as Map<String, dynamic>;
-      if (data['role'] != 'student') {
-        print('DEBUG: ⚠️ User không phải sinh viên, role: ${data['role']}');
-        return null;
-      }
-
-      return StudentModel.fromFirestore(docSnapshot);
+      return user;
     } catch (e) {
-      print('DEBUG: ❌ Lỗi lấy sinh viên: $e');
       throw Exception('Lỗi lấy sinh viên: $e');
     }
   }
 
   // ========================================
-  // HÀM: getStudentsByIds()
-  // MÔ TẢ: Lấy nhiều sinh viên (tránh index)
-  // ========================================
-  static Future<List<StudentModel>> getStudentsByIds(
-    List<String> studentUids,
-  ) async {
-    try {
-      if (studentUids.isEmpty) return [];
-
-      print('DEBUG: 📚 Lấy ${studentUids.length} sinh viên');
-
-      // ✅ Lấy từng document riêng (không cần index)
-      final students = <StudentModel>[];
-      for (final uid in studentUids) {
-        final doc = await _firestore
-            .collection(_collection)
-            .doc(uid)
-            .get();
-
-        if (doc.exists) {
-          final data = doc.data() as Map<String, dynamic>;
-          if (data['role'] == 'student') {
-            students.add(StudentModel.fromFirestore(doc));
-          }
-        }
-      }
-
-      print('DEBUG: ✅ Lấy ${students.length} sinh viên thành công');
-      return students;
-    } catch (e) {
-      print('DEBUG: ❌ Lỗi lấy danh sách: $e');
-      return [];
-    }
-  }
-
-  // ========================================
   // HÀM: updateStudent()
-  // MÔ TẢ: Cập nhật thông tin sinh viên
+  // MÔ TẢ: Cập nhật toàn bộ object
   // ========================================
-  static Future<void> updateStudent(StudentModel student) async {
+  static Future<void> updateStudent(UserModel user) async {
     try {
-      print('DEBUG: ✏️ Cập nhật sinh viên: ${student.uid}');
-
       await _firestore
           .collection(_collection)
-          .doc(student.uid)
-          .update(student.toFirestore());
-
-      print('DEBUG: ✅ Cập nhật thành công');
+          .doc(user.uid)
+          .update(user.toFirestore());
     } catch (e) {
-      print('DEBUG: ❌ Lỗi cập nhật: $e');
       throw Exception('Lỗi cập nhật sinh viên: $e');
     }
   }
 
   // ========================================
   // HÀM: updateStudentProfile()
-  // MÔ TẢ: Cập nhật profile sinh viên
+  // MÔ TẢ: Cập nhật từng trường (Name, Phone)
   // ========================================
   static Future<void> updateStudentProfile(
-    String studentUid, {
+    String uid, {
     String? name,
     String? phone,
-    String? department,
-    String? studentCode,
   }) async {
     try {
-      print('DEBUG: 📝 Cập nhật profile sinh viên: $studentUid');
-
       final updates = <String, dynamic>{};
+
       if (name != null) updates['name'] = name;
-      if (phone != null) updates['phone'] = phone;
-      if (department != null) updates['department'] = department;
-      if (studentCode != null) updates['studentCode'] = studentCode;
+      if (phone != null) updates['phoneNumber'] = phone;
+      if (updates.isNotEmpty) {
+        updates['updatedAt'] = DateTime.now().toIso8601String();
 
-      await _firestore
-          .collection(_collection)
-          .doc(studentUid)
-          .update(updates);
-
-      print('DEBUG: ✅ Cập nhật thành công');
+        await _firestore.collection(_collection).doc(uid).update(updates);
+      }
     } catch (e) {
-      print('DEBUG: ❌ Lỗi cập nhật: $e');
       throw Exception('Lỗi cập nhật: $e');
     }
   }
 
   // ========================================
   // HÀM: deleteStudent()
-  // MÔ TẢ: Xóa sinh viên (set inactive)
+  // MÔ TẢ: Soft delete (set isActive = false)
   // ========================================
-  static Future<void> deleteStudent(String studentUid) async {
+  static Future<void> deleteStudent(String uid) async {
     try {
-      print('DEBUG: 🗑️ Xóa sinh viên: $studentUid');
-
-      await _firestore.collection(_collection).doc(studentUid).update({
+      await _firestore.collection(_collection).doc(uid).update({
         'isActive': false,
-        'settings': {
-          'status': 'inactive',
-        }
+        'settings.status': 'inactive',
+        'updatedAt': DateTime.now().toIso8601String(),
       });
-
-      print('DEBUG: ✅ Xóa thành công');
     } catch (e) {
-      print('DEBUG: ❌ Lỗi xóa: $e');
       throw Exception('Lỗi xóa sinh viên: $e');
     }
   }
 
   // ========================================
-  // HÀM: enrollStudentToCourse()
-  // MÔ TẢ: Thêm sinh viên vào course
-  // ========================================
-  static Future<void> enrollStudentToCourse(
-    String studentUid,
-    String courseId,
-  ) async {
-    try {
-      print('DEBUG: 📍 Thêm $studentUid vào course $courseId');
-
-      await _firestore.collection(_collection).doc(studentUid).update({
-        'courseIds': FieldValue.arrayUnion([courseId]),
-      });
-
-      print('DEBUG: ✅ Thêm thành công');
-    } catch (e) {
-      print('DEBUG: ❌ Lỗi thêm: $e');
-      throw Exception('Lỗi thêm sinh viên vào course: $e');
-    }
-  }
-
-  // ========================================
-  // HÀM: removeStudentFromCourse()
-  // MÔ TẢ: Xóa sinh viên khỏi course
-  // ========================================
-  static Future<void> removeStudentFromCourse(
-    String studentUid,
-    String courseId,
-  ) async {
-    try {
-      print('DEBUG: 🗑️ Xóa $studentUid khỏi course $courseId');
-
-      await _firestore.collection(_collection).doc(studentUid).update({
-        'courseIds': FieldValue.arrayRemove([courseId]),
-      });
-
-      print('DEBUG: ✅ Xóa thành công');
-    } catch (e) {
-      print('DEBUG: ❌ Lỗi xóa: $e');
-      throw Exception('Lỗi xóa sinh viên khỏi course: $e');
-    }
-  }
-
-  // ========================================
-  // HÀM: addStudentToGroup()
-  // MÔ TẢ: Thêm sinh viên vào group
-  // ========================================
-  static Future<void> addStudentToGroup(
-    String studentUid,
-    String groupId,
-  ) async {
-    try {
-      print('DEBUG: 📍 Thêm $studentUid vào group $groupId');
-
-      await _firestore.collection(_collection).doc(studentUid).update({
-        'groupIds': FieldValue.arrayUnion([groupId]),
-      });
-
-      print('DEBUG: ✅ Thêm thành công');
-    } catch (e) {
-      print('DEBUG: ❌ Lỗi thêm: $e');
-      throw Exception('Lỗi thêm sinh viên vào group: $e');
-    }
-  }
-
-  // ========================================
-  // HÀM: removeStudentFromGroup()
-  // MÔ TẢ: Xóa sinh viên khỏi group
-  // ========================================
-  static Future<void> removeStudentFromGroup(
-    String studentUid,
-    String groupId,
-  ) async {
-    try {
-      print('DEBUG: 🗑️ Xóa $studentUid khỏi group $groupId');
-
-      await _firestore.collection(_collection).doc(studentUid).update({
-        'groupIds': FieldValue.arrayRemove([groupId]),
-      });
-
-      print('DEBUG: ✅ Xóa thành công');
-    } catch (e) {
-      print('DEBUG: ❌ Lỗi xóa: $e');
-      throw Exception('Lỗi xóa sinh viên khỏi group: $e');
-    }
-  }
-
-  // ========================================
   // HÀM: getStudentStatistics()
-  // MÔ TẢ: Lấy thống kê sinh viên
+  // MÔ TẢ: Thống kê đơn giản
   // ========================================
   static Future<Map<String, int>> getStudentStatistics() async {
     try {
-      print('DEBUG: 📊 Lấy thống kê sinh viên');
-
       final allStudents = await getAllStudents();
       final activeStudents = allStudents.where((s) => s.isActive).toList();
 
@@ -449,36 +181,69 @@ class StudentRepository {
         'inactive': allStudents.length - activeStudents.length,
       };
     } catch (e) {
-      print('DEBUG: ❌ Lỗi lấy thống kê: $e');
       return {'total': 0, 'active': 0, 'inactive': 0};
     }
   }
 
   // ========================================
   // HÀM: listenToStudents()
-  // MÔ TẢ: Stream theo dõi sinh viên (tránh index)
+  // MÔ TẢ: Stream theo dõi danh sách sinh viên (client-side filter)
   // ========================================
-  static Stream<List<StudentModel>> listenToStudents() {
-    return _firestore
-        .collection(_collection)
-        .snapshots()
-        .map((snapshot) {
-          // Filter trên client
-          final students = snapshot.docs
-              .map((doc) {
-                try {
-                  return StudentModel.fromFirestore(doc);
-                } catch (e) {
-                  return null;
-                }
-              })
-              .where((s) => s != null && s.role == 'student')
-              .cast<StudentModel>()
-              .toList();
+  static Stream<List<UserModel>> listenToStudents() {
+    return _firestore.collection(_collection).snapshots().map((snapshot) {
+      final students = snapshot.docs
+          .map((doc) {
+            try {
+              return UserModel.fromFirestore(doc);
+            } catch (e) {
+              return null;
+            }
+          })
+          .where((u) => u != null && u.role == UserRole.student)
+          .cast<UserModel>()
+          .toList();
 
-          // Sort trên client
-          students.sort((a, b) => a.name.compareTo(b.name));
-          return students;
-        });
+      students.sort((a, b) => a.name.compareTo(b.name));
+      return students;
+    });
+  }
+
+  // ==================================================================
+  // NOTE: Các hàm liên quan đến Course/Group đã bị loại bỏ hoàn toàn
+  // vì UserModel mới không còn chứa courseIds / groupIds.
+  // Quản lý đăng ký khóa học / nhóm phải dùng collection riêng (enrollments, group_members...).
+  // Các hàm dưới đây chỉ là placeholder để tránh lỗi compile tạm thời.
+  // ==================================================================
+
+  static Future<void> enrollStudentToCourse(String uid, String courseId) async {
+    // TODO: Implement với collection enrollments
+    // throw UnimplementedError('Chưa hỗ trợ với UserModel mới');
+  }
+
+  static Future<void> removeStudentFromCourse(String uid, String courseId) async {
+    // TODO: Implement với collection enrollments
+  }
+
+  static Future<List<UserModel>> getStudentsByCourse(String courseId) async {
+    // TODO: Query từ collection enrollments
+    return [];
+  }
+
+  static Future<List<UserModel>> getStudentsByGroup(String groupId) async {
+    // TODO: Query từ collection group_members hoặc tương tự
+    return [];
+  }
+
+  static Future<void> addStudentToGroup(String uid, String groupId) async {
+    // TODO: Implement
+  }
+
+  static Future<void> removeStudentFromGroup(String uid, String groupId) async {
+    // TODO: Implement
+  }
+
+  static Future<List<UserModel>> getStudentsByIds(List<String> studentUids) async {
+    // Tạm thời không dùng nữa hoặc implement lại nếu cần
+    return [];
   }
 }

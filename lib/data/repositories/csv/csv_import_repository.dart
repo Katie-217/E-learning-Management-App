@@ -1,6 +1,6 @@
 // ========================================
 // FILE: csv_import_service.dart
-// MÔ TẢ: Service import CSV - REMOVED department field
+// DESCRIPTION: CSV import service - Updated for UserModel (Removed studentCode)
 // ========================================
 
 import 'package:csv/csv.dart';
@@ -43,16 +43,14 @@ class StudentImportRecord {
 
 class CsvImportService {
   // ========================================
-  // HÀM: parseAndValidateStudentsCsv()
-  // MÔ TẢ: Parse CSV và validate từng record (REMOVED department)
+  // METHOD: parseAndValidateStudentsCsv()
+  // DESCRIPTION: Parse CSV and validate records (Only Email and Name required)
   // ========================================
   static Future<List<StudentImportRecord>> parseAndValidateStudentsCsv(
     String csvContent,
     List<String> existingEmails,
   ) async {
     try {
-      print('DEBUG: 📄 Parsing students CSV...');
-
       final List<List<dynamic>> rows =
           const CsvToListConverter().convert(csvContent);
 
@@ -61,10 +59,9 @@ class CsvImportService {
       }
 
       final headers = rows.first.cast<String>().map((h) => h.trim()).toList();
-      print('DEBUG: Headers: $headers');
 
-      // Validate headers - REMOVED 'department' from required
-      final requiredHeaders = ['email', 'name', 'studentCode'];
+      // Validate required headers (studentCode removed)
+      final requiredHeaders = ['email', 'name'];
       final missingHeaders = requiredHeaders
           .where((h) => !headers.contains(h))
           .toList();
@@ -77,35 +74,36 @@ class CsvImportService {
       }
 
       final records = <StudentImportRecord>[];
+
       for (int i = 1; i < rows.length; i++) {
         final row = rows[i];
 
-        // Skip empty rows
+        // Skip completely empty rows
         if (row.isEmpty ||
             row.every((cell) => cell == null || cell.toString().trim() == '')) {
           continue;
         }
 
-        // Create student map
-        final student = <String, dynamic>{};
+        // Map row to student data
+        final user = <String, dynamic>{};
         for (int j = 0; j < headers.length; j++) {
           final header = headers[j];
           final value = j < row.length ? row[j]?.toString() ?? '' : '';
-          student[header] = value.trim();
+          user[header] = value.trim();
         }
 
-        // Validate từng field
-        final validations = _validateStudentRecord(student);
-        final isValid = validations.every((v) => v.isValid);
+        // Validate fields
+        final validations = _validateUserRecord(user);
+        final isFieldValid = validations.every((v) => v.isValid);
 
-        // Check duplicate
-        final email = student['email']?.toString() ?? '';
+        // Check for duplicate email
+        final email = user['email']?.toString() ?? '';
         final isDuplicate = existingEmails.contains(email.toLowerCase());
 
         // Determine status
         String status = 'new';
         String? duplicateEmail;
-        if (!isValid) {
+        if (!isFieldValid) {
           status = 'invalid';
         } else if (isDuplicate) {
           status = 'duplicate';
@@ -114,33 +112,30 @@ class CsvImportService {
 
         records.add(StudentImportRecord(
           rowIndex: i,
-          data: student,
+          data: user,
           validations: validations,
-          isValid: isValid && !isDuplicate,
+          isValid: isFieldValid && !isDuplicate,
           status: status,
           duplicateEmail: duplicateEmail,
         ));
       }
 
-      print(
-          'DEBUG: ✅ Parsed ${records.length} records - New: ${records.where((r) => r.status == 'new').length}, Duplicate: ${records.where((r) => r.status == 'duplicate').length}, Invalid: ${records.where((r) => r.status == 'invalid').length}');
       return records;
     } catch (e) {
-      print('DEBUG: ❌ Error parsing CSV: $e');
       rethrow;
     }
   }
 
   // ========================================
-  // HÀM: _validateStudentRecord()
-  // MÔ TẢ: Validate từng field (REMOVED department)
+  // METHOD: _validateUserRecord()
+  // DESCRIPTION: Validate Email, Name, Phone (studentCode removed)
   // ========================================
-  static List<CsvValidationResult> _validateStudentRecord(
-      Map<String, dynamic> student) {
+  static List<CsvValidationResult> _validateUserRecord(
+      Map<String, dynamic> user) {
     final validations = <CsvValidationResult>[];
 
     // Email validation
-    final email = student['email']?.toString() ?? '';
+    final email = user['email']?.toString() ?? '';
     final emailValid = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
         .hasMatch(email);
     validations.add(CsvValidationResult(
@@ -148,44 +143,34 @@ class CsvImportService {
       value: email,
       error: !emailValid
           ? email.isEmpty
-              ? 'Email không được để trống'
-              : 'Email không hợp lệ'
+              ? 'Email is required'
+              : 'Invalid email format'
           : null,
       isValid: emailValid,
     ));
 
     // Name validation
-    final name = student['name']?.toString() ?? '';
-    final nameValid = name.isNotEmpty && name.length >= 3;
+    final name = user['name']?.toString() ?? '';
+    final nameValid = name.isNotEmpty && name.length >= 2;
     validations.add(CsvValidationResult(
       fieldName: 'name',
       value: name,
       error: !nameValid
           ? name.isEmpty
-              ? 'Tên không được để trống'
-              : 'Tên phải có ít nhất 3 ký tự'
+              ? 'Name is required'
+              : 'Name must be at least 2 characters'
           : null,
       isValid: nameValid,
     ));
 
-    // Student Code validation
-    final studentCode = student['studentCode']?.toString() ?? '';
-    final codeValid = studentCode.isNotEmpty;
-    validations.add(CsvValidationResult(
-      fieldName: 'studentCode',
-      value: studentCode,
-      error: !codeValid ? 'Mã sinh viên không được để trống' : null,
-      isValid: codeValid,
-    ));
-
-    // Phone validation (tùy chọn)
-    final phone = student['phone']?.toString() ?? '';
+    // Phone validation (optional)
+    final phone = user['phone']?.toString() ?? '';
     final phoneValid = phone.isEmpty ||
         (phone.isNotEmpty && RegExp(r'^\d{10}$').hasMatch(phone));
     validations.add(CsvValidationResult(
       fieldName: 'phone',
       value: phone,
-      error: !phoneValid ? 'Số điện thoại phải có 10 chữ số' : null,
+      error: !phoneValid ? 'Phone must be exactly 10 digits' : null,
       isValid: phoneValid,
     ));
 
@@ -193,8 +178,8 @@ class CsvImportService {
   }
 
   // ========================================
-  // HÀM: validateCsvStructure()
-  // MÔ TẢ: Kiểm tra cấu trúc file CSV
+  // METHOD: validateCsvStructure()
+  // DESCRIPTION: Check CSV file structure
   // ========================================
   static Map<String, dynamic> validateCsvStructure(
     String csvContent,
@@ -207,7 +192,7 @@ class CsvImportService {
       if (rows.isEmpty) {
         return {
           'isValid': false,
-          'error': 'File CSV trống',
+          'error': 'CSV file is empty',
           'totalRows': 0,
           'validRows': 0,
         };
@@ -216,28 +201,25 @@ class CsvImportService {
       final headers = rows.first.cast<String>().map((h) => h.trim()).toList();
 
       // Check required columns
-      final missingColumns = <String>[];
-      for (final col in requiredColumns) {
-        if (!headers.contains(col)) {
-          missingColumns.add(col);
-        }
-      }
+      final missingColumns = requiredColumns
+          .where((col) => !headers.contains(col))
+          .toList();
 
       if (missingColumns.isNotEmpty) {
         return {
           'isValid': false,
           'error':
-              'Thiếu cột: ${missingColumns.join(", ")}. Bắt buộc có: ${requiredColumns.join(", ")}',
+              'Missing columns: ${missingColumns.join(", ")}. Required: ${requiredColumns.join(", ")}',
           'totalRows': rows.length,
           'validRows': 0,
         };
       }
 
-      // Count valid data rows
+      // Count non-empty data rows
       int validRows = 0;
       for (int i = 1; i < rows.length; i++) {
         final row = rows[i];
-        if (row.isNotEmpty && row.any((cell) => cell != null && cell != '')) {
+        if (row.isNotEmpty && row.any((cell) => cell != null && cell.toString().trim().isNotEmpty)) {
           validRows++;
         }
       }
@@ -252,14 +234,15 @@ class CsvImportService {
     } catch (e) {
       return {
         'isValid': false,
-        'error': 'Lỗi đọc file: ${e.toString()}',
+        'error': 'Error reading file: ${e.toString()}',
         'totalRows': 0,
       };
     }
   }
 
   // ========================================
-  // HÀM: getImportSummary()
+  // METHOD: getImportSummary()
+  // DESCRIPTION: Generate import summary
   // ========================================
   static Map<String, dynamic> getImportSummary(
     List<StudentImportRecord> records, {
@@ -277,8 +260,7 @@ class CsvImportService {
       'invalidCount': invalidRecords.length,
       'successCount': successCount,
       'failureCount': failureCount,
-      'duplicateEmails':
-          duplicateRecords.map((r) => r.duplicateEmail).toList(),
+      'duplicateEmails': duplicateRecords.map((r) => r.duplicateEmail).whereType<String>().toList(),
       'invalidRecords': invalidRecords,
     };
   }
