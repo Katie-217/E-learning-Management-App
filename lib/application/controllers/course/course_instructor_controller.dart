@@ -44,9 +44,16 @@ class CourseInstructorController {
 
       print('DEBUG: 🔑 CourseInstructorController got instructor: ${user.uid}');
 
-      // 2. Lấy courses từ CourseInstructorRepository
+      // 2. Lấy Firebase Auth UID (không phải document ID)
+      final firebaseAuthUid = await _authRepository.getCurrentUserId();
+      if (firebaseAuthUid == null) {
+        throw Exception('User not authenticated');
+      }
+      print('DEBUG: 🔑 Using Firebase Auth UID: $firebaseAuthUid');
+
+      // 3. Lấy courses từ CourseInstructorRepository với Firebase Auth UID
       final courses =
-          await CourseInstructorRepository.getInstructorCourses(user.uid);
+          await CourseInstructorRepository.getInstructorCourses(firebaseAuthUid);
 
       // 3. Business logic: Additional filtering for active instructor
       return courses
@@ -76,10 +83,16 @@ class CourseInstructorController {
 
       print('DEBUG: 🔑 Getting instructor courses for semester: $semester');
 
-      // 2. Lấy courses từ Repository
+      // 2. Lấy Firebase Auth UID (không phải document ID)
+      final firebaseAuthUid = await _authRepository.getCurrentUserId();
+      if (firebaseAuthUid == null) {
+        throw Exception('User not authenticated');
+      }
+
+      // 3. Lấy courses từ Repository với Firebase Auth UID
       final courses =
           await CourseInstructorRepository.getInstructorCoursesBySemester(
-              user.uid, semester);
+              firebaseAuthUid, semester);
 
       // 3. Business logic: Filter active courses
       return courses.where((course) => course.status == 'active').toList();
@@ -103,9 +116,15 @@ class CourseInstructorController {
             'Access denied: Only instructors can access teaching courses');
       }
 
-      // 2. Get course từ Repository với instructor validation
+      // 2. Lấy Firebase Auth UID (không phải document ID)
+      final firebaseAuthUid = await _authRepository.getCurrentUserId();
+      if (firebaseAuthUid == null) {
+        throw Exception('User not authenticated');
+      }
+
+      // 3. Get course từ Repository với instructor validation
       final course = await CourseInstructorRepository.getCourseById(courseId,
-          instructorUid: user.uid);
+          instructorUid: firebaseAuthUid);
 
       // 3. Business logic: Additional validation
       if (course != null && course.status == 'deleted') {
@@ -153,9 +172,15 @@ class CourseInstructorController {
             'sessions', 'Number of sessions must be between 5 and 50');
       }
 
-      // 3. Check for duplicate course code
+      // 3. Lấy Firebase Auth UID (không phải document ID)
+      final firebaseAuthUid = await _authRepository.getCurrentUserId();
+      if (firebaseAuthUid == null) {
+        throw Exception('User not authenticated');
+      }
+
+      // 4. Check for duplicate course code
       final existingCourses =
-          await CourseInstructorRepository.getInstructorCourses(user.uid);
+          await CourseInstructorRepository.getInstructorCourses(firebaseAuthUid);
       final duplicateCode = existingCourses.any((existingCourse) =>
           existingCourse.code.toLowerCase() == course.code.toLowerCase());
 
@@ -164,12 +189,12 @@ class CourseInstructorController {
             'code', 'This course code already exists');
       }
 
-      // 4. Hardcode status to 'active' for all new courses
+      // 5. Hardcode status to 'active' for all new courses
       final courseWithActiveStatus = course.copyWith(status: 'active');
 
-      // 5. Create course with instructor UID
+      // 6. Create course with Firebase Auth UID
       final success = await CourseInstructorRepository.createCourse(
-          courseWithActiveStatus, user.uid);
+          courseWithActiveStatus, firebaseAuthUid);
 
       if (success) {
         print(
@@ -204,9 +229,15 @@ class CourseInstructorController {
         throw Exception('Course name cannot be empty');
       }
 
-      // 3. Update course với instructor validation
+      // 3. Lấy Firebase Auth UID (không phải document ID)
+      final firebaseAuthUid = await _authRepository.getCurrentUserId();
+      if (firebaseAuthUid == null) {
+        throw Exception('User not authenticated');
+      }
+
+      // 4. Update course với instructor validation
       final success = await CourseInstructorRepository.updateCourse(
-          courseId, updatedCourse, user.uid);
+          courseId, updatedCourse, firebaseAuthUid);
 
       if (success) {
         print(
@@ -375,9 +406,15 @@ class CourseInstructorController {
             'Access denied: Only instructors can access dashboard stats');
       }
 
-      // 2. Get enrollment stats từ Repository
+      // 2. Lấy Firebase Auth UID (không phải document ID)
+      final firebaseAuthUid = await _authRepository.getCurrentUserId();
+      if (firebaseAuthUid == null) {
+        throw Exception('User not authenticated');
+      }
+
+      // 3. Get enrollment stats từ Repository
       final stats =
-          await CourseInstructorRepository.getStudentEnrollmentStats(user.uid);
+          await CourseInstructorRepository.getStudentEnrollmentStats(firebaseAuthUid);
 
       // 3. Get all courses để tính toán thêm
       final allCourses = await getInstructorCourses();

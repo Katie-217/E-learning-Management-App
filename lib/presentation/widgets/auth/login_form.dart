@@ -22,9 +22,9 @@ class LoginForm extends StatefulWidget {
 
 class _LoginFormState extends State<LoginForm> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
+  final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _emailFocusNode = FocusNode();
+  final _usernameFocusNode = FocusNode();
   final _passwordFocusNode = FocusNode();
   bool isLoading = false;
   bool rememberMe = false;
@@ -33,7 +33,7 @@ class _LoginFormState extends State<LoginForm> {
   @override
   void initState() {
     super.initState();
-    _emailFocusNode.addListener(() {
+    _usernameFocusNode.addListener(() {
       setState(() {});
     });
     _passwordFocusNode.addListener(() {
@@ -43,9 +43,9 @@ class _LoginFormState extends State<LoginForm> {
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _usernameController.dispose();
     _passwordController.dispose();
-    _emailFocusNode.dispose();
+    _usernameFocusNode.dispose();
     _passwordFocusNode.dispose();
     super.dispose();
   }
@@ -61,8 +61,8 @@ class _LoginFormState extends State<LoginForm> {
       final authRepository = AuthRepository.defaultClient();
 
       // Đăng nhập và nhận UserModel
-      final userModel = await authRepository.signInWithEmailAndPassword(
-        _emailController.text.trim(),
+      final userModel = await authRepository.signInWithUsernameAndPassword(
+        _usernameController.text.trim(),
         _passwordController.text.trim(),
       );
 
@@ -70,6 +70,10 @@ class _LoginFormState extends State<LoginForm> {
       await UserSessionService.saveUserSession(userModel);
 
       if (!mounted) return;
+
+      // Debug: Kiểm tra role
+      print('DEBUG: 🔍 Login Form - User role: ${userModel.role.name}');
+      print('DEBUG: 🔍 Login Form - Is instructor: ${userModel.role == UserRole.instructor}');
 
       // Navigation dựa trên UserModel role
       if (userModel.role == UserRole.instructor) {
@@ -155,27 +159,27 @@ class _LoginFormState extends State<LoginForm> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Email', style: _labelStyle),
+          Text('Username', style: _labelStyle),
           const SizedBox(height: 8),
           TextFormField(
-            controller: _emailController,
-            focusNode: _emailFocusNode,
-            keyboardType: TextInputType.emailAddress,
+            controller: _usernameController,
+            focusNode: _usernameFocusNode,
+            keyboardType: TextInputType.text,
             validator: (value) {
               if (value == null || value.isEmpty) {
-                return 'Please enter your email';
+                return 'Please enter your username';
               }
-              if (!value.contains('@')) {
-                return 'Invalid email';
+              if (value.length < 3) {
+                return 'Username must be at least 3 characters';
               }
               return null;
             },
             style: const TextStyle(color: Colors.white),
             cursorColor: Colors.white,
             decoration: _inputDecoration(
-              hint: 'Email ID',
-              icon: Icons.alternate_email_rounded,
-              isFocused: _emailFocusNode.hasFocus,
+              hint: 'Enter your username',
+              icon: Icons.person_outline,
+              isFocused: _usernameFocusNode.hasFocus,
             ),
           ),
           const SizedBox(height: 20),
@@ -189,8 +193,8 @@ class _LoginFormState extends State<LoginForm> {
               if (value == null || value.isEmpty) {
                 return 'Please enter your password';
               }
-              if (value.length < 6) {
-                return 'Password must be at least 6 characters';
+              if (value.length < 5) {
+                return 'Password must be at least 5 characters';
               }
               return null;
             },

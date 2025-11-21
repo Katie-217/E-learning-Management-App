@@ -26,13 +26,13 @@ class AuthProvider extends ChangeNotifier {
   bool get isAuthenticated => _currentUser != null;
 
   // ========================================
-  // HÀM: signIn - Đăng nhập và cập nhật state
+  // HÀM: signIn - Đăng nhập bằng username/password và cập nhật state
   // ========================================
-  Future<UserModel?> signIn(String email, String password) async {
+  Future<UserModel?> signIn(String username, String password) async {
     _setLoading(true);
     try {
       final user =
-          await _authRepository.signInWithEmailAndPassword(email, password);
+          await _authRepository.signInWithUsernameAndPassword(username, password);
       await UserSessionService.saveUserSession(user);
       _setCurrentUser(user);
       return user;

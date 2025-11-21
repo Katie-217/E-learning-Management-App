@@ -14,21 +14,31 @@ class RoleBasedDashboard extends StatelessWidget {
       return const MainShell();
     }
     return Scaffold(
-      body: FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-        future:
-            FirebaseFirestore.instance.collection('users').doc(user.uid).get(),
+      body: FutureBuilder<QuerySnapshot<Map<String, dynamic>>>(
+        future: FirebaseFirestore.instance
+            .collection('users')
+            .where('email', isEqualTo: user.email)
+            .limit(1)
+            .get(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
-          if (snapshot.hasError) {
+          final hasError = snapshot.hasError;
+          final isEmpty = snapshot.data?.docs.isEmpty ?? true;
+          if (hasError || isEmpty) {
+            print('DEBUG: ⚠️ RoleBasedDashboard - No user document found, defaulting to MainShell');
             return const MainShell();
           }
-          final data = snapshot.data?.data();
-          final role = (data?['role'] ?? '').toString().toLowerCase();
+          final doc = snapshot.data!.docs.first;
+          final data = doc.data();
+          final role = (data['role'] ?? '').toString().toLowerCase();
+          print('DEBUG: 🔍 RoleBasedDashboard - Role from Firestore: $role');
           if (role == 'teacher' || role == 'instructor') {
+            print('DEBUG: ✅ RoleBasedDashboard - Navigating to InstructorDashboard');
             return InstructorDashboard();
           }
+          print('DEBUG: ✅ RoleBasedDashboard - Navigating to MainShell (student)');
           // Sử dụng MainShell cho student để có navigation
           return MainShell();
         },

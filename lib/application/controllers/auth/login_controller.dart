@@ -16,7 +16,7 @@ import '../../../../core/config/users-role.dart';
 class LoginController extends ChangeNotifier {
   final AuthRepository _authRepository = AuthRepository.defaultClient();
 
-  final TextEditingController emailController = TextEditingController();
+  final TextEditingController usernameController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 
   bool _isLoading = false;
@@ -35,9 +35,9 @@ class LoginController extends ChangeNotifier {
     notifyListeners();
   }
 
-  String? validateEmail(String? value) {
-    if (value == null || value.isEmpty) return 'Please enter your email';
-    if (!value.contains('@')) return 'Please enter a valid email';
+  String? validateUsername(String? value) {
+    if (value == null || value.isEmpty) return 'Please enter your username';
+    if (value.length < 3) return 'Username must be at least 3 characters';
     return null;
   }
 
@@ -60,8 +60,9 @@ class LoginController extends ChangeNotifier {
 
     try {
       // Đăng nhập thông qua AuthRepository
-      final userModel = await _authRepository.signInWithEmailAndPassword(
-        emailController.text.trim(),
+      final userModel =
+          await _authRepository.signInWithUsernameAndPassword(
+        usernameController.text.trim(),
         passwordController.text.trim(),
       );
 
@@ -136,32 +137,11 @@ class LoginController extends ChangeNotifier {
   // MÔ TẢ: Gửi email đặt lại mật khẩu
   // ========================================
   Future<void> resetPassword(BuildContext context) async {
-    final email = emailController.text.trim();
-    if (email.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Vui lòng nhập email để đặt lại mật khẩu')),
-      );
-      return;
-    }
-
-    _setLoading(true);
-    try {
-      await _authRepository.sendPasswordResetEmail(email);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Email đặt lại mật khẩu đã được gửi!')),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
-        );
-      }
-    } finally {
-      _setLoading(false);
-    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Reset password chưa hỗ trợ cho đăng nhập username'),
+      ),
+    );
   }
 
   // ========================================
@@ -190,7 +170,7 @@ class LoginController extends ChangeNotifier {
 
   @override
   void dispose() {
-    emailController.dispose();
+    usernameController.dispose();
     passwordController.dispose();
     super.dispose();
   }

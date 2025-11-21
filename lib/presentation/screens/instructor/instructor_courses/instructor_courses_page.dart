@@ -24,6 +24,8 @@ class InstructorCoursesPage extends ConsumerStatefulWidget {
 class _InstructorCoursesPageState extends ConsumerState<InstructorCoursesPage> {
   String? _selectedSemesterId;
   bool _showImportView = false; // State để điều khiển hiển thị import view
+  bool _showDetailView = false;
+  String? _selectedCourseId;
 
   // Constants for uniform sizing
   static const double kImportButtonWidth = 160.0; // Compact for Import CSV
@@ -144,9 +146,18 @@ class _InstructorCoursesPageState extends ConsumerState<InstructorCoursesPage> {
       );
     }
 
-    // Normal courses view
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 300),
+      child: _showDetailView
+          ? _buildCourseDetailView()
+          : _buildCourseOverview(instructorCoursesState),
+    );
+  }
+
+  Widget _buildCourseOverview(InstructorCourseState instructorCoursesState) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      key: const ValueKey('instructor-course-list'),
       children: [
         // Header Section - Block-based responsive layout
         LayoutBuilder(
@@ -311,6 +322,14 @@ class _InstructorCoursesPageState extends ConsumerState<InstructorCoursesPage> {
     );
   }
 
+  Widget _buildCourseDetailView() {
+    return InstructorCourseDetailContent(
+      key: ValueKey('instructor-course-detail-${_selectedCourseId ?? ''}'),
+      courseId: _selectedCourseId!,
+      onBack: _closeDetailView,
+    );
+  }
+
   Widget _buildCoursesContent(InstructorCourseState state) {
     if (state.isLoading) {
       return const Center(
@@ -415,14 +434,7 @@ class _InstructorCoursesPageState extends ConsumerState<InstructorCoursesPage> {
             return CourseCard(
               course: course,
               onTap: () {
-                // Navigate to instructor course detail
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) =>
-                        InstructorCourseDetailPage(courseId: course.id),
-                  ),
-                );
+                _openCourseDetail(course.id);
               },
             );
           },
@@ -441,6 +453,20 @@ class _InstructorCoursesPageState extends ConsumerState<InstructorCoursesPage> {
   void _hideImportView() {
     setState(() {
       _showImportView = false;
+    });
+  }
+
+  void _openCourseDetail(String courseId) {
+    setState(() {
+      _selectedCourseId = courseId;
+      _showDetailView = true;
+    });
+  }
+
+  void _closeDetailView() {
+    setState(() {
+      _showDetailView = false;
+      _selectedCourseId = null;
     });
   }
 
