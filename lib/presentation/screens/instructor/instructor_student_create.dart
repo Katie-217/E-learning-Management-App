@@ -6,7 +6,7 @@ import '../../../data/repositories/auth/auth_repository.dart';
 class CreateStudentPage extends StatefulWidget {
   final VoidCallback? onSuccess;
   final VoidCallback? onCancel;
-  
+
   const CreateStudentPage({
     super.key,
     this.onSuccess,
@@ -21,11 +21,9 @@ class _CreateStudentPageState extends State<CreateStudentPage> {
   late StudentController _studentController;
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
 
-  // Form Controllers - REMOVED department
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _studentCodeController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
 
   final _formKey = GlobalKey<FormState>();
@@ -41,43 +39,21 @@ class _CreateStudentPageState extends State<CreateStudentPage> {
   }
 
   bool _validateForm() {
-    if (!_formKey.currentState!.validate()) {
+    if (!_formKey.currentState!.validate()) return false;
+
+    if (!_emailController.text.trim().contains('@')) {
+      _showError('Invalid email');
       return false;
     }
-
-    final email = _emailController.text.trim();
-    if (!_isValidEmail(email)) {
-      _showError('❌ Invalid email');
-      return false;
-    }
-
-    if (_passwordController.text.length < 6) {
-      _showError('❌ Password must be at least 6 characters');
-      return false;
-    }
-
-    if (_studentCodeController.text.trim().isEmpty) {
-      _showError('❌ Please enter student code');
-      return false;
-    }
-
     return true;
   }
 
-  bool _isValidEmail(String email) {
-    return email.contains('@');
-  }
-
   Future<void> _createStudent() async {
-    if (!_validateForm()) {
-      return;
-    }
+    if (!_validateForm()) return;
 
     setState(() => isLoading = true);
 
     try {
-      print('DEBUG: 🔑 STEP 1 - Create Firebase Auth Account');
-
       final email = _emailController.text.trim();
       final password = _passwordController.text;
 
@@ -88,58 +64,41 @@ class _CreateStudentPageState extends State<CreateStudentPage> {
       );
 
       final uid = userCredential.user!.uid;
-      print('DEBUG: ✅ Firebase Auth Account created successfully: $uid');
 
-      print('DEBUG: 🔑 STEP 2 - Create Student Profile');
-
-      // REMOVED department parameter
-      final studentId = await _studentController.createStudent(
+      await _studentController.createStudent(
         uid: uid,
         email: email,
         name: _nameController.text.trim(),
-        studentCode: _studentCodeController.text.trim(),
-        phone: _phoneController.text.trim(),
+        phoneNumber: _phoneController.text.trim(),
       );
 
-      print('DEBUG: ✅ Student Profile created successfully: $studentId');
-
       if (mounted) {
-        _showSuccess(
-          '✅ Student created successfully!\n'
-          'UID: $uid\n'
-          'Email: $email',
-        );
-
+        _showSuccess('Student created successfully!\nUID: $uid');
         await Future.delayed(const Duration(seconds: 1));
-        if (mounted && widget.onSuccess != null) {
-          widget.onSuccess!();
-        }
+        widget.onSuccess?.call();
       }
     } on FirebaseAuthException catch (e) {
-      String errorMessage = '❌ Account creation error:';
-
+      String msg = 'Auth Error';
       switch (e.code) {
         case 'email-already-in-use':
-          errorMessage += '\n📧 This email is already in use';
+          msg = 'This email is already in use';
           break;
         case 'invalid-email':
-          errorMessage += '\n📧 Invalid email';
+          msg = 'Invalid email';
           break;
         case 'weak-password':
-          errorMessage += '\n🔒 Password is too weak';
-          break;
-        case 'operation-not-allowed':
-          errorMessage += '\n🚫 Account type not allowed';
+          msg = 'Password is too weak';
           break;
         default:
-          errorMessage += '\n${e.message}';
+          msg = e.message ?? 'Unknown error';
       }
-
-      _showError(errorMessage);
+      _showError(msg);
     } catch (e) {
-      _showError('❌ Error: $e');
+      _showError('Error: $e');
     } finally {
-      setState(() => isLoading = false);
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
     }
   }
 
@@ -148,7 +107,7 @@ class _CreateStudentPageState extends State<CreateStudentPage> {
       SnackBar(
         content: Text(message),
         backgroundColor: Colors.red,
-        duration: const Duration(seconds: 3),
+        duration: const Duration(seconds: 4),
       ),
     );
   }
@@ -157,64 +116,27 @@ class _CreateStudentPageState extends State<CreateStudentPage> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
+      builder: (_) => AlertDialog(
         backgroundColor: const Color(0xFF1F2937),
         title: const Row(
           children: [
             Icon(Icons.check_circle, color: Colors.green, size: 32),
             SizedBox(width: 12),
-            Text(
-              '🎉 Success!',
-              style: TextStyle(color: Colors.white),
-            ),
+            Text('Success!', style: TextStyle(color: Colors.white)),
           ],
         ),
-        content: Text(
-          message,
-          style: const TextStyle(color: Colors.white70),
-        ),
+        content: Text(message, style: const TextStyle(color: Colors.white70)),
         actions: [
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              if (widget.onSuccess != null) {
-                widget.onSuccess!();
-              }
+              widget.onSuccess?.call();
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('OK'),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+            child: const Text('OK', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
-    );
-  }
-
-  void _handleCancel() {
-    if (widget.onCancel != null) {
-      widget.onCancel!();
-    }
-  }
-
-  Widget _buildSection(String title, List<Widget> children) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16.0),
-          child: Text(
-            title,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.blue,
-            ),
-          ),
-        ),
-        ...children,
-      ],
     );
   }
 
@@ -224,7 +146,7 @@ class _CreateStudentPageState extends State<CreateStudentPage> {
     required String hint,
     TextInputType keyboardType = TextInputType.text,
     bool obscureText = false,
-    int minLines = 1,
+    Widget? suffixIcon,
     String? Function(String?)? validator,
   }) {
     return Padding(
@@ -233,14 +155,15 @@ class _CreateStudentPageState extends State<CreateStudentPage> {
         controller: controller,
         obscureText: obscureText,
         keyboardType: keyboardType,
-        minLines: minLines,
-        maxLines: obscureText ? 1 : null,
         style: const TextStyle(color: Colors.white),
         decoration: InputDecoration(
           labelText: label,
           labelStyle: const TextStyle(color: Colors.grey),
           hintText: hint,
           hintStyle: TextStyle(color: Colors.grey[600]),
+          suffixIcon: suffixIcon,
+          filled: true,
+          fillColor: const Color(0xFF1F2937),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: const BorderSide(color: Colors.grey),
@@ -253,8 +176,6 @@ class _CreateStudentPageState extends State<CreateStudentPage> {
             borderRadius: BorderRadius.circular(12),
             borderSide: const BorderSide(color: Colors.blue, width: 2),
           ),
-          filled: true,
-          fillColor: const Color(0xFF1F2937),
         ),
         validator: validator,
       ),
@@ -272,16 +193,11 @@ class _CreateStudentPageState extends State<CreateStudentPage> {
       child: isLoading
           ? const Center(
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  CircularProgressIndicator(
-                    color: Colors.indigo,
-                  ),
+                  CircularProgressIndicator(color: Colors.indigo),
                   SizedBox(height: 16),
-                  Text(
-                    '🔄 Creating student...',
-                    style: TextStyle(color: Colors.white70),
-                  ),
+                  Text('Creating student...', style: TextStyle(color: Colors.white70)),
                 ],
               ),
             )
@@ -292,194 +208,7 @@ class _CreateStudentPageState extends State<CreateStudentPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // SECTION 1: Account Information
-                    _buildSection(
-                      '🔐 Account Information',
-                      [
-                        _buildTextField(
-                          controller: _emailController,
-                          label: 'Email',
-                          hint: 'student@example.com',
-                          keyboardType: TextInputType.emailAddress,
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter email';
-                            }
-                            if (!_isValidEmail(value)) {
-                              return 'Invalid email';
-                            }
-                            return null;
-                          },
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 16.0),
-                          child: TextFormField(
-                            controller: _passwordController,
-                            obscureText: _obscurePassword,
-                            style: const TextStyle(color: Colors.white),
-                            decoration: InputDecoration(
-                              labelText: 'Password',
-                              labelStyle: const TextStyle(color: Colors.grey),
-                              hintText: 'Enter password (at least 6 characters)',
-                              hintStyle: TextStyle(color: Colors.grey[600]),
-                              suffixIcon: IconButton(
-                                icon: Icon(
-                                  _obscurePassword
-                                      ? Icons.visibility_off
-                                      : Icons.visibility,
-                                  color: Colors.grey,
-                                ),
-                                onPressed: () {
-                                  setState(() {
-                                    _obscurePassword = !_obscurePassword;
-                                  });
-                                },
-                              ),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(
-                                  color: Colors.grey[700]!,
-                                ),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(
-                                  color: Colors.blue,
-                                  width: 2,
-                                ),
-                              ),
-                              filled: true,
-                              fillColor: const Color(0xFF1F2937),
-                            ),
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Please enter password';
-                              }
-                              if (value.length < 6) {
-                                return 'Password must be at least 6 characters';
-                              }
-                              return null;
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    // SECTION 2: Personal Information
-                    _buildSection(
-                      '👤 Personal Information',
-                      [
-                        _buildTextField(
-                          controller: _nameController,
-                          label: 'Student Name',
-                          hint: 'E.g.: Nguyen Van A',
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter name';
-                            }
-                            if (value.length < 3) {
-                              return 'Name must be at least 3 characters';
-                            }
-                            return null;
-                          },
-                        ),
-                        _buildTextField(
-                          controller: _studentCodeController,
-                          label: 'Student Code',
-                          hint: 'E.g.: SV001',
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter student code';
-                            }
-                            return null;
-                          },
-                        ),
-                        _buildTextField(
-                          controller: _phoneController,
-                          label: 'Phone Number',
-                          hint: 'E.g.: 0123456789',
-                          keyboardType: TextInputType.phone,
-                          validator: (value) {
-                            if (value != null && value.isNotEmpty) {
-                              if (!RegExp(r'^\d{10}$').hasMatch(value)) {
-                                return 'Phone number must have 10 digits';
-                              }
-                            }
-                            return null;
-                          },
-                        ),
-                      ],
-                    ),
-
-                    const Divider(height: 32, color: Colors.grey),
-
-                    // Create student button
-                    SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: ElevatedButton.icon(
-                        onPressed: isLoading ? null : _createStudent,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          disabledBackgroundColor: Colors.grey,
-                        ),
-                        icon: isLoading
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    Colors.white,
-                                  ),
-                                ),
-                              )
-                            : const Icon(Icons.add, size: 24),
-                        label: Text(
-                          isLoading ? 'Creating...' : 'Create Student',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // Cancel button
-                    SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: OutlinedButton.icon(
-                        onPressed: isLoading ? null : _handleCancel,
-                        style: OutlinedButton.styleFrom(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          side: const BorderSide(color: Colors.red),
-                        ),
-                        icon: const Icon(Icons.close, size: 24, color: Colors.red),
-                        label: const Text(
-                          'Cancel',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // Info box - REMOVED department note
+                    // Note box
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -490,25 +219,126 @@ class _CreateStudentPageState extends State<CreateStudentPage> {
                       child: const Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'ℹ️ Note:',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                              color: Colors.blue,
-                            ),
-                          ),
+                          Text('Note:',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                  color: Colors.blue)),
                           SizedBox(height: 8),
                           Text(
                             '• Email must be unique\n'
                             '• Password at least 6 characters\n'
-                            '• Student code must not duplicate\n'
                             '• Phone number is optional',
                             style: TextStyle(fontSize: 12, color: Colors.white70),
                           ),
                         ],
                       ),
                     ),
+
+                    const SizedBox(height: 24),
+
+                    // Account Information
+                    const Text('Account Information',
+                        style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue)),
+                    const SizedBox(height: 16),
+                    _buildTextField(
+                      controller: _emailController,
+                      label: 'Email',
+                      hint: 'student@example.com',
+                      keyboardType: TextInputType.emailAddress,
+                    ),
+                    _buildTextField(
+                      controller: _passwordController,
+                      label: 'Password',
+                      hint: 'At least 6 characters',
+                      obscureText: _obscurePassword,
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                            _obscurePassword
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                            color: Colors.grey),
+                        onPressed: () =>
+                            setState(() => _obscurePassword = !_obscurePassword),
+                      ),
+                      validator: (v) => (v != null && v.length < 6)
+                          ? 'Password must be at least 6 characters'
+                          : null,
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // Personal Information
+                    const Text('Personal Information',
+                        style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue)),
+                    const SizedBox(height: 16),
+                    _buildTextField(
+                      controller: _nameController,
+                      label: 'Full Name',
+                      hint: 'E.g.: Nguyen Van A',
+                    ),
+                    _buildTextField(
+                      controller: _phoneController,
+                      label: 'Phone Number (optional)',
+                      hint: '0123456789',
+                      keyboardType: TextInputType.phone,
+                    ),
+
+                    const SizedBox(height:(32)),
+
+                    // Buttons
+                    SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: ElevatedButton.icon(
+                        onPressed: isLoading ? null : _createStudent,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                        ),
+                        icon: isLoading
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                    color: Colors.white, strokeWidth: 2),
+                              )
+                            : const Icon(Icons.add),
+                        label: Text(isLoading ? 'Creating...' : 'Create Student',
+                            style: const TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: OutlinedButton.icon(
+                        onPressed: isLoading ? null : widget.onCancel,
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Colors.red),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                        ),
+                        icon: const Icon(Icons.close, color: Colors.red),
+                        label: const Text('Cancel',
+                            style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.red)),
+                      ),
+                    ),
+
+                    const SizedBox(height: 24),
                   ],
                 ),
               ),
@@ -521,7 +351,6 @@ class _CreateStudentPageState extends State<CreateStudentPage> {
     _emailController.dispose();
     _passwordController.dispose();
     _nameController.dispose();
-    _studentCodeController.dispose();
     _phoneController.dispose();
     super.dispose();
   }

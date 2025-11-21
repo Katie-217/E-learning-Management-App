@@ -3,12 +3,17 @@
 // MÔ TẢ: Model nộp bài của sinh viên
 // ========================================
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class SubmissionModel {
   final String id;
   final String assignmentId;
   final String studentId;
   final String studentName;
   final String courseId;
+  final String
+      semesterId; // ✅ NEW: Root Collection support - semester filtering
+  final String groupId; // ✅ NEW: Root Collection support - group filtering
   final DateTime submittedAt;
   final SubmissionStatus status;
   final List<AttachmentModel> attachments;
@@ -28,6 +33,8 @@ class SubmissionModel {
     required this.studentId,
     required this.studentName,
     required this.courseId,
+    required this.semesterId, // ✅ REQUIRED: Root Collection support
+    required this.groupId, // ✅ REQUIRED: Root Collection support
     required this.submittedAt,
     required this.status,
     this.attachments = const [],
@@ -47,19 +54,28 @@ class SubmissionModel {
   // MÔ TẢ: Tạo SubmissionModel từ Map (Firebase data)
   // ========================================
   factory SubmissionModel.fromMap(Map<String, dynamic> map) {
-    return SubmissionModel(
+    print('DEBUG: 📄 Parsing SubmissionModel from map');
+    print('DEBUG: 📄 Map keys: ${map.keys.toList()}');
+    print('DEBUG: 📄 attachments field: ${map['attachments']}');
+    print('DEBUG: 📄 attachments type: ${map['attachments']?.runtimeType}');
+
+    final attachments = _parseAttachments(map['attachments']);
+    print('DEBUG: 📄 Parsed ${attachments.length} attachment(s)');
+
+    final submittedAt = _parseDateTime(map['submittedAt']);
+    print('DEBUG: 📄 submittedAt: $submittedAt');
+
+    final submission = SubmissionModel(
       id: map['id'] ?? '',
       assignmentId: map['assignmentId'] ?? '',
       studentId: map['studentId'] ?? '',
       studentName: map['studentName'] ?? '',
       courseId: map['courseId'] ?? '',
-      submittedAt: _parseDateTime(map['submittedAt']) ?? DateTime.now(),
+      semesterId: map['semesterId'] ?? '', // ✅ Read semesterId from Firebase
+      groupId: map['groupId'] ?? '', // ✅ Read groupId from Firebase
+      submittedAt: submittedAt ?? DateTime.now(),
       status: _parseStatus(map['status'] ?? 'submitted'),
-      attachments: (map['attachments'] as List<dynamic>?)
-              ?.map((item) =>
-                  AttachmentModel.fromMap(item as Map<String, dynamic>))
-              .toList() ??
-          [],
+      attachments: attachments,
       textContent: map['textContent'],
       score: map['score']?.toDouble(),
       maxScore: map['maxScore']?.toDouble(),
@@ -67,9 +83,13 @@ class SubmissionModel {
       gradedBy: map['gradedBy'],
       gradedAt: _parseDateTime(map['gradedAt']),
       isLate: map['isLate'] ?? false,
-      attemptNumber: map['attemptNumber'] ?? 1,
+      attemptNumber: (map['attemptNumber'] as int?) ?? 1,
       lastModified: _parseDateTime(map['lastModified']),
     );
+
+    print(
+        'DEBUG: ✅ Created SubmissionModel: id=${submission.id}, status=${submission.status.name}, attachments=${submission.attachments.length}');
+    return submission;
   }
 
   // ========================================
@@ -83,6 +103,8 @@ class SubmissionModel {
       'studentId': studentId,
       'studentName': studentName,
       'courseId': courseId,
+      'semesterId': semesterId, // ✅ Write semesterId to Firebase
+      'groupId': groupId, // ✅ Write groupId to Firebase
       'submittedAt': submittedAt.toIso8601String(),
       'status': status.name,
       'attachments':
@@ -109,6 +131,8 @@ class SubmissionModel {
     String? studentId,
     String? studentName,
     String? courseId,
+    String? semesterId, // ✅ Support semesterId updates
+    String? groupId, // ✅ Support groupId updates
     DateTime? submittedAt,
     SubmissionStatus? status,
     List<AttachmentModel>? attachments,
@@ -128,6 +152,8 @@ class SubmissionModel {
       studentId: studentId ?? this.studentId,
       studentName: studentName ?? this.studentName,
       courseId: courseId ?? this.courseId,
+      semesterId: semesterId ?? this.semesterId,
+      groupId: groupId ?? this.groupId,
       submittedAt: submittedAt ?? this.submittedAt,
       status: status ?? this.status,
       attachments: attachments ?? this.attachments,
@@ -208,6 +234,65 @@ class SubmissionModel {
   // ========================================
   // Static Helper Methods
   // ========================================
+  static List<AttachmentModel> _parseAttachments(dynamic attachmentsData) {
+    if (attachmentsData == null) {
+      print('DEBUG: 📎 attachmentsData is null');
+      return [];
+    }
+
+    print(
+        'DEBUG: 📎 Parsing attachments, type: ${attachmentsData.runtimeType}');
+    print('DEBUG: 📎 attachmentsData: $attachmentsData');
+
+    // If it's a List (array)
+    if (attachmentsData is List) {
+      print(
+          'DEBUG: 📎 attachmentsData is List with ${attachmentsData.length} items');
+      return attachmentsData
+          .map((item) {
+            try {
+              if (item is Map) {
+                final map = Map<String, dynamic>.from(item);
+                final attachment = AttachmentModel.fromMap(map);
+                print(
+                    'DEBUG: ✅ Parsed attachment from list: ${attachment.name}');
+                return attachment;
+              }
+              print('DEBUG: ⚠️ Item in list is not Map: ${item.runtimeType}');
+              return null;
+            } catch (e) {
+              print('DEBUG: ⚠️ Error parsing attachment from list: $e');
+              return null;
+            }
+          })
+          .whereType<AttachmentModel>()
+          .toList();
+    }
+
+    // If it's a Map (object) - convert to list with single item
+    if (attachmentsData is Map) {
+      try {
+        print(
+            'DEBUG: 📎 attachmentsData is Map, converting to AttachmentModel');
+        final map = Map<String, dynamic>.from(attachmentsData);
+        final attachment = AttachmentModel.fromMap(map);
+        print(
+            'DEBUG: ✅ Successfully parsed attachment from object: ${attachment.name}');
+        print(
+            'DEBUG: ✅ Attachment details: url=${attachment.url}, size=${attachment.sizeInBytes}, mimeType=${attachment.mimeType}');
+        return [attachment];
+      } catch (e, stackTrace) {
+        print('DEBUG: ⚠️ Error parsing attachment from object: $e');
+        print('DEBUG: ⚠️ Stack trace: $stackTrace');
+        return [];
+      }
+    }
+
+    print(
+        'DEBUG: ⚠️ attachmentsData is neither List nor Map: ${attachmentsData.runtimeType}');
+    return [];
+  }
+
   static SubmissionStatus _parseStatus(String status) {
     switch (status.toLowerCase()) {
       case 'draft':
@@ -224,13 +309,32 @@ class SubmissionModel {
   }
 
   static DateTime? _parseDateTime(dynamic dateData) {
-    if (dateData == null) return null;
+    if (dateData == null) {
+      print('DEBUG: ⏰ dateData is null');
+      return null;
+    }
 
-    if (dateData is DateTime) return dateData;
+    print(
+        'DEBUG: ⏰ Parsing date, type: ${dateData.runtimeType}, value: $dateData');
+
+    if (dateData is DateTime) {
+      print('DEBUG: ⏰ dateData is already DateTime');
+      return dateData;
+    }
+
+    // Handle Firestore Timestamp
+    if (dateData is Timestamp) {
+      final date = dateData.toDate();
+      print('DEBUG: ⏰ Converted Timestamp to DateTime: $date');
+      return date;
+    }
 
     try {
-      return DateTime.parse(dateData.toString());
+      final parsed = DateTime.parse(dateData.toString());
+      print('DEBUG: ⏰ Parsed string to DateTime: $parsed');
+      return parsed;
     } catch (e) {
+      print('DEBUG: ⚠️ Error parsing date: $e');
       return null;
     }
   }
@@ -311,15 +415,43 @@ class AttachmentModel {
   });
 
   factory AttachmentModel.fromMap(Map<String, dynamic> map) {
-    return AttachmentModel(
-      id: map['id'] ?? '',
-      name: map['name'] ?? '',
-      url: map['url'] ?? '',
-      mimeType: map['mimeType'] ?? '',
-      sizeInBytes: map['sizeInBytes'] ?? 0,
-      uploadedAt:
-          DateTime.parse(map['uploadedAt'] ?? DateTime.now().toIso8601String()),
+    // Parse uploadedAt - handle Timestamp, DateTime, or String
+    DateTime parseUploadedAt(dynamic dateData) {
+      if (dateData == null) {
+        return DateTime.now();
+      }
+      if (dateData is DateTime) {
+        return dateData;
+      }
+      if (dateData is Timestamp) {
+        return dateData.toDate();
+      }
+      try {
+        return DateTime.parse(dateData.toString());
+      } catch (e) {
+        print('DEBUG: ⚠️ Error parsing uploadedAt: $e');
+        return DateTime.now();
+      }
+    }
+
+    print('DEBUG: 📎 Parsing AttachmentModel from map: $map');
+
+    final attachment = AttachmentModel(
+      id: map['id']?.toString() ?? '',
+      name: map['name']?.toString() ?? '',
+      url: map['url']?.toString() ?? '',
+      mimeType: map['mimeType']?.toString() ?? '',
+      sizeInBytes: (map['sizeInBytes'] as int?) ??
+          (map['size'] as int?) ??
+          ((map['sizeInBytes'] as num?)?.toInt()) ??
+          ((map['size'] as num?)?.toInt()) ??
+          0,
+      uploadedAt: parseUploadedAt(map['uploadedAt']),
     );
+
+    print(
+        'DEBUG: ✅ Created AttachmentModel: name=${attachment.name}, url=${attachment.url}, size=${attachment.sizeInBytes}');
+    return attachment;
   }
 
   Map<String, dynamic> toMap() {

@@ -2,6 +2,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Assignment {
   final String id;
+  final String courseId; // ✅ NEW: Support Collection Group Query
+  final String
+      semesterId; // ✅ NEW: Support Root Collection - semester filtering and CSV export
   final String title;
   final String description;
   final DateTime startDate;
@@ -17,6 +20,8 @@ class Assignment {
 
   Assignment({
     required this.id,
+    required this.courseId, // ✅ REQUIRED: Parent course ID
+    required this.semesterId, // ✅ REQUIRED: Root Collection support
     required this.title,
     required this.description,
     required this.startDate,
@@ -52,15 +57,31 @@ class Assignment {
                 .toList() ??
             [];
 
+    // Parse dates - handle both Timestamp and DateTime
+    DateTime parseDate(dynamic dateData) {
+      if (dateData == null) {
+        return DateTime.now();
+      }
+      if (dateData is Timestamp) {
+        return dateData.toDate();
+      }
+      if (dateData is DateTime) {
+        return dateData;
+      }
+      return DateTime.now();
+    }
+
     return Assignment(
       id: doc.id,
+      courseId: data['courseId'] ?? '', // ✅ Read courseId from Firebase
+      semesterId: data['semesterId'] ?? '', // ✅ Read semesterId from Firebase
       title: data['title'] ?? '',
       description: data['description'] ?? '',
-      startDate: (data['startDate'] as Timestamp).toDate(),
-      deadline: (data['deadline'] as Timestamp).toDate(),
+      startDate: parseDate(data['startDate'] ?? data['timestamp']),
+      deadline: parseDate(data['deadline']),
       allowLateSubmissions: data['allowLateSubmissions'] ?? false,
       lateDeadline:
-          (data['lateDeadline'] as Timestamp?)?.toDate(), // Xử lý nullable
+          data['lateDeadline'] != null ? parseDate(data['lateDeadline']) : null,
       maxSubmissionAttempts: data['maxSubmissionAttempts'] ?? 1,
       allowedFileFormats: allowedFileFormats,
       maxFileSizeMB: data['maxFileSizeMB'] ?? 10,
@@ -72,6 +93,8 @@ class Assignment {
   // "Phiên dịch" từ đối tượng Dart sang Map để ghi lên Firebase
   Map<String, dynamic> toFirestore() {
     return {
+      'courseId': courseId, // ✅ Write courseId to Firebase
+      'semesterId': semesterId, // ✅ Write semesterId to Firebase
       'title': title,
       'description': description,
       'startDate': Timestamp.fromDate(startDate),
@@ -85,5 +108,43 @@ class Assignment {
       'attachments': attachments,
       'groupIds': groupIds,
     };
+  }
+
+  // ========================================
+  // copyWith method for immutable updates
+  // ========================================
+  Assignment copyWith({
+    String? id,
+    String? courseId, // ✅ Support courseId updates
+    String? semesterId, // ✅ Support semesterId updates
+    String? title,
+    String? description,
+    DateTime? startDate,
+    DateTime? deadline,
+    bool? allowLateSubmissions,
+    DateTime? lateDeadline,
+    int? maxSubmissionAttempts,
+    List<String>? allowedFileFormats,
+    int? maxFileSizeMB,
+    List<Map<String, dynamic>>? attachments,
+    List<String>? groupIds,
+  }) {
+    return Assignment(
+      id: id ?? this.id,
+      courseId: courseId ?? this.courseId,
+      semesterId: semesterId ?? this.semesterId,
+      title: title ?? this.title,
+      description: description ?? this.description,
+      startDate: startDate ?? this.startDate,
+      deadline: deadline ?? this.deadline,
+      allowLateSubmissions: allowLateSubmissions ?? this.allowLateSubmissions,
+      lateDeadline: lateDeadline ?? this.lateDeadline,
+      maxSubmissionAttempts:
+          maxSubmissionAttempts ?? this.maxSubmissionAttempts,
+      allowedFileFormats: allowedFileFormats ?? this.allowedFileFormats,
+      maxFileSizeMB: maxFileSizeMB ?? this.maxFileSizeMB,
+      attachments: attachments ?? this.attachments,
+      groupIds: groupIds ?? this.groupIds,
+    );
   }
 }

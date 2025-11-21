@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:elearning_management_app/domain/models/course_model.dart';
 import 'package:elearning_management_app/presentation/widgets/course/Student_Course/course_detail.dart';
 import 'package:elearning_management_app/presentation/widgets/course/Instructor_Course/instructor_course_tabs_widget.dart';
+// ✅ Import Provider mới tạo
+import 'package:elearning_management_app/application/controllers/course/course_detail_provider.dart';
 
 class InstructorCourseDetailPage extends ConsumerStatefulWidget {
   final String courseId;
@@ -22,19 +24,6 @@ class _InstructorCourseDetailPageState
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  // Mock course data - replace with actual data from provider
-  late final CourseModel _course = CourseModel(
-    id: widget.courseId,
-    name: 'Lập trình Flutter',
-    code: 'IT001',
-    instructor: 'Dr. Johnson',
-    semester: 'HK1/24-25',
-    sessions: 0,
-    students: 1,
-    progress: 0,
-    description: 'Cross-platform mobile development with Flutter',
-  );
-
   @override
   void initState() {
     super.initState();
@@ -49,24 +38,74 @@ class _InstructorCourseDetailPageState
 
   @override
   Widget build(BuildContext context) {
+    // ✅ 1. Lắng nghe dữ liệu từ Provider
+    final courseAsyncValue = ref.watch(courseDetailProvider(widget.courseId));
+
     return Scaffold(
       backgroundColor: const Color(0xFF0F1720),
-      body: Column(
-        children: [
-          // Course Header
-          CourseDetailHeader(
-            course: _course,
-            onBack: () => Navigator.pop(context),
+      // ✅ 2. Xử lý 3 trạng thái: Loading, Error, Data
+      body: courseAsyncValue.when(
+        // Trạng thái đang tải
+        loading: () => const Center(
+          child: CircularProgressIndicator(color: Colors.indigo),
+        ),
+        
+        // Trạng thái lỗi (ví dụ: không tìm thấy course hoặc không phải giảng viên của course này)
+        error: (error, stack) => Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, color: Colors.red, size: 48),
+              const SizedBox(height: 16),
+              Text(
+                'Error loading course',
+                style: TextStyle(color: Colors.red[300], fontSize: 18),
+              ),
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32.0),
+                child: Text(
+                  error.toString().replaceAll('Exception:', '').trim(),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.grey),
+                ),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () {
+                  // Thử tải lại
+                  ref.refresh(courseDetailProvider(widget.courseId));
+                },
+                child: const Text('Retry'),
+              )
+            ],
           ),
+        ),
 
-          // Course Tabs (Stream, Classwork, People)
-          Expanded(
-            child: InstructorCourseTabsWidget(
-              tabController: _tabController,
-              course: _course,
-            ),
-          ),
-        ],
+        // Trạng thái có dữ liệu
+        data: (course) {
+          if (course == null) {
+             return const Center(child: Text('Course not found', style: TextStyle(color: Colors.white)));
+          }
+
+          return Column(
+            children: [
+              // Course Header
+              CourseDetailHeader(
+                course: course, // ✅ Truyền data thật
+                onBack: () => Navigator.pop(context),
+              ),
+
+              // Course Tabs (Stream, Classwork, People)
+              Expanded(
+                child: InstructorCourseTabsWidget(
+                  tabController: _tabController,
+                  course: course, // ✅ Truyền data thật xuống các tab con
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

@@ -2,6 +2,26 @@
 // FILE: material_model.dart
 // MÔ TẢ: Model tài liệu học tập
 // ========================================
+import 'package:cloud_firestore/cloud_firestore.dart';
+enum MaterialType { pdf, video, link, unknown }
+class AttachmentModel {
+  final String url;
+  final String mimeType;
+  final int size;
+
+  AttachmentModel({required this.url, required this.mimeType, required this.size});
+
+  // Helper để lưu vào SQLite (dưới dạng JSON String)
+  Map<String, dynamic> toJson() => {'url': url, 'mimeType': mimeType, 'size': size};
+  
+  factory AttachmentModel.fromMap(Map<String, dynamic> map) {
+    return AttachmentModel(
+      url: map['url'] ?? '',
+      mimeType: map['mimeType'] ?? '',
+      size: map['size'] ?? 0,
+    );
+  }
+}
 
 class MaterialModel {
   final String id;
@@ -19,6 +39,8 @@ class MaterialModel {
   final bool isPublished;
   final List<String> targetGroupIds; // Nếu rỗng = cho tất cả
   final int downloadCount;
+  // Field hỗ trợ Offline (Nullable)
+  final String? localPath;
 
   const MaterialModel({
     required this.id,
@@ -36,6 +58,7 @@ class MaterialModel {
     this.isPublished = true,
     this.targetGroupIds = const [],
     this.downloadCount = 0,
+    this.localPath,
   });
 
   // ========================================
