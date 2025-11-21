@@ -73,7 +73,7 @@ class _MainShellState extends State<MainShell> {
         }
       }
     } catch (e) {
-      print('Error loading user data: $e');
+      // Error loading user data - continue with defaults
     }
   }
 
@@ -116,7 +116,6 @@ class _MainShellState extends State<MainShell> {
   }
 
   void onSelect(String key) {
-    print('DEBUG: onSelect called with key = $key'); // Debug log
     // Chỉ cho phép set activeKey là 'dashboard' hoặc 'courses'
     // Profile không được set làm activeKey - profile chỉ mở qua Navigator.push
     if (key == 'dashboard' || key == 'courses') {
@@ -132,21 +131,16 @@ class _MainShellState extends State<MainShell> {
   }
 
   Widget _buildCurrentPage() {
-    print(
-        'DEBUG: _buildCurrentPage called with activeKey = $activeKey'); // Debug log
     // CHỈ hiển thị dashboard hoặc courses trong MainShell
     // Profile KHÔNG BAO GIỜ được hiển thị ở đây
     // Profile chỉ được mở qua Navigator.push từ menu dropdown
     switch (activeKey) {
       case 'dashboard':
-        print('DEBUG: Building StudentDashboardPage'); // Debug log
         return const StudentDashboardPage(showSidebar: false);
       case 'courses':
-        print('DEBUG: Building CoursePage'); // Debug log
         return const CoursePage(showSidebar: false);
       default:
         // Mặc định luôn hiển thị dashboard
-        print('DEBUG: Building default StudentDashboardPage (activeKey was: $activeKey)'); // Debug log
         // Đảm bảo activeKey được reset về 'dashboard'
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {

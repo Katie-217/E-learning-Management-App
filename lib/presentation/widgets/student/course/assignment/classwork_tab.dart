@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:elearning_management_app/presentation/widgets/student/course/assignment/assignment_card.dart';
-import 'package:elearning_management_app/presentation/widgets/quiz/quiz_card.dart';
 import 'package:elearning_management_app/presentation/widgets/student/course/material/material_card.dart';
 import 'package:elearning_management_app/domain/models/course_model.dart';
 import 'package:elearning_management_app/data/repositories/assignment/assignment_repository.dart';
@@ -12,14 +11,15 @@ import 'package:elearning_management_app/presentation/screens/student/course/tab
 
 class ClassworkTab extends StatefulWidget {
   final CourseModel course;
-  
+
   const ClassworkTab({super.key, required this.course});
 
   @override
   State<ClassworkTab> createState() => _ClassworkTabState();
 }
 
-class _ClassworkTabState extends State<ClassworkTab> with AutomaticKeepAliveClientMixin {
+class _ClassworkTabState extends State<ClassworkTab>
+    with AutomaticKeepAliveClientMixin {
   List<Assignment> _assignments = [];
   List<MaterialModel> _materials = [];
   bool _isLoading = true;
@@ -39,7 +39,6 @@ class _ClassworkTabState extends State<ClassworkTab> with AutomaticKeepAliveClie
   @override
   void initState() {
     super.initState();
-    print('DEBUG: 🚀 ClassworkTab initState called');
     _loadAssignments();
     _loadMaterials();
   }
@@ -49,11 +48,9 @@ class _ClassworkTabState extends State<ClassworkTab> with AutomaticKeepAliveClie
     super.didChangeDependencies();
     // Load assignments when tab becomes visible
     if (!_hasLoaded) {
-      print('DEBUG: 🔄 ClassworkTab didChangeDependencies - loading assignments');
       _loadAssignments();
     }
     if (!_hasLoadedMaterials) {
-      print('DEBUG: 🔄 ClassworkTab didChangeDependencies - loading materials');
       _loadMaterials();
     }
   }
@@ -93,14 +90,7 @@ class _ClassworkTabState extends State<ClassworkTab> with AutomaticKeepAliveClie
         _materialError = null;
       });
 
-      print('DEBUG: ========== CLASSWORK TAB LOAD MATERIALS ==========');
-      print('DEBUG: 🔍 Course info:');
-      print('DEBUG:   - Course ID: ${widget.course.id}');
-      print('DEBUG:   - Course Name: ${widget.course.name}');
-      print('DEBUG:   - Course Code: ${widget.course.code}');
-      
       if (widget.course.id.isEmpty) {
-        print('DEBUG: ⚠️ WARNING: Course ID is empty!');
         setState(() {
           _materialError = 'Course ID is empty';
           _isLoadingMaterials = false;
@@ -108,28 +98,15 @@ class _ClassworkTabState extends State<ClassworkTab> with AutomaticKeepAliveClie
         return;
       }
 
-      print('DEBUG: 📞 Calling MaterialRepository.getMaterialsByCourse...');
-      final materials = await MaterialRepository.getMaterialsByCourse(widget.course.id);
-      
-      print('DEBUG: ✅ Loaded ${materials.length} materials');
-      
-      if (materials.isNotEmpty) {
-        print('DEBUG: 📚 Materials list:');
-        for (var i = 0; i < materials.length; i++) {
-          print('DEBUG:   ${i + 1}. ${materials[i].title} (ID: ${materials[i].id})');
-        }
-      }
-      
-      print('DEBUG: ===========================================');
-      
+      final materials =
+          await MaterialRepository.getMaterialsByCourse(widget.course.id);
+
       setState(() {
         _materials = materials;
         _isLoadingMaterials = false;
         _hasLoadedMaterials = true;
       });
-    } catch (e, stackTrace) {
-      print('DEBUG: ❌ Error loading materials: $e');
-      print('DEBUG: ❌ Stack trace: $stackTrace');
+    } catch (e) {
       setState(() {
         _materialError = e.toString();
         _isLoadingMaterials = false;
@@ -144,14 +121,7 @@ class _ClassworkTabState extends State<ClassworkTab> with AutomaticKeepAliveClie
         _error = null;
       });
 
-      print('DEBUG: ========== CLASSWORK TAB LOAD ASSIGNMENTS ==========');
-      print('DEBUG: 🔍 Course info:');
-      print('DEBUG:   - Course ID: ${widget.course.id}');
-      print('DEBUG:   - Course Name: ${widget.course.name}');
-      print('DEBUG:   - Course Code: ${widget.course.code}');
-      
       if (widget.course.id.isEmpty) {
-        print('DEBUG: ⚠️ WARNING: Course ID is empty!');
         setState(() {
           _error = 'Course ID is empty';
           _isLoading = false;
@@ -159,28 +129,15 @@ class _ClassworkTabState extends State<ClassworkTab> with AutomaticKeepAliveClie
         return;
       }
 
-      print('DEBUG: 📞 Calling AssignmentRepository.getAssignmentsByCourse...');
-      final assignments = await AssignmentRepository.getAssignmentsByCourse(widget.course.id);
-      
-      print('DEBUG: ✅ Loaded ${assignments.length} assignments');
-      
-      if (assignments.isNotEmpty) {
-        print('DEBUG: 📚 Assignments list:');
-        for (var i = 0; i < assignments.length; i++) {
-          print('DEBUG:   ${i + 1}. ${assignments[i].title} (ID: ${assignments[i].id})');
-        }
-      }
-      
-      print('DEBUG: ===========================================');
-      
+      final assignments =
+          await AssignmentRepository.getAssignmentsByCourse(widget.course.id);
+
       setState(() {
         _assignments = assignments;
         _isLoading = false;
         _hasLoaded = true;
       });
-    } catch (e, stackTrace) {
-      print('DEBUG: ❌ Error loading assignments: $e');
-      print('DEBUG: ❌ Stack trace: $stackTrace');
+    } catch (e) {
       setState(() {
         _error = e.toString();
         _isLoading = false;
@@ -191,7 +148,7 @@ class _ClassworkTabState extends State<ClassworkTab> with AutomaticKeepAliveClie
   @override
   Widget build(BuildContext context) {
     super.build(context); // Required for AutomaticKeepAliveClientMixin
-    
+
     // Show assignment detail view if selected
     if (_showDetail && _selectedAssignment != null) {
       return AssignmentDetailView(
@@ -209,7 +166,7 @@ class _ClassworkTabState extends State<ClassworkTab> with AutomaticKeepAliveClie
         onBack: _hideMaterialDetail,
       );
     }
-    
+
     // Show assignments and materials list
     return RefreshIndicator(
       onRefresh: () async {
@@ -225,7 +182,7 @@ class _ClassworkTabState extends State<ClassworkTab> with AutomaticKeepAliveClie
                   fontSize: 16,
                   color: Colors.white)),
           SizedBox(height: 8),
-          
+
           // Loading state
           if (_isLoading)
             Center(
@@ -234,7 +191,7 @@ class _ClassworkTabState extends State<ClassworkTab> with AutomaticKeepAliveClie
                 child: CircularProgressIndicator(),
               ),
             )
-          
+
           // Error state
           else if (_error != null)
             Center(
@@ -263,7 +220,7 @@ class _ClassworkTabState extends State<ClassworkTab> with AutomaticKeepAliveClie
                 ),
               ),
             )
-          
+
           // Empty state
           else if (_assignments.isEmpty)
             Center(
@@ -271,7 +228,8 @@ class _ClassworkTabState extends State<ClassworkTab> with AutomaticKeepAliveClie
                 padding: const EdgeInsets.all(32.0),
                 child: Column(
                   children: [
-                    Icon(Icons.assignment_outlined, color: Colors.grey, size: 48),
+                    Icon(Icons.assignment_outlined,
+                        color: Colors.grey, size: 48),
                     SizedBox(height: 16),
                     Text(
                       'No assignments yet',
@@ -287,17 +245,19 @@ class _ClassworkTabState extends State<ClassworkTab> with AutomaticKeepAliveClie
                 ),
               ),
             )
-          
+
           // Assignments list
           else
-            ..._assignments.map<Widget>((assignment) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: AssignmentCard(
-                assignment: assignment,
-                onTap: () => _showAssignmentDetail(assignment),
-              ),
-            )).toList(),
-          
+            ..._assignments
+                .map<Widget>((assignment) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: AssignmentCard(
+                        assignment: assignment,
+                        onTap: () => _showAssignmentDetail(assignment),
+                      ),
+                    ))
+                .toList(),
+
           // QuizCard(quiz: null), // TODO: Add quiz loading
           SizedBox(height: 24),
           Text('Course Materials',
@@ -306,7 +266,7 @@ class _ClassworkTabState extends State<ClassworkTab> with AutomaticKeepAliveClie
                   fontSize: 16,
                   color: Colors.white)),
           SizedBox(height: 8),
-          
+
           // Loading state for materials
           if (_isLoadingMaterials)
             Center(
@@ -315,7 +275,7 @@ class _ClassworkTabState extends State<ClassworkTab> with AutomaticKeepAliveClie
                 child: CircularProgressIndicator(),
               ),
             )
-          
+
           // Error state for materials
           else if (_materialError != null)
             Center(
@@ -344,7 +304,7 @@ class _ClassworkTabState extends State<ClassworkTab> with AutomaticKeepAliveClie
                 ),
               ),
             )
-          
+
           // Empty state for materials
           else if (_materials.isEmpty)
             Center(
@@ -368,16 +328,18 @@ class _ClassworkTabState extends State<ClassworkTab> with AutomaticKeepAliveClie
                 ),
               ),
             )
-          
+
           // Materials list
           else
-            ..._materials.map<Widget>((material) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: MaterialCard(
-                material: material,
-                onTap: () => _showMaterialDetailView(material),
-              ),
-            )).toList(),
+            ..._materials
+                .map<Widget>((material) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: MaterialCard(
+                        material: material,
+                        onTap: () => _showMaterialDetailView(material),
+                      ),
+                    ))
+                .toList(),
         ],
       ),
     );

@@ -103,12 +103,12 @@ class _InstructorKPICard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final borderColor = bgStart.withOpacity(0.3);
+    final borderColor = bgStart.withValues(alpha: 0.3);
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [bgStart.withOpacity(0.18), bgEnd.withOpacity(0.18)],
+          colors: [bgStart.withValues(alpha: 0.18), bgEnd.withValues(alpha: 0.18)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -124,7 +124,7 @@ class _InstructorKPICard extends StatelessWidget {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: bgStart.withOpacity(0.3),
+                  color: bgStart.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(icon, color: iconColor),

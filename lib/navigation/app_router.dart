@@ -8,25 +8,13 @@ import '../presentation/screens/auth/auth_overlay_screen.dart';
 import '../core/config/users-role.dart';
 import '../presentation/screens/instructor/instructor_dashboard.dart';
 import '../presentation/screens/instructor/instructor_students_page.dart';
-import '../presentation/screens/instructor/instructor_grades_page.dart';
+// import '../presentation/screens/instructor/instructor_grades_page.dart';
 import '../presentation/screens/profile/profile_view.dart';
 import '../presentation/screens/student/course/course_page.dart';
 import '../presentation/screens/instructor/instructor_courses/instructor_courses_page.dart';
 import '../presentation/screens/instructor/instructor_courses/instructor_course_detail_page.dart';
 import '../presentation/screens/assignment/assignments_page.dart';
-// import '../../presentation/screens/semester_page.dart';
-// import '../../presentation/screens/course/course_page.dart';
-// import '../../presentation/screens/group/group_page.dart';
-// import '../../presentation/screens/student_page.dart';
-// import '../../presentation/screens/csv_import_preview.dart';
-// import '../../presentation/screens/announcement/announcements_page.dart';
-// import '../../presentation/screens/assignment/assignments_page.dart';
-// import '../../presentation/screens/quiz/quizzes_page.dart';
-// import '../../presentation/screens/material/materials_page.dart';
-// import '../../presentation/screens/forum_page.dart';
-// import '../../presentation/screens/chat_page.dart';
-// import '../../presentation/screens/notification/notification_page.dart';
-// import '../../presentation/screens/analytics_page.dart';
+import '../presentation/screens/instructor/instructor_student_create.dart';
 
 class AppRouter {
   AppRouter._();
@@ -91,6 +79,12 @@ class AppRouter {
         path: '/instructor',
         redirect: (context, state) => '/instructor/dashboard',
       ),
+// Thêm route để điều hướng đến CreateStudentPage
+      GoRoute(
+        path: '/instructor/students/create',
+        name: 'create-student',
+        builder: (context, state) => const CreateStudentPage(),
+      ),
       GoRoute(
         path: '/instructor/dashboard',
         name: 'instructor-dashboard',
@@ -119,37 +113,11 @@ class AppRouter {
         name: 'instructor-assignments',
         builder: (context, state) => const AssignmentsPage(),
       ),
-      GoRoute(
-        path: '/instructor/grades',
-        name: 'instructor-grades',
-        builder: (context, state) => const InstructorGradesPage(),
-      ),
-      GoRoute(
-        path: '/instructor/courses/:courseId',
-        name: 'instructor-course-detail',
-        builder: (context, state) {
-          final courseId = state.pathParameters['courseId']!;
-          return InstructorCourseDetailPage(courseId: courseId);
-        },
-      ),
-      // GoRoute(path: '/semesters', builder: (c, s) => const SemesterPage()),
-      // GoRoute(path: '/groups', builder: (c, s) => const GroupPage()),
-      // GoRoute(path: '/students', builder: (c, s) => const StudentPage()),
-      // GoRoute(path: '/csv-import', builder: (c, s) => const CsvImportPreviewPage()),
-      // GoRoute(path: '/announcements', builder: (c, s) => const AnnouncementsPage()),
-      // GoRoute(path: '/quizzes', builder: (c, s) => const QuizzesPage()),
-      // GoRoute(path: '/materials', builder: (c, s) => const MaterialsPage()),
-      // GoRoute(path: '/forum', builder: (c, s) => const ForumPage()),
-      // GoRoute(path: '/chat', builder: (c, s) => const ChatPage()),
-      // GoRoute(path: '/notifications', builder: (c, s) => const NotificationsView()),
-      // GoRoute(path: '/analytics', builder: (c, s) => const AnalyticsPage()),
+      // GoRoute(
+      //   path: '/instructor/grades',
+      //   name: 'instructor-grades',
+      //   builder: (context, state) => const InstructorGradesPage(),
+      // ),
     ],
-    // static const String auth = '/auth';
-    // static const String dashboard = '/dashboard';
-    // static const String profile = '/profile';
-    // static const String content = '/content';
-    // static const String forum = '/forum';
-    // static const String notifications = '/notifications';
-    // static const String analytics = '/analytics';
   );
 }

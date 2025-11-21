@@ -5,6 +5,7 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:elearning_management_app/domain/models/course_model.dart';
+import 'package:elearning_management_app/domain/models/validation_result.dart';
 import 'package:elearning_management_app/data/repositories/auth/auth_repository.dart';
 import 'course_instructor_controller.dart';
 
@@ -110,16 +111,25 @@ class CourseInstructorNotifier extends StateNotifier<InstructorCourseState> {
   // HÀM: createCourse
   // MÔ TẢ: Tạo khóa học mới
   // ========================================
-  Future<void> createCourse(CourseModel course) async {
+  Future<ValidationResult> createCourse(CourseModel course) async {
     try {
       state = state.copyWith(isLoading: true, error: null);
 
-      await _courseController.createCourse(course);
+      final result = await _courseController.createCourse(course);
 
-      // Reload courses after creation
-      await loadInstructorCourses(forceRefresh: true);
+      if (result.isSuccess) {
+        // Reload courses after creation
+        await loadInstructorCourses(forceRefresh: true);
+        state = state.copyWith(isLoading: false, error: null);
+      } else {
+        state = state.copyWith(isLoading: false, error: result.message);
+      }
+
+      return result;
     } catch (e) {
       state = state.copyWith(error: e.toString(), isLoading: false);
+      return ValidationResult.generalError(
+          'An unexpected error occurred: ${e.toString()}');
     }
   }
 

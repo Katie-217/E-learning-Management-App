@@ -74,11 +74,11 @@ class _LoginFormState extends State<LoginForm> {
       // Navigation dựa trên UserModel role
       if (userModel.role == UserRole.instructor) {
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const InstructorDashboard()),
+          MaterialPageRoute(builder: (_) => InstructorDashboard()),
         );
       } else {
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const MainShell()),
+          MaterialPageRoute(builder: (_) => MainShell()),
         );
       }
     } catch (e) {
@@ -105,33 +105,33 @@ class _LoginFormState extends State<LoginForm> {
     return InputDecoration(
       hintText: hint,
       hintStyle: TextStyle(
-        color: Colors.white.withOpacity(0.6),
+        color: Colors.white.withValues(alpha: 0.6),
       ),
       filled: true,
-      fillColor: Colors.white.withOpacity(0.12),
+      fillColor: Colors.white.withValues(alpha: 0.12),
       prefixIcon: icon != null
           ? Icon(
               icon,
-              color: Colors.white.withOpacity(0.8),
+              color: Colors.white.withValues(alpha: 0.8),
               size: 24,
             )
           : null,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
         borderSide: BorderSide(
-          color: Colors.white.withOpacity(0.25),
+          color: Colors.white.withValues(alpha: 0.25),
         ),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
         borderSide: BorderSide(
-          color: Colors.white.withOpacity(0.2),
+          color: Colors.white.withValues(alpha: 0.2),
         ),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
         borderSide: BorderSide(
-          color: Colors.white.withOpacity(0.5),
+          color: Colors.white.withValues(alpha: 0.5),
           width: 1.5,
         ),
       ),
@@ -145,7 +145,7 @@ class _LoginFormState extends State<LoginForm> {
   TextStyle get _labelStyle => TextStyle(
         fontSize: 14,
         fontWeight: FontWeight.w600,
-        color: Colors.white.withOpacity(0.8),
+        color: Colors.white.withValues(alpha: 0.8),
       );
 
   @override
@@ -206,7 +206,7 @@ class _LoginFormState extends State<LoginForm> {
                   _obscurePassword
                       ? Icons.visibility_off_outlined
                       : Icons.visibility_outlined,
-                  color: Colors.white.withOpacity(0.7),
+                  color: Colors.white.withValues(alpha: 0.7),
                 ),
                 onPressed: () {
                   setState(() {
@@ -235,12 +235,12 @@ class _LoginFormState extends State<LoginForm> {
                       activeColor: Colors.white,
                       checkColor: widget.role.primaryColor,
                       side: BorderSide(
-                        color: Colors.white.withOpacity(0.7),
+                        color: Colors.white.withValues(alpha: 0.7),
                         width: 1.1,
                       ),
                       fillColor: MaterialStateProperty.resolveWith(
                         (states) => states.contains(MaterialState.selected)
-                            ? Colors.white.withOpacity(0.9)
+                            ? Colors.white.withValues(alpha: 0.9)
                             : Colors.transparent,
                       ),
                     ),
@@ -249,7 +249,7 @@ class _LoginFormState extends State<LoginForm> {
                   Text(
                     'Remember me',
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.7),
+                      color: Colors.white.withValues(alpha: 0.7),
                       fontSize: 12,
                     ),
                   ),
@@ -266,7 +266,7 @@ class _LoginFormState extends State<LoginForm> {
                 child: Text(
                   'Forgot password?',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.85),
+                    color: Colors.white.withValues(alpha: 0.85),
                     fontSize: 12,
                   ),
                 ),

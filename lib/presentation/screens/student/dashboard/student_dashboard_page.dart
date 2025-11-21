@@ -39,7 +39,7 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
   StudentDashboardMetrics? _metricsData;
   bool _isMetricsLoading = true;
   Object? _metricsError;
-  
+
   @override
   void initState() {
     super.initState();
@@ -74,7 +74,7 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
         }
       }
     } catch (e) {
-      print('Error loading user name: $e');
+      // Error loading user name - continue with default
     }
   }
 
@@ -196,7 +196,8 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
   // ignore: unused_element
   Widget _buildQuizExamList(List<TaskModel> tasks) {
     final relevantTasks = tasks
-        .where((task) => task.type == TaskType.quiz || task.type == TaskType.exam)
+        .where(
+            (task) => task.type == TaskType.quiz || task.type == TaskType.exam)
         .toList()
       ..sort((a, b) => a.dateTime.compareTo(b.dateTime));
     if (relevantTasks.isEmpty) {
@@ -237,7 +238,6 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
           .toList(),
     );
   }
-
 
   Future<void> _loadMetricsForCurrentSemester() async {
     final semester = _activeSemester;
@@ -298,91 +298,89 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
               const SidebarWidget(),
             Expanded(
               child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(18),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      StudentDashboardHeader(
-                        userName: _userName,
-                        semesters: _semesters,
-                        selectedSemesterId: _selectedSemesterId,
-                        isReadonlySemester: isReadonlySemester,
-                        onSemesterChanged: (value) {
-                          if (value == null) return;
-                          setState(() {
-                            _selectedSemesterId = value;
-                          });
-                          _loadMetricsForCurrentSemester();
-                        },
-                      ),
-                      const SizedBox(height: 24),
-                      LayoutBuilder(builder: (context, cons) {
-                        final isNarrow = cons.maxWidth < 600;
-                        return isNarrow
-                            ? Column(
-                                children: summaryMetrics
-                                    .map((metric) => Padding(
-                                          padding: const EdgeInsets.only(bottom: 12),
-                                          child: StatsCard(
-                                            icon: metric.icon,
-                                            title: metric.title,
-                                            value: metric.value,
-                                            bgStart: metric.bgStart,
-                                            bgEnd: metric.bgEnd,
-                                            iconColor: metric.iconColor,
-                                          ),
-                                        ))
-                                    .toList(),
-                              )
-                            : Row(
-                                children: summaryMetrics
-                                    .asMap()
-                                    .entries
-                                    .map((entry) {
-                                      final index = entry.key;
-                                      final metric = entry.value;
-                                      return Expanded(
-                                        child: Padding(
-                                          padding: EdgeInsets.only(
-                                            right: index < summaryMetrics.length - 1
-                                                ? 12
-                                                : 0,
-                                          ),
-                                          child: StatsCard(
-                                            icon: metric.icon,
-                                            title: metric.title,
-                                            value: metric.value,
-                                            bgStart: metric.bgStart,
-                                            bgEnd: metric.bgEnd,
-                                            iconColor: metric.iconColor,
-                                          ),
+                padding: const EdgeInsets.all(18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    StudentDashboardHeader(
+                      userName: _userName,
+                      semesters: _semesters,
+                      selectedSemesterId: _selectedSemesterId,
+                      isReadonlySemester: isReadonlySemester,
+                      onSemesterChanged: (value) {
+                        if (value == null) return;
+                        setState(() {
+                          _selectedSemesterId = value;
+                        });
+                        _loadMetricsForCurrentSemester();
+                      },
+                    ),
+                    const SizedBox(height: 24),
+                    LayoutBuilder(builder: (context, cons) {
+                      final isNarrow = cons.maxWidth < 600;
+                      return isNarrow
+                          ? Column(
+                              children: summaryMetrics
+                                  .map((metric) => Padding(
+                                        padding:
+                                            const EdgeInsets.only(bottom: 12),
+                                        child: StatsCard(
+                                          icon: metric.icon,
+                                          title: metric.title,
+                                          value: metric.value,
+                                          bgStart: metric.bgStart,
+                                          bgEnd: metric.bgEnd,
+                                          iconColor: metric.iconColor,
                                         ),
-                                      );
-                                    })
-                                    .toList(),
-                              );
-                      }),
-                      if (_metricsError != null)
-                        Container(
-                          width: double.infinity,
-                          margin: const EdgeInsets.only(top: 12),
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: const Color.fromRGBO(239, 68, 68, 0.08),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: const Color.fromRGBO(239, 68, 68, 0.3),
-                            ),
-                          ),
-                          child: Text(
-                            'Không thể tải dữ liệu thống kê: $_metricsError',
-                            style: const TextStyle(
-                              color: Colors.redAccent,
-                              fontSize: 12,
-                            ),
+                                      ))
+                                  .toList(),
+                            )
+                          : Row(
+                              children:
+                                  summaryMetrics.asMap().entries.map((entry) {
+                                final index = entry.key;
+                                final metric = entry.value;
+                                return Expanded(
+                                  child: Padding(
+                                    padding: EdgeInsets.only(
+                                      right: index < summaryMetrics.length - 1
+                                          ? 12
+                                          : 0,
+                                    ),
+                                    child: StatsCard(
+                                      icon: metric.icon,
+                                      title: metric.title,
+                                      value: metric.value,
+                                      bgStart: metric.bgStart,
+                                      bgEnd: metric.bgEnd,
+                                      iconColor: metric.iconColor,
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                            );
+                    }),
+                    if (_metricsError != null)
+                      Container(
+                        width: double.infinity,
+                        margin: const EdgeInsets.only(top: 12),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color.fromRGBO(239, 68, 68, 0.08),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: const Color.fromRGBO(239, 68, 68, 0.3),
                           ),
                         ),
-                      const SizedBox(height: 18),
+                        child: Text(
+                          'Không thể tải dữ liệu thống kê: $_metricsError',
+                          style: const TextStyle(
+                            color: Colors.redAccent,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    const SizedBox(height: 18),
                     LayoutBuilder(builder: (context, constraints) {
                       final isWide = constraints.maxWidth > 960;
                       return Flex(
@@ -401,33 +399,41 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
                                   title: 'Progress Overview & Completion Rate',
                                   child: LayoutBuilder(
                                     builder: (context, constraints) {
-                                      final isNarrow = constraints.maxWidth < 600;
+                                      final isNarrow =
+                                          constraints.maxWidth < 600;
                                       return isNarrow
                                           ? Column(
                                               children: [
                                                 PieChartWidget(
-                                                  completed: assignmentsCompleted,
+                                                  completed:
+                                                      assignmentsCompleted,
                                                   pending: assignmentsPending,
                                                   title: 'Assignments',
-                                                  completedColor: const Color(0xFF22C55E),
-                                                  pendingColor: const Color(0xFFFF6B6B),
+                                                  completedColor:
+                                                      const Color(0xFF22C55E),
+                                                  pendingColor:
+                                                      const Color(0xFFFF6B6B),
                                                   trendPercent: 5.0,
                                                   trendLabel: 'vs last month',
                                                 ),
                                                 Container(
                                                   width: double.infinity,
                                                   height: 1,
-                                                  margin: const EdgeInsets.symmetric(vertical: 16),
+                                                  margin: const EdgeInsets
+                                                      .symmetric(vertical: 16),
                                                   color: Colors.grey[800],
                                                 ),
                                                 PieChartWidget(
                                                   completed: quizzesCompleted,
                                                   pending: quizzesPending,
                                                   title: 'Quizzes',
-                                                  completedColor: const Color(0xFF0EA5E9),
-                                                  pendingColor: const Color(0xFFFFB347),
+                                                  completedColor:
+                                                      const Color(0xFF0EA5E9),
+                                                  pendingColor:
+                                                      const Color(0xFFFFB347),
                                                   trendPercent: -12.0,
-                                                  trendLabel: 'vs previous semester',
+                                                  trendLabel:
+                                                      'vs previous semester',
                                                 ),
                                               ],
                                             )
@@ -439,17 +445,22 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
                                                         assignmentsCompleted,
                                                     pending: assignmentsPending,
                                                     title: 'Assignments',
-                                                    completedColor: const Color(0xFF22C55E),
-                                                    pendingColor: const Color(0xFFFF6B6B),
+                                                    completedColor:
+                                                        const Color(0xFF22C55E),
+                                                    pendingColor:
+                                                        const Color(0xFFFF6B6B),
                                                   ),
                                                 ),
                                                 Container(
                                                   width: 2,
                                                   height: 200,
-                                                  margin: const EdgeInsets.symmetric(horizontal: 8),
+                                                  margin: const EdgeInsets
+                                                      .symmetric(horizontal: 8),
                                                   decoration: BoxDecoration(
                                                     color: Colors.grey[700],
-                                                    borderRadius: BorderRadius.circular(1),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            1),
                                                   ),
                                                 ),
                                                 Expanded(
@@ -457,8 +468,10 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
                                                     completed: quizzesCompleted,
                                                     pending: quizzesPending,
                                                     title: 'Quizzes',
-                                                    completedColor: const Color(0xFF0EA5E9),
-                                                    pendingColor: const Color(0xFFFFB347),
+                                                    completedColor:
+                                                        const Color(0xFF0EA5E9),
+                                                    pendingColor:
+                                                        const Color(0xFFFFB347),
                                                   ),
                                                 ),
                                               ],
@@ -474,7 +487,8 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
                               ],
                             ),
                           ),
-                          SizedBox(width: isWide ? 12 : 0, height: isWide ? 0 : 12),
+                          SizedBox(
+                              width: isWide ? 12 : 0, height: isWide ? 0 : 12),
                           Expanded(
                             flex: 1,
                             child: Column(
@@ -499,12 +513,3 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
     );
   }
 }
-
-
-
-
-
-
-
-
-

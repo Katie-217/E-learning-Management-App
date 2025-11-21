@@ -352,10 +352,12 @@ class _AssignmentPieChartPainter extends StatefulWidget {
   });
 
   @override
-  State<_AssignmentPieChartPainter> createState() => _AssignmentPieChartPainterState();
+  State<_AssignmentPieChartPainter> createState() =>
+      _AssignmentPieChartPainterState();
 }
 
-class _AssignmentPieChartPainterState extends State<_AssignmentPieChartPainter> {
+class _AssignmentPieChartPainterState
+    extends State<_AssignmentPieChartPainter> {
   String? _hoveredSegment;
   Offset? _hoverPosition;
   final GlobalKey _key = GlobalKey();
@@ -371,27 +373,28 @@ class _AssignmentPieChartPainterState extends State<_AssignmentPieChartPainter> 
     final center = Offset(size.width / 2, size.height / 2);
     final radius = math.min(size.width, size.height) / 2 - 15;
     final innerRadius = radius * 0.6;
-    
+
     final dx = localPosition.dx - center.dx;
     final dy = localPosition.dy - center.dy;
     final distance = math.sqrt(dx * dx + dy * dy);
-    
+
     // Check if point is within the donut (between inner and outer radius)
     if (distance < innerRadius || distance > radius) return null;
-    
+
     var angle = math.atan2(dy, dx);
     angle = (angle + math.pi / 2 + 2 * math.pi) % (2 * math.pi);
-    
-    final total = widget.notSubmitted + widget.submitted + widget.late + widget.graded;
+
+    final total =
+        widget.notSubmitted + widget.submitted + widget.late + widget.graded;
     if (total <= 0) return null;
-    
+
     final segments = [
       ('notSubmitted', widget.notSubmitted),
       ('submitted', widget.submitted),
       ('late', widget.late),
       ('graded', widget.graded),
     ];
-    
+
     double currentAngle = 0;
     for (final (segment, value) in segments) {
       final segmentAngle = (value / total) * 2 * math.pi;
@@ -408,7 +411,8 @@ class _AssignmentPieChartPainterState extends State<_AssignmentPieChartPainter> 
       return const SizedBox.shrink();
     }
 
-    final total = widget.notSubmitted + widget.submitted + widget.late + widget.graded;
+    final total =
+        widget.notSubmitted + widget.submitted + widget.late + widget.graded;
     if (total <= 0) return const SizedBox.shrink();
 
     final Map<String, Map<String, dynamic>> segmentData = {
@@ -453,10 +457,10 @@ class _AssignmentPieChartPainterState extends State<_AssignmentPieChartPainter> 
           decoration: BoxDecoration(
             color: const Color(0xFF1F2937),
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: color.withOpacity(0.5), width: 1.5),
+            border: Border.all(color: color.withValues(alpha: 0.5), width: 1.5),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.4),
+                color: Colors.black.withValues(alpha: 0.4),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
@@ -539,8 +543,11 @@ class _AssignmentPieChartPainterState extends State<_AssignmentPieChartPainter> 
               _hoverTimer = Timer(Duration.zero, () {
                 if (!mounted) return;
                 try {
-                  final RenderBox? renderBox = _key.currentContext?.findRenderObject() as RenderBox?;
-                  if (renderBox == null || !renderBox.hasSize || !renderBox.attached) return;
+                  final RenderBox? renderBox =
+                      _key.currentContext?.findRenderObject() as RenderBox?;
+                  if (renderBox == null ||
+                      !renderBox.hasSize ||
+                      !renderBox.attached) return;
                   final size = renderBox.size;
                   final segment = _getSegmentAtPosition(localPosition, size);
                   // Use Future.microtask to ensure setState is called outside device update
@@ -650,21 +657,23 @@ class _AssignmentPieChartCustomPainter extends CustomPainter {
         final shadowBlur = isHovered ? 12.0 : 6.0;
         final shadowOffset = isHovered ? 4.0 : 2.0;
         final shadowPaint = Paint()
-          ..color = Colors.black.withOpacity(shadowOpacity)
+          ..color = Colors.black.withValues(alpha: shadowOpacity)
           ..maskFilter = MaskFilter.blur(BlurStyle.normal, shadowBlur);
-        
+
         // Draw shadow with slight offset
         final shadowCenter = Offset(
           adjustedCenter.dx + shadowOffset,
           adjustedCenter.dy + shadowOffset,
         );
-        final shadowRect = Rect.fromCircle(center: shadowCenter, radius: radius);
+        final shadowRect =
+            Rect.fromCircle(center: shadowCenter, radius: radius);
         canvas.drawArc(shadowRect, startAngle, sweepAngle, true, shadowPaint);
 
         // Draw donut segment with fill
         final rect = Rect.fromCircle(center: adjustedCenter, radius: radius);
-        final innerRect = Rect.fromCircle(center: adjustedCenter, radius: innerR);
-        
+        final innerRect =
+            Rect.fromCircle(center: adjustedCenter, radius: innerR);
+
         // Create path for donut segment
         final path = Path()
           ..moveTo(
@@ -674,7 +683,7 @@ class _AssignmentPieChartCustomPainter extends CustomPainter {
           ..arcTo(rect, startAngle, sweepAngle, false)
           ..arcTo(innerRect, startAngle + sweepAngle, -sweepAngle, false)
           ..close();
-        
+
         // Draw base fill
         final fillPaint = Paint()
           ..color = colors[i]
@@ -686,37 +695,39 @@ class _AssignmentPieChartCustomPainter extends CustomPainter {
           center: Alignment.center,
           radius: 1.0,
           colors: [
-            Colors.black.withOpacity(0.0), // Transparent at outer edge
-            Colors.black.withOpacity(0.4), // Darker at inner edge
+            Colors.black.withValues(alpha: 0.0), // Transparent at outer edge
+            Colors.black.withValues(alpha: 0.4), // Darker at inner edge
           ],
           stops: const [0.6, 1.0],
         );
-        
+
         final depthPaint = Paint()
           ..shader = depthGradient.createShader(rect)
           ..blendMode = BlendMode.multiply;
-        
+
         // Draw depth gradient
         canvas.drawPath(path, depthPaint);
 
         // Draw inner edge shadow for depth
         final innerShadowPaint = Paint()
-          ..color = Colors.black.withOpacity(0.3)
+          ..color = Colors.black.withValues(alpha: 0.3)
           ..style = PaintingStyle.stroke
           ..strokeWidth = 3.0
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
-        canvas.drawArc(innerRect, startAngle, sweepAngle, false, innerShadowPaint);
+        canvas.drawArc(
+            innerRect, startAngle, sweepAngle, false, innerShadowPaint);
 
         // Draw inner edge highlight
         final innerHighlightPaint = Paint()
-          ..color = Colors.white.withOpacity(0.2)
+          ..color = Colors.white.withValues(alpha: 0.2)
           ..style = PaintingStyle.stroke
           ..strokeWidth = 2.0;
-        canvas.drawArc(innerRect, startAngle, sweepAngle, false, innerHighlightPaint);
+        canvas.drawArc(
+            innerRect, startAngle, sweepAngle, false, innerHighlightPaint);
 
         // Draw border for better definition
         final borderPaint = Paint()
-          ..color = colors[i].withOpacity(0.8)
+          ..color = colors[i].withValues(alpha: 0.8)
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1.5;
         canvas.drawPath(path, borderPaint);
@@ -727,13 +738,13 @@ class _AssignmentPieChartCustomPainter extends CustomPainter {
 
     // Center circle for donut effect
     final centerPaint = Paint()
-      ..color = const Color(0xFF111827).withOpacity(0.9)
+      ..color = const Color(0xFF111827).withValues(alpha: 0.9)
       ..style = PaintingStyle.fill;
     canvas.drawCircle(center, innerRadius, centerPaint);
-    
+
     // Center circle border
     final centerBorderPaint = Paint()
-      ..color = Colors.grey[800]!.withOpacity(0.5)
+      ..color = Colors.grey[800]!.withValues(alpha: 0.5)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0;
     canvas.drawCircle(center, innerRadius, centerBorderPaint);
@@ -782,27 +793,28 @@ class _QuizPieChartPainterState extends State<_QuizPieChartPainter> {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = math.min(size.width, size.height) / 2 - 15;
     final innerRadius = radius * 0.6;
-    
+
     final dx = localPosition.dx - center.dx;
     final dy = localPosition.dy - center.dy;
     final distance = math.sqrt(dx * dx + dy * dy);
-    
+
     // Check if point is within the donut (between inner and outer radius)
     if (distance < innerRadius || distance > radius) return null;
-    
+
     var angle = math.atan2(dy, dx);
     angle = (angle + math.pi / 2 + 2 * math.pi) % (2 * math.pi);
-    
-    final total = widget.notStarted + widget.completed + widget.passed + widget.failed;
+
+    final total =
+        widget.notStarted + widget.completed + widget.passed + widget.failed;
     if (total <= 0) return null;
-    
+
     final segments = [
       ('notStarted', widget.notStarted),
       ('completed', widget.completed),
       ('passed', widget.passed),
       ('failed', widget.failed),
     ];
-    
+
     double currentAngle = 0;
     for (final (segment, value) in segments) {
       final segmentAngle = (value / total) * 2 * math.pi;
@@ -819,7 +831,8 @@ class _QuizPieChartPainterState extends State<_QuizPieChartPainter> {
       return const SizedBox.shrink();
     }
 
-    final total = widget.notStarted + widget.completed + widget.passed + widget.failed;
+    final total =
+        widget.notStarted + widget.completed + widget.passed + widget.failed;
     if (total <= 0) return const SizedBox.shrink();
 
     final Map<String, Map<String, dynamic>> segmentData = {
@@ -864,10 +877,10 @@ class _QuizPieChartPainterState extends State<_QuizPieChartPainter> {
           decoration: BoxDecoration(
             color: const Color(0xFF1F2937),
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: color.withOpacity(0.5), width: 1.5),
+            border: Border.all(color: color.withValues(alpha: 0.5), width: 1.5),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.4),
+                color: Colors.black.withValues(alpha: 0.4),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
@@ -950,8 +963,11 @@ class _QuizPieChartPainterState extends State<_QuizPieChartPainter> {
               _hoverTimer = Timer(Duration.zero, () {
                 if (!mounted) return;
                 try {
-                  final RenderBox? renderBox = _key.currentContext?.findRenderObject() as RenderBox?;
-                  if (renderBox == null || !renderBox.hasSize || !renderBox.attached) return;
+                  final RenderBox? renderBox =
+                      _key.currentContext?.findRenderObject() as RenderBox?;
+                  if (renderBox == null ||
+                      !renderBox.hasSize ||
+                      !renderBox.attached) return;
                   final size = renderBox.size;
                   final segment = _getSegmentAtPosition(localPosition, size);
                   // Use Future.microtask to ensure setState is called outside device update
@@ -1061,21 +1077,23 @@ class _QuizPieChartCustomPainter extends CustomPainter {
         final shadowBlur = isHovered ? 12.0 : 6.0;
         final shadowOffset = isHovered ? 4.0 : 2.0;
         final shadowPaint = Paint()
-          ..color = Colors.black.withOpacity(shadowOpacity)
+          ..color = Colors.black.withValues(alpha: shadowOpacity)
           ..maskFilter = MaskFilter.blur(BlurStyle.normal, shadowBlur);
-        
+
         // Draw shadow with slight offset
         final shadowCenter = Offset(
           adjustedCenter.dx + shadowOffset,
           adjustedCenter.dy + shadowOffset,
         );
-        final shadowRect = Rect.fromCircle(center: shadowCenter, radius: radius);
+        final shadowRect =
+            Rect.fromCircle(center: shadowCenter, radius: radius);
         canvas.drawArc(shadowRect, startAngle, sweepAngle, true, shadowPaint);
 
         // Draw donut segment with fill
         final rect = Rect.fromCircle(center: adjustedCenter, radius: radius);
-        final innerRect = Rect.fromCircle(center: adjustedCenter, radius: innerR);
-        
+        final innerRect =
+            Rect.fromCircle(center: adjustedCenter, radius: innerR);
+
         // Create path for donut segment
         final path = Path()
           ..moveTo(
@@ -1085,7 +1103,7 @@ class _QuizPieChartCustomPainter extends CustomPainter {
           ..arcTo(rect, startAngle, sweepAngle, false)
           ..arcTo(innerRect, startAngle + sweepAngle, -sweepAngle, false)
           ..close();
-        
+
         // Draw base fill
         final fillPaint = Paint()
           ..color = colors[i]
@@ -1097,37 +1115,39 @@ class _QuizPieChartCustomPainter extends CustomPainter {
           center: Alignment.center,
           radius: 1.0,
           colors: [
-            Colors.black.withOpacity(0.0), // Transparent at outer edge
-            Colors.black.withOpacity(0.4), // Darker at inner edge
+            Colors.black.withValues(alpha: 0.0), // Transparent at outer edge
+            Colors.black.withValues(alpha: 0.4), // Darker at inner edge
           ],
           stops: const [0.6, 1.0],
         );
-        
+
         final depthPaint = Paint()
           ..shader = depthGradient.createShader(rect)
           ..blendMode = BlendMode.multiply;
-        
+
         // Draw depth gradient
         canvas.drawPath(path, depthPaint);
 
         // Draw inner edge shadow for depth
         final innerShadowPaint = Paint()
-          ..color = Colors.black.withOpacity(0.3)
+          ..color = Colors.black.withValues(alpha: 0.3)
           ..style = PaintingStyle.stroke
           ..strokeWidth = 3.0
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
-        canvas.drawArc(innerRect, startAngle, sweepAngle, false, innerShadowPaint);
+        canvas.drawArc(
+            innerRect, startAngle, sweepAngle, false, innerShadowPaint);
 
         // Draw inner edge highlight
         final innerHighlightPaint = Paint()
-          ..color = Colors.white.withOpacity(0.2)
+          ..color = Colors.white.withValues(alpha: 0.2)
           ..style = PaintingStyle.stroke
           ..strokeWidth = 2.0;
-        canvas.drawArc(innerRect, startAngle, sweepAngle, false, innerHighlightPaint);
+        canvas.drawArc(
+            innerRect, startAngle, sweepAngle, false, innerHighlightPaint);
 
         // Draw border for better definition
         final borderPaint = Paint()
-          ..color = colors[i].withOpacity(0.8)
+          ..color = colors[i].withValues(alpha: 0.8)
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1.5;
         canvas.drawPath(path, borderPaint);
@@ -1138,13 +1158,13 @@ class _QuizPieChartCustomPainter extends CustomPainter {
 
     // Center circle for donut effect
     final centerPaint = Paint()
-      ..color = const Color(0xFF111827).withOpacity(0.9)
+      ..color = const Color(0xFF111827).withValues(alpha: 0.9)
       ..style = PaintingStyle.fill;
     canvas.drawCircle(center, innerRadius, centerPaint);
-    
+
     // Center circle border
     final centerBorderPaint = Paint()
-      ..color = Colors.grey[800]!.withOpacity(0.5)
+      ..color = Colors.grey[800]!.withValues(alpha: 0.5)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0;
     canvas.drawCircle(center, innerRadius, centerBorderPaint);
@@ -1180,7 +1200,7 @@ class _LineChartPainter extends CustomPainter {
 
     // Draw grid lines
     final gridPaint = Paint()
-      ..color = Colors.white.withOpacity(0.1)
+      ..color = Colors.white.withValues(alpha: 0.1)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0;
 
@@ -1263,9 +1283,7 @@ class _LineChartPainter extends CustomPainter {
 
     for (int i = 0; i < values.length; i++) {
       final x = padding + stepX * i;
-      final y = padding +
-          chartHeight -
-          (values[i] / maxValue) * chartHeight;
+      final y = padding + chartHeight - (values[i] / maxValue) * chartHeight;
 
       if (i == 0) {
         path.moveTo(x, y);
@@ -1370,4 +1388,3 @@ class _TimelineLegendItem extends StatelessWidget {
     );
   }
 }
-

@@ -123,9 +123,11 @@ class CourseInstructorRepository {
     try {
       print('DEBUG: 📝 Creating course for instructor: $instructorUid');
 
-      // Ensure instructor field is set
+      // Ensure instructor field is set and status is always 'active'
       final courseData = course.toFirestore();
       courseData['instructor'] = instructorUid;
+      courseData['status'] =
+          'active'; // Always set status to 'active' for new courses
       courseData['createdAt'] = FieldValue.serverTimestamp();
       courseData['updatedAt'] = FieldValue.serverTimestamp();
 

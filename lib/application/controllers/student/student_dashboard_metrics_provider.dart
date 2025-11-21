@@ -84,27 +84,27 @@ final studentDashboardMetricsProvider =
     int assignmentsCompleted = 0;
     int assignmentsPending = 0;
 
-    for (final assignment in allAssignments) {
-      final courseId = assignmentCourseMap[assignment.id];
-      if (courseId == null) continue;
+    // for (final assignment in allAssignments) {
+    //   final courseId = assignmentCourseMap[assignment.id];
+    //   if (courseId == null) continue;
 
-      final submission =
-          await SubmissionRepository.getUserSubmissionForAssignment(
-        courseId,
-        assignment.id,
-      );
+    //   final submission =
+    //       await SubmissionRepository.getUserSubmissionForAssignment(
+    //     courseId,
+    //     assignment.id,
+    //   );
 
-      final isSubmitted = submission != null &&
-          (submission.status == SubmissionStatus.submitted ||
-              submission.status == SubmissionStatus.graded ||
-              submission.status == SubmissionStatus.returned);
+    //   final isSubmitted = submission != null &&
+    //       (submission.status == SubmissionStatus.submitted ||
+    //           submission.status == SubmissionStatus.graded ||
+    //           submission.status == SubmissionStatus.returned);
 
-      if (isSubmitted) {
-        assignmentsCompleted++;
-      } else {
-        assignmentsPending++;
-      }
-    }
+    //   if (isSubmitted) {
+    //     assignmentsCompleted++;
+    //   } else {
+    //     assignmentsPending++;
+    //   }
+    // }
 
     return StudentDashboardMetrics(
       coursesCount: coursesForMetrics.length,

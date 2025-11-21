@@ -43,9 +43,6 @@ class MaterialModel {
   factory MaterialModel.fromFirestore(DocumentSnapshot doc) {
     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
 
-    print('DEBUG: 📄 Parsing material doc ${doc.id}');
-    print('DEBUG: 📄 Raw data: $data');
-
     // Parse dates - handle both Timestamp and DateTime
     DateTime? parseDate(dynamic dateData) {
       if (dateData == null) {
@@ -69,17 +66,14 @@ class MaterialModel {
       if (map == null) return null;
       try {
         return AttachmentModel(
-          id: map['id']?.toString() ??
-              map['fileId']?.toString() ??
-              doc.id,
+          id: map['id']?.toString() ?? map['fileId']?.toString() ?? doc.id,
           name: map['name']?.toString() ??
               map['fileName']?.toString() ??
               'Attachment',
           url: map['url']?.toString() ?? '',
-          mimeType:
-              map['mimeType']?.toString() ??
-                  map['type']?.toString() ??
-                  'application/octet-stream',
+          mimeType: map['mimeType']?.toString() ??
+              map['type']?.toString() ??
+              'application/octet-stream',
           sizeInBytes: (map['sizeInBytes'] as int?) ??
               (map['size'] as int?) ??
               ((map['sizeInBytes'] as num?)?.toInt()) ??
@@ -90,18 +84,17 @@ class MaterialModel {
               DateTime.now(),
         );
       } catch (e) {
-        print('DEBUG: ⚠️ Error building attachment: $e');
         return null;
       }
     }
 
     // Parse attachment - hỗ trợ nhiều định dạng ('attachment', 'files', 'attachments')
-    AttachmentModel? attachment =
-        buildAttachmentFromMap((data['attachment'] as Map?)?.cast<String, dynamic>());
+    AttachmentModel? attachment = buildAttachmentFromMap(
+        (data['attachment'] as Map?)?.cast<String, dynamic>());
 
     if (attachment == null && data['files'] != null) {
-      attachment =
-          buildAttachmentFromMap((data['files'] as Map?)?.cast<String, dynamic>());
+      attachment = buildAttachmentFromMap(
+          (data['files'] as Map?)?.cast<String, dynamic>());
     }
 
     if (attachment == null && data['attachments'] != null) {

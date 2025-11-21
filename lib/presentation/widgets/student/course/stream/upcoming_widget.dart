@@ -5,7 +5,7 @@ import 'package:elearning_management_app/domain/models/assignment_model.dart';
 
 class UpcomingWidget extends StatefulWidget {
   final CourseModel course;
-  
+
   const UpcomingWidget({super.key, required this.course});
 
   @override
@@ -28,21 +28,21 @@ class _UpcomingWidgetState extends State<UpcomingWidget> {
         _isLoading = true;
       });
 
-      final allAssignments = await AssignmentRepository.getAssignmentsByCourse(widget.course.id);
+      final allAssignments =
+          await AssignmentRepository.getAssignmentsByCourse(widget.course.id);
       final now = DateTime.now();
-      
+
       // Filter upcoming assignments (not past deadline, limit to 5)
       final upcoming = allAssignments
           .where((assignment) => assignment.deadline.isAfter(now))
           .toList()
         ..sort((a, b) => a.deadline.compareTo(b.deadline));
-      
+
       setState(() {
         _upcomingAssignments = upcoming.take(5).toList();
         _isLoading = false;
       });
     } catch (e) {
-      print('DEBUG: Error loading upcoming assignments: $e');
       setState(() {
         _isLoading = false;
       });
@@ -50,8 +50,20 @@ class _UpcomingWidgetState extends State<UpcomingWidget> {
   }
 
   String _formatDate(DateTime date) {
-    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    final months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
     return '${months[date.month - 1]} ${date.day}';
   }
 
@@ -67,7 +79,7 @@ class _UpcomingWidgetState extends State<UpcomingWidget> {
     final now = DateTime.now();
     final difference = deadline.difference(now);
     final days = difference.inDays;
-    
+
     if (days == 0) {
       final hours = difference.inHours;
       if (hours == 0) {
@@ -86,7 +98,7 @@ class _UpcomingWidgetState extends State<UpcomingWidget> {
     final now = DateTime.now();
     final difference = deadline.difference(now);
     final days = difference.inDays;
-    
+
     if (days <= 1) {
       return Colors.redAccent;
     } else if (days <= 3) {
@@ -115,7 +127,6 @@ class _UpcomingWidgetState extends State<UpcomingWidget> {
                   fontSize: 16,
                   color: Colors.white)),
           const SizedBox(height: 12),
-          
           if (_isLoading)
             const Center(
               child: Padding(
@@ -171,7 +182,8 @@ class _UpcomingWidgetState extends State<UpcomingWidget> {
                                   ),
                                   Text(
                                     '${_formatDate(assignment.deadline)}, ${_formatTime(assignment.deadline)}',
-                                    style: const TextStyle(color: Colors.grey, fontSize: 13),
+                                    style: const TextStyle(
+                                        color: Colors.grey, fontSize: 13),
                                   ),
                                 ]),
                           ),

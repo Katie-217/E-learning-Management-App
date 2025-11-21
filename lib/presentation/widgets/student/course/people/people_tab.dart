@@ -7,7 +7,7 @@ import 'package:elearning_management_app/core/theme/app_colors.dart';
 
 class PeopleTab extends StatefulWidget {
   final CourseModel course;
-  
+
   const PeopleTab({super.key, required this.course});
 
   @override
@@ -34,7 +34,7 @@ class _PeopleTabState extends State<PeopleTab> {
 
       // Load instructor info
       _instructorName = widget.course.instructor;
-      
+
       // Try to get instructor email from users collection
       try {
         final usersSnapshot = await FirebaseFirestore.instance
@@ -42,21 +42,22 @@ class _PeopleTabState extends State<PeopleTab> {
             .where('name', isEqualTo: _instructorName)
             .limit(1)
             .get();
-        
+
         if (usersSnapshot.docs.isNotEmpty) {
           _instructorEmail = usersSnapshot.docs.first.data()['email'];
         }
       } catch (e) {
-        print('Error loading instructor email: $e');
+        // Error loading instructor email - continue without email
       }
 
       // Load classmates
       final enrollmentRepo = EnrollmentRepository();
-      final enrollments = await enrollmentRepo.getStudentsInCourse(widget.course.id);
-      
+      final enrollments =
+          await enrollmentRepo.getStudentsInCourse(widget.course.id);
+
       // Get current user to exclude from classmates list
       final currentUser = FirebaseAuth.instance.currentUser;
-      
+
       // Convert enrollments to classmates list
       final classmates = <Map<String, dynamic>>[];
       for (var enrollment in enrollments) {
@@ -64,7 +65,7 @@ class _PeopleTabState extends State<PeopleTab> {
         if (currentUser != null && enrollment.userId == currentUser.uid) {
           continue;
         }
-        
+
         classmates.add({
           'userId': enrollment.userId,
           'name': enrollment.studentName,
@@ -77,7 +78,6 @@ class _PeopleTabState extends State<PeopleTab> {
         _isLoading = false;
       });
     } catch (e) {
-      print('Error loading people data: $e');
       setState(() {
         _isLoading = false;
       });
@@ -131,11 +131,11 @@ class _PeopleTabState extends State<PeopleTab> {
               if (_instructorName != null && _instructorName!.isNotEmpty)
                 _buildTeacherItem(_instructorName!, _instructorEmail),
               const SizedBox(height: 32),
-              
+
               // Divider
               Divider(color: AppColors.border, height: 1),
               const SizedBox(height: 32),
-              
+
               // Classmates Section
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,

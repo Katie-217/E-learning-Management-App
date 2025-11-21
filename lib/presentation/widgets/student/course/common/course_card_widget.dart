@@ -92,30 +92,28 @@ class _CourseCardWidgetState extends State<CourseCardWidget> {
                       ],
                     ),
                     const Spacer(),
-                    const Text('Progress',
+                    const Text('Status',
                         style: TextStyle(color: Colors.grey, fontSize: 12)),
                     const SizedBox(height: 4),
-                    Stack(children: [
-                      Container(
-                          height: 6,
-                          decoration: BoxDecoration(
-                              color: Colors.grey[800],
-                              borderRadius: BorderRadius.circular(8))),
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
-                        height: 6,
-                        width: MediaQuery.of(context).size.width *
-                            (c.progress / 100) /
-                            3,
-                        decoration: BoxDecoration(
-                            color: Colors.indigo[500],
-                            borderRadius: BorderRadius.circular(8)),
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: c.status == 'active'
+                            ? Colors.green.shade100
+                            : Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                    ]),
-                    const SizedBox(height: 4),
-                    Text('${c.progress}%',
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold, color: Colors.indigo)),
+                      child: Text(
+                        c.status == 'active' ? 'Active' : 'Archived',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: c.status == 'active'
+                              ? Colors.green.shade700
+                              : Colors.grey.shade600,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),

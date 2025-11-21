@@ -6,6 +6,7 @@
 import '../../../data/repositories/course/course_instructor_repository.dart';
 import '../../../data/repositories/auth/auth_repository.dart';
 import '../../../domain/models/course_model.dart';
+import '../../../domain/models/validation_result.dart';
 import '../../../core/config/users-role.dart';
 import 'enrollment_controller.dart';
 
@@ -121,41 +122,68 @@ class CourseInstructorController {
   // ========================================
   // HÀM: createCourse - Business logic cho việc tạo course mới
   // MÔ TẢ: Instructor có thể tạo course mới
+  // Return ValidationResult với thông tin lỗi cụ thể
   // ========================================
-  Future<bool> createCourse(CourseModel course) async {
+  Future<ValidationResult> createCourse(CourseModel course) async {
     try {
-      // 1. Validate user và role
+      // 1. Validate user and role
       final user = await _authRepository.currentUserModel;
       if (user == null || user.role != UserRole.instructor) {
-        throw Exception('Access denied: Only instructors can create courses');
+        return ValidationResult.generalError(
+            'Access denied: Only instructors can create courses');
       }
 
-      // 2. Business rules validation
+      // 2. Field-specific business rules validation
       if (course.name.trim().isEmpty) {
-        throw Exception('Course name cannot be empty');
+        return ValidationResult.fieldError('name', 'Course name is required');
       }
 
       if (course.code.trim().isEmpty) {
-        throw Exception('Course code cannot be empty');
+        return ValidationResult.fieldError('code', 'Course code is required');
       }
 
       if (course.semester.trim().isEmpty) {
-        throw Exception('Semester cannot be empty');
+        return ValidationResult.fieldError(
+            'semester', 'Semester selection is required');
       }
 
-      // 3. Create course với instructor UID
-      final success =
-          await CourseInstructorRepository.createCourse(course, user.uid);
+      // Sessions validation (business rule moved from UI)
+      if (course.sessions < 5 || course.sessions > 50) {
+        return ValidationResult.fieldError(
+            'sessions', 'Number of sessions must be between 5 and 50');
+      }
+
+      // 3. Check for duplicate course code
+      final existingCourses =
+          await CourseInstructorRepository.getInstructorCourses(user.uid);
+      final duplicateCode = existingCourses.any((existingCourse) =>
+          existingCourse.code.toLowerCase() == course.code.toLowerCase());
+
+      if (duplicateCode) {
+        return ValidationResult.fieldError(
+            'code', 'This course code already exists');
+      }
+
+      // 4. Hardcode status to 'active' for all new courses
+      final courseWithActiveStatus = course.copyWith(status: 'active');
+
+      // 5. Create course with instructor UID
+      final success = await CourseInstructorRepository.createCourse(
+          courseWithActiveStatus, user.uid);
 
       if (success) {
         print(
             'DEBUG: ✅ Course created successfully by instructor: ${user.uid}');
+        return ValidationResult.success('Course created successfully');
+      } else {
+        print('DEBUG: ❌ Failed to create course');
+        return ValidationResult.generalError(
+            'Failed to create course in database');
       }
-
-      return success;
     } catch (e) {
       print('DEBUG: ❌ CourseInstructorController.createCourse error: $e');
-      return false;
+      return ValidationResult.generalError(
+          'An unexpected error occurred: ${e.toString()}');
     }
   }
 
@@ -227,7 +255,6 @@ class CourseInstructorController {
       final validation = await _enrollmentController.validateEnrollment(
         courseId: courseId,
         userId: studentUid,
-        maxCapacity: course.maxCapacity,
       );
 
       if (!validation['isValid']) {
@@ -366,10 +393,8 @@ class CourseInstructorController {
         'currentSemesterCourses': currentSemesterCourses,
         'totalSessions':
             allCourses.fold<int>(0, (sum, course) => sum + course.sessions),
-        'averageProgress': allCourses.isEmpty
-            ? 0
-            : allCourses.fold<int>(0, (sum, course) => sum + course.progress) ~/
-                allCourses.length,
+        'activeCourses':
+            allCourses.where((course) => course.status == 'active').length,
       };
     } catch (e) {
       print(
@@ -380,7 +405,6 @@ class CourseInstructorController {
         'totalStudents': 0,
         'currentSemesterCourses': 0,
         'totalSessions': 0,
-        'averageProgress': 0,
       };
     }
   }

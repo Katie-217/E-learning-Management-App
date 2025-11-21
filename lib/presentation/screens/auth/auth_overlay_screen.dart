@@ -41,7 +41,7 @@ class _AuthOverlayScreenState extends State<AuthOverlayScreen> {
             fit: BoxFit.cover,
           ),
           Container(
-            color: Colors.black.withOpacity(0.55),
+            color: Colors.black.withValues(alpha: 0.55),
           ),
           SafeArea(
             child: Center(
@@ -62,13 +62,13 @@ class _AuthOverlayScreenState extends State<AuthOverlayScreen> {
                         ),
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(28),
-                          color: Colors.white.withOpacity(0.12),
+                          color: Colors.white.withValues(alpha: 0.12),
                           border: Border.all(
-                            color: Colors.white.withOpacity(0.25),
+                            color: Colors.white.withValues(alpha: 0.25),
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.35),
+                              color: Colors.black.withValues(alpha: 0.35),
                               blurRadius: 30,
                               offset: const Offset(0, 20),
                             ),
@@ -82,7 +82,7 @@ class _AuthOverlayScreenState extends State<AuthOverlayScreen> {
                               alignment: Alignment.center,
                               child: Icon(
                                 role.icon,
-                                color: Colors.white.withOpacity(0.9),
+                                color: Colors.white.withValues(alpha: 0.9),
                                 size: 32,
                               ),
                             ),
@@ -90,7 +90,7 @@ class _AuthOverlayScreenState extends State<AuthOverlayScreen> {
                             Text(
                               'Login',
                               style: TextStyle(
-                                color: Colors.white.withOpacity(0.95),
+                                color: Colors.white.withValues(alpha: 0.95),
                                 fontSize: 30,
                                 fontWeight: FontWeight.w700,
                               ),
@@ -99,7 +99,7 @@ class _AuthOverlayScreenState extends State<AuthOverlayScreen> {
                             Text(
                               'Log in to continue experiencing the E-learning system',
                               style: TextStyle(
-                                color: Colors.white.withOpacity(0.75),
+                                color: Colors.white.withValues(alpha: 0.75),
                                 fontSize: 14,
                               ),
                             ),
@@ -110,7 +110,7 @@ class _AuthOverlayScreenState extends State<AuthOverlayScreen> {
                               child: Text(
                                 'Closed system - only for granted accounts',
                                 style: TextStyle(
-                                  color: Colors.white.withOpacity(0.7),
+                                  color: Colors.white.withValues(alpha: 0.7),
                                   fontSize: 12,
                                 ),
                                 textAlign: TextAlign.center,

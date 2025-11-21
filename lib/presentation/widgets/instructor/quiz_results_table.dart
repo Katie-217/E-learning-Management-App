@@ -525,7 +525,7 @@ class _QuizResultsTableState extends State<QuizResultsTable> {
                               color: (data.passed
                                       ? const Color(0xFF34D399)
                                       : const Color(0xFFFF6B6B))
-                                  .withOpacity(0.2),
+                                  .withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(4),
                               border: Border.all(
                                 color: data.passed

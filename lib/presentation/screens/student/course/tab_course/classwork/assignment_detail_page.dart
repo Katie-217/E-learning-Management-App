@@ -55,10 +55,16 @@ class _AssignmentDetailViewState extends State<AssignmentDetailView> {
       print('DEBUG: Course ID: ${widget.course.id}');
       print('DEBUG: Assignment ID: ${widget.assignment.id}');
 
+      // Get current user ID from Firebase Auth
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) {
+        throw Exception('User not authenticated');
+      }
+
       final submission =
-          await SubmissionRepository.getUserSubmissionForAssignment(
-        widget.course.id,
+          await SubmissionRepository.getStudentSubmissionForAssignment(
         widget.assignment.id,
+        currentUser.uid,
       );
 
       if (submission != null) {
@@ -341,17 +347,16 @@ class _AssignmentDetailViewState extends State<AssignmentDetailView> {
       bool success;
       if (_currentSubmission != null) {
         // Update existing submission
-        success = await SubmissionRepository.updateSubmission(
-          widget.course.id,
-          _currentSubmission!.id,
+        await SubmissionRepository.updateSubmission(
           submission,
         );
+        success = true;
       } else {
         // Create new submission
-        success = await SubmissionRepository.submitAssignment(
-          widget.course.id,
+        final submissionId = await SubmissionRepository.createSubmission(
           submission,
         );
+        success = submissionId.isNotEmpty;
       }
 
       if (success) {
