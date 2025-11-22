@@ -11,7 +11,7 @@ class UserModel {
   final String email;
   final String name;
   final String displayName;
-  final String? phoneNumber; // Supplementary field 
+  final String? phoneNumber; // Supplementary field
   final UserRole role;
   final String? photoUrl;
   final DateTime createdAt;
@@ -25,7 +25,7 @@ class UserModel {
     required this.email,
     required this.name,
     required this.displayName,
-    this.phoneNumber,    // Thêm vào constructor
+    this.phoneNumber, // Thêm vào constructor
     required this.role,
     this.photoUrl,
     required this.createdAt,
@@ -167,16 +167,23 @@ class UserModel {
   // MÔ TẢ: Parse role từ string thành UserRole enum
   // ========================================
   static UserRole _parseUserRole(dynamic roleData) {
-    if (roleData == null) return UserRole.student;
+    // Temporarily reduce logging to avoid confusion
+    if (roleData == null) {
+      return UserRole.student;
+    }
 
     final roleString = roleData.toString().toLowerCase().trim();
+
     switch (roleString) {
       case 'instructor':
       case 'teacher':
+      case 'admin': // Admin có thể access như instructor
         return UserRole.instructor;
       case 'student':
         return UserRole.student;
       default:
+        print(
+            'DEBUG: ❌ Unknown role in database: "$roleData" -> defaulting to student');
         return UserRole.student;
     }
   }

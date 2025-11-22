@@ -6,14 +6,11 @@ import 'package:elearning_management_app/application/controllers/course/course_i
 import 'package:elearning_management_app/presentation/widgets/course/Instructor_Course/widget_course/semester_filter_instructor.dart';
 import 'package:elearning_management_app/presentation/screens/instructor/csv_import/csv_import_semester.dart';
 import 'package:elearning_management_app/application/controllers/semester/semester_provider.dart';
+import 'package:elearning_management_app/presentation/screens/instructor/instructor_courses/instructor_course_create.dart';
 
 class InstructorCoursesPage extends ConsumerStatefulWidget {
-  // 🆕 Callback
-  final VoidCallback? onCreateCoursePressed;
-
   const InstructorCoursesPage({
     super.key,
-    this.onCreateCoursePressed,
   });
 
   @override
@@ -32,6 +29,24 @@ class _InstructorCoursesPageState extends ConsumerState<InstructorCoursesPage> {
   static const double kSemesterDropdownWidth = 280.0; // Wide for semester names
   static const double kActionButtonHeight =
       50.0; // Uniform height for all action buttons
+
+  void _navigateToCreateCourse() {
+    print('🚀 InstructorCoursesPage: About to navigate to CreateCoursePage');
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CreateCoursePage(
+          onSuccess: () {
+            print('🔄 Course created successfully! Refreshing courses...');
+            // Refresh courses list without resetting filters
+            ref
+                .read(courseInstructorProvider.notifier)
+                .refreshInstructorCourses();
+          },
+        ),
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -190,7 +205,7 @@ class _InstructorCoursesPageState extends ConsumerState<InstructorCoursesPage> {
                       ),
                       const SizedBox(width: 8),
                       IconButton(
-                        onPressed: widget.onCreateCoursePressed,
+                        onPressed: () => _navigateToCreateCourse(),
                         icon: const Icon(
                           Icons.add_circle,
                           size: 26,
@@ -256,7 +271,7 @@ class _InstructorCoursesPageState extends ConsumerState<InstructorCoursesPage> {
                       ),
                       const SizedBox(width: 8),
                       IconButton(
-                        onPressed: widget.onCreateCoursePressed,
+                        onPressed: () => _navigateToCreateCourse(),
                         icon: const Icon(
                           Icons.add_circle,
                           size: 28,

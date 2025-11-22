@@ -1,38 +1,90 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:elearning_management_app/domain/models/course_model.dart';
+import 'package:elearning_management_app/application/controllers/group/group_controller.dart';
+import 'package:elearning_management_app/application/controllers/course/enrollment_controller.dart';
 import 'package:elearning_management_app/presentation/widgets/course/instructor_course_people/export_student_CSV.dart';
 import 'package:elearning_management_app/presentation/widgets/course/instructor_course_people/edit_student_group.dart';
 import 'package:elearning_management_app/presentation/widgets/course/instructor_course_people/create_group_dialog.dart';
 
-class InstructorPeopleTab extends StatefulWidget {
+class InstructorPeopleTab extends ConsumerStatefulWidget {
   final CourseModel course;
   const InstructorPeopleTab({super.key, required this.course});
 
   @override
-  State<InstructorPeopleTab> createState() => _InstructorPeopleTabState();
+  ConsumerState<InstructorPeopleTab> createState() =>
+      _InstructorPeopleTabState();
 }
 
-class _InstructorPeopleTabState extends State<InstructorPeopleTab> {
+class _InstructorPeopleTabState extends ConsumerState<InstructorPeopleTab> {
   String selectedGroup = 'All Groups';
   final TextEditingController _searchController = TextEditingController();
   String searchQuery = '';
 
-  final List<String> groups = [
-    'All Groups',
-    'Group 1 - SE501.N21',
-    'Group 2 - SE502.N21',
-    'Group 3 - SE503.N21',
-    'Lab Group A',
-    'Lab Group B',
-  ];
-
   @override
   void initState() {
     super.initState();
-    // Set default group to first actual group if available
-    if (groups.length > 1) {
-      selectedGroup = groups[0]; // Default to 'All Groups'
-    }
+    // Load groups when widget initializes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref
+          .read(groupControllerProvider.notifier)
+          .getGroupsByCourse(widget.course.id);
+    });
+  }
+
+  // Helper methods for working with GroupController
+  List<DropdownMenuEntry<String>> _buildGroupDropdownEntries() {
+    final groupsState = ref.watch(groupControllerProvider);
+
+    return groupsState.when(
+      data: (groups) {
+        final List<String> groupNames = ['All Groups'];
+        groupNames.addAll(groups.map((group) => group.name));
+
+        return groupNames.map<DropdownMenuEntry<String>>((String group) {
+          return DropdownMenuEntry<String>(
+            value: group,
+            label: group,
+            style: MenuItemButton.styleFrom(
+              foregroundColor: Colors.white,
+              backgroundColor: selectedGroup == group
+                  ? Colors.indigo.withOpacity(0.2)
+                  : Colors.transparent,
+            ),
+            leadingIcon: Icon(Icons.group, color: Colors.indigo[400], size: 18),
+            trailingIcon: selectedGroup == group
+                ? Icon(Icons.check, color: Colors.indigo[400], size: 16)
+                : null,
+          );
+        }).toList();
+      },
+      loading: () => [
+        const DropdownMenuEntry<String>(
+          value: 'All Groups',
+          label: 'Loading...',
+        ),
+      ],
+      error: (_, __) => [
+        const DropdownMenuEntry<String>(
+          value: 'All Groups',
+          label: 'Error loading groups',
+        ),
+      ],
+    );
+  }
+
+  List<String> _getAvailableGroupNames() {
+    final groupsState = ref.watch(groupControllerProvider);
+
+    return groupsState.when(
+      data: (groups) {
+        final List<String> groupNames = ['All Groups'];
+        groupNames.addAll(groups.map((group) => group.name));
+        return groupNames;
+      },
+      loading: () => ['All Groups'],
+      error: (_, __) => ['All Groups'],
+    );
   }
 
   @override
@@ -43,7 +95,7 @@ class _InstructorPeopleTabState extends State<InstructorPeopleTab> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -139,12 +191,16 @@ class _InstructorPeopleTabState extends State<InstructorPeopleTab> {
           const SizedBox(height: 12),
 
           // Khu vực 2: Student Toolbar
-          _buildStudentToolbar(),
+          SizedBox(
+            height: 48, // Fixed height to prevent overflow
+            child: _buildStudentToolbar(),
+          ),
 
           const SizedBox(height: 16),
 
           // Khu vực 3: Student List
-          Expanded(
+          Container(
+            height: 400, // Fixed height to prevent overflow
             child: _buildStudentList(),
           ),
         ],
@@ -267,24 +323,7 @@ class _InstructorPeopleTabState extends State<InstructorPeopleTab> {
                   });
                 }
               },
-              dropdownMenuEntries:
-                  groups.map<DropdownMenuEntry<String>>((String group) {
-                return DropdownMenuEntry<String>(
-                  value: group,
-                  label: group,
-                  style: MenuItemButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    backgroundColor: selectedGroup == group
-                        ? Colors.indigo.withOpacity(0.2)
-                        : Colors.transparent,
-                  ),
-                  leadingIcon:
-                      Icon(Icons.group, color: Colors.indigo[400], size: 18),
-                  trailingIcon: selectedGroup == group
-                      ? const Icon(Icons.check, color: Colors.green, size: 18)
-                      : null,
-                );
-              }).toList(),
+              dropdownMenuEntries: _buildGroupDropdownEntries(),
             ),
           ),
           // Separator
@@ -487,132 +526,216 @@ class _InstructorPeopleTabState extends State<InstructorPeopleTab> {
 
   // Khu vực 3: Student List (Group-filtered)
   Widget _buildStudentList() {
-    final filteredStudents = _getFilteredStudents();
-
-    if (filteredStudents.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.people_outline, size: 64, color: Colors.grey[600]),
-            const SizedBox(height: 16),
-            Text(
-              selectedGroup == 'All Groups'
-                  ? 'No students found'
-                  : 'No students in $selectedGroup',
-              style: TextStyle(
-                color: Colors.grey[400],
-                fontSize: 16,
-              ),
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: _getFilteredStudents(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(32.0),
+              child: CircularProgressIndicator(),
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Try adding students to this group',
-              style: TextStyle(
-                color: Colors.grey[500],
-                fontSize: 14,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
+          );
+        }
 
-    return ListView.builder(
-      itemCount: filteredStudents.length,
-      itemBuilder: (context, index) {
-        if (index >= filteredStudents.length) return const SizedBox.shrink();
-
-        final student = filteredStudents[index];
-        if (student.isEmpty) return const SizedBox.shrink();
-
-        return Container(
-          margin: const EdgeInsets.only(bottom: 8),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: const Color(0xFF1F2937),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.grey[800]!),
-          ),
-          child: Row(
-            children: [
-              // Avatar
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: (student['color'] as Color?) ?? Colors.grey,
-                  shape: BoxShape.circle,
-                ),
-                child: Center(
-                  child: Text(
-                    (student['initials'] as String?) ?? '?',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
+        if (snapshot.hasError) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.error_outline, size: 64, color: Colors.red[400]),
+                const SizedBox(height: 16),
+                Text(
+                  'Error loading students',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Colors.red[600],
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              // Student Info (Name, Email, MSSV)
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      (student['name'] as String?) ?? 'Unknown',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      (student['email'] as String?) ?? 'No email',
-                      style: TextStyle(
-                        color: Colors.grey[400],
-                        fontSize: 12,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      (student['studentId'] as String?) ?? 'No ID',
-                      style: TextStyle(
-                        color: Colors.grey[500],
-                        fontSize: 11,
-                      ),
-                    ),
-                  ],
+                const SizedBox(height: 8),
+                Text(
+                  '${snapshot.error}',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                  ),
+                  textAlign: TextAlign.center,
                 ),
+              ],
+            ),
+          );
+        }
+
+        final filteredStudents = snapshot.data ?? [];
+
+        if (filteredStudents.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.people_outline, size: 64, color: Colors.grey[600]),
+                const SizedBox(height: 16),
+                Text(
+                  selectedGroup == 'All Groups'
+                      ? 'No students found'
+                      : 'No students in $selectedGroup',
+                  style: TextStyle(
+                    color: Colors.grey[400],
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Try adding students to this group',
+                  style: TextStyle(
+                    color: Colors.grey[500],
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return ListView.builder(
+          itemCount: filteredStudents.length,
+          itemBuilder: (context, index) {
+            if (index >= filteredStudents.length)
+              return const SizedBox.shrink();
+
+            final student = filteredStudents[index];
+            if (student.isEmpty) return const SizedBox.shrink();
+
+            // Generate initials and color for avatar
+            final name = (student['name'] as String?) ?? 'Unknown';
+            final initials = name.isNotEmpty
+                ? name
+                    .split(' ')
+                    .map((e) => e.isNotEmpty ? e[0] : '')
+                    .take(2)
+                    .join()
+                    .toUpperCase()
+                : '?';
+            final color =
+                Colors.primaries[name.hashCode % Colors.primaries.length];
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1F2937),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey[800]!),
               ),
-              // Actions Menu - Tách component
-              EditStudentGroup(
-                student: student,
-                availableGroups: groups,
-                currentGroup: selectedGroup,
-                onMoveStudent: (student) {
-                  // Handle move student logic
-                },
-                onRemoveStudent: (student) {
-                  // Handle remove student logic
-                },
+              child: Row(
+                children: [
+                  // Avatar
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: color,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Text(
+                        initials,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // Student Info (Name, Email, MSSV)
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          name,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          (student['email'] as String?) ?? 'No email',
+                          style: TextStyle(
+                            color: Colors.grey[400],
+                            fontSize: 12,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          (student['studentId'] as String?) ?? 'No ID',
+                          style: TextStyle(
+                            color: Colors.grey[500],
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Actions Menu - Tách component
+                  EditStudentGroup(
+                    student: student,
+                    availableGroups: _getAvailableGroupNames(),
+                    currentGroup: selectedGroup,
+                    onMoveStudent: (student) {
+                      // Handle move student logic
+                      setState(() {
+                        // Refresh the student list
+                      });
+                    },
+                    onRemoveStudent: (student) {
+                      // Handle remove student logic
+                      setState(() {
+                        // Refresh the student list
+                      });
+                    },
+                  ),
+                ],
               ),
-            ],
-          ),
+            );
+          },
         );
       },
     );
   }
 
   // Helper Methods
-  List<Map<String, dynamic>> _getFilteredStudents() {
+  Future<List<Map<String, dynamic>>> _getFilteredStudents() async {
     try {
-      var students = _mockStudents;
+      // Get enrollments for this course from EnrollmentController
+      final enrollmentController = EnrollmentController();
+      final enrollments =
+          await enrollmentController.getEnrolledStudents(widget.course.id);
 
-      // Null safety check
-      if (students.isEmpty) return [];
+      // Get groups to map group IDs to group names
+      final groupsState = ref.read(groupControllerProvider);
+      Map<String, String> groupIdToName = {};
+
+      groupsState.whenData((groups) {
+        for (final group in groups) {
+          groupIdToName[group.id] = group.name;
+        }
+      });
+
+      var students = enrollments
+          .map((enrollment) => {
+                'name': enrollment.studentName ?? 'Unknown',
+                'email': enrollment.studentEmail ?? 'Unknown',
+                'studentId': enrollment.userId,
+                'group': groupIdToName[enrollment.groupId] ?? 'Unknown Group',
+                'enrollmentId': enrollment.id,
+                'groupId': enrollment.groupId,
+              })
+          .toList();
 
       // Filter by group
       if (selectedGroup != 'All Groups') {
@@ -627,15 +750,18 @@ class _InstructorPeopleTabState extends State<InstructorPeopleTab> {
         students = students.where((s) {
           final name = s['name']?.toString().toLowerCase() ?? '';
           final email = s['email']?.toString().toLowerCase() ?? '';
+          final studentId = s['studentId']?.toString().toLowerCase() ?? '';
           final query = searchQuery.toLowerCase();
-          return name.contains(query) || email.contains(query);
+          return name.contains(query) ||
+              email.contains(query) ||
+              studentId.contains(query);
         }).toList();
       }
 
       return students;
     } catch (e) {
       debugPrint('Error filtering students: $e');
-      return [];
+      rethrow; // Let FutureBuilder handle the error
     }
   }
 
@@ -645,18 +771,42 @@ class _InstructorPeopleTabState extends State<InstructorPeopleTab> {
       context: context,
       barrierDismissible: false,
       builder: (context) => CreateGroupDialog(
-        onCreateGroup: (String groupName, String groupCode) {
-          // Handle group creation logic
-          setState(() {
-            // Add new group to list (with both name and code)
-            final newGroup = '$groupName ($groupCode)';
-            if (!groups.contains(newGroup)) {
-              groups.add(newGroup);
-            }
-          });
+        onCreateGroup: (String groupName, String groupCode) async {
+          try {
+            // Create group using GroupController
+            await ref.read(groupControllerProvider.notifier).createGroup(
+                  courseId: widget.course.id,
+                  groupName: groupName,
+                  groupCode: groupCode,
+                );
 
-          // Log group creation for development
-          debugPrint('Created new group: $groupName with code: $groupCode');
+            // Set the new group as selected
+            setState(() {
+              selectedGroup = groupName;
+            });
+
+            // Show success message
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Group "$groupName" created successfully!'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            }
+
+            debugPrint('Created new group: $groupName with code: $groupCode');
+          } catch (e) {
+            // Show error message
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Error creating group: $e'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          }
         },
       ),
     );
@@ -693,70 +843,6 @@ class _InstructorPeopleTabState extends State<InstructorPeopleTab> {
   }
 }
 
-// Enhanced Mock student data with groups and student IDs
-final List<Map<String, dynamic>> _mockStudents = [
-  {
-    'name': 'Nguyen Van A',
-    'email': 'student.a@example.com',
-    'studentId': 'SE001',
-    'initials': 'NA',
-    'color': Colors.blue,
-    'group': 'Group 1 - SE501.N21',
-  },
-  {
-    'name': 'Tran Thi B',
-    'email': 'student.b@example.com',
-    'studentId': 'SE002',
-    'initials': 'TB',
-    'color': Colors.green,
-    'group': 'Group 1 - SE501.N21',
-  },
-  {
-    'name': 'Le Van C',
-    'email': 'student.c@example.com',
-    'studentId': 'SE003',
-    'initials': 'LC',
-    'color': Colors.orange,
-    'group': 'Group 2 - SE502.N21',
-  },
-  {
-    'name': 'Pham Thi D',
-    'email': 'student.d@example.com',
-    'studentId': 'SE004',
-    'initials': 'PD',
-    'color': Colors.purple,
-    'group': 'Group 2 - SE502.N21',
-  },
-  {
-    'name': 'Hoang Van E',
-    'email': 'student.e@example.com',
-    'studentId': 'SE005',
-    'initials': 'HE',
-    'color': Colors.red,
-    'group': 'Lab Group A',
-  },
-  {
-    'name': 'Vo Thi F',
-    'email': 'student.f@example.com',
-    'studentId': 'SE006',
-    'initials': 'VF',
-    'color': Colors.teal,
-    'group': 'Lab Group A',
-  },
-  {
-    'name': 'Dang Van G',
-    'email': 'student.g@example.com',
-    'studentId': 'SE007',
-    'initials': 'DG',
-    'color': Colors.pink,
-    'group': 'Group 3 - SE503.N21',
-  },
-  {
-    'name': 'Bui Thi H',
-    'email': 'student.h@example.com',
-    'studentId': 'SE008',
-    'initials': 'BH',
-    'color': Colors.cyan,
-    'group': 'Lab Group B',
-  },
-];
+// Mock student data removed - now using real data from EnrollmentController
+// Student data will be loaded from Firebase through EnrollmentController
+// when the enrollment system integration is complete

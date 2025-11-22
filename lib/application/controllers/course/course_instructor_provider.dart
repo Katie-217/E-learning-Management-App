@@ -151,11 +151,24 @@ class CourseInstructorNotifier extends StateNotifier<InstructorCourseState> {
   List<CourseModel> _applyFilters(List<CourseModel> courses) {
     List<CourseModel> filtered = courses;
 
-    // Lọc theo học kì
+    // Lọc theo học kì (So sánh với semester name thay vì ID)
     if (state.selectedSemester != 'All') {
-      filtered = filtered
-          .where((course) => course.semester == state.selectedSemester)
-          .toList();
+      // Debug: In ra để kiểm tra giá trị
+      print('DEBUG: 🔍 Filtering by semester: ${state.selectedSemester}');
+      print('DEBUG: 📚 Available courses:');
+      for (var course in filtered) {
+        print('  - ${course.name}: semester="${course.semester}"');
+      }
+
+      filtered = filtered.where((course) {
+        // So sánh trực tiếp với semester name
+        bool matches = course.semester == state.selectedSemester;
+        print(
+            'DEBUG: Course ${course.name} matches: $matches (semester: "${course.semester}")');
+        return matches;
+      }).toList();
+
+      print('DEBUG: ✅ Filtered courses count: ${filtered.length}');
     }
 
     // Lọc theo trạng thái

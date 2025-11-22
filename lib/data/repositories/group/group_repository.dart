@@ -95,6 +95,44 @@ class GroupRepository {
   }
 
   // ========================================
+  // HÀM: createGroup
+  // MÔ TẢ: Tạo group mới trong course
+  // ========================================
+  static Future<String> createGroup({
+    required String courseId,
+    required String groupName,
+    required String groupCode,
+    String? description,
+    int maxMembers = 30,
+  }) async {
+    try {
+      print('DEBUG: Creating group $groupName for course: $courseId');
+
+      final groupData = {
+        'name': groupName,
+        'code': groupCode,
+        'description': description ?? '',
+        'maxMembers': maxMembers,
+        'courseId': courseId,
+        'createdAt': FieldValue.serverTimestamp(),
+        'isActive': true,
+      };
+
+      final docRef = await _firestore
+          .collection(_courseCollectionName)
+          .doc(courseId)
+          .collection(_groupSubCollectionName)
+          .add(groupData);
+
+      print('DEBUG: Group created with ID: ${docRef.id}');
+      return docRef.id;
+    } catch (e) {
+      print('DEBUG: Error creating group: $e');
+      rethrow;
+    }
+  }
+
+  // ========================================
   // DEPRECATED: Student management methods moved to EnrollmentRepository
   // MÔ TẢ: GroupRepository now only handles group CRUD operations
   // Use EnrollmentRepository for all student-group assignments

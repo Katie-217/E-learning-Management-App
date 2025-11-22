@@ -57,7 +57,8 @@ class _LoginPageState extends State<LoginPage> {
           SafeArea(
             child: Center(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
                 physics: const BouncingScrollPhysics(),
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 420),
@@ -90,7 +91,8 @@ class _LoginPageState extends State<LoginPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   IconButton(
                                     onPressed: () => Navigator.pop(context),
@@ -125,8 +127,8 @@ class _LoginPageState extends State<LoginPage> {
                               _buildInputField(
                                 label: 'Email',
                                 hint: 'Email ID',
-                                controller: _controller.emailController,
-                                validator: _controller.validateEmail,
+                                controller: _controller.usernameController,
+                                validator: _controller.validateUsername,
                                 icon: Icons.alternate_email_rounded,
                                 focusNode: _emailFocusNode,
                               ),
@@ -142,7 +144,8 @@ class _LoginPageState extends State<LoginPage> {
                               ),
                               const SizedBox(height: 16),
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Row(
                                     children: [
@@ -150,9 +153,11 @@ class _LoginPageState extends State<LoginPage> {
                                         width: 16,
                                         height: 16,
                                         decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(4),
+                                          borderRadius:
+                                              BorderRadius.circular(4),
                                           border: Border.all(
-                                            color: Colors.white.withValues(alpha: 0.7),
+                                            color: Colors.white
+                                                .withValues(alpha: 0.7),
                                           ),
                                         ),
                                       ),
@@ -160,7 +165,8 @@ class _LoginPageState extends State<LoginPage> {
                                       Text(
                                         'Remember me',
                                         style: TextStyle(
-                                          color: Colors.white.withValues(alpha: 0.7),
+                                          color: Colors.white
+                                              .withValues(alpha: 0.7),
                                           fontSize: 12,
                                         ),
                                       ),
@@ -169,7 +175,8 @@ class _LoginPageState extends State<LoginPage> {
                                   TextButton(
                                     onPressed: () {
                                       // _controller.resetPassword(context, ref);
-                                      ScaffoldMessenger.of(context).showSnackBar(
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
                                         const SnackBar(
                                           content: Text(
                                             'Reset password feature coming soon',
@@ -180,7 +187,8 @@ class _LoginPageState extends State<LoginPage> {
                                     child: Text(
                                       'Forgot password?',
                                       style: TextStyle(
-                                        color: Colors.white.withValues(alpha: 0.85),
+                                        color: Colors.white
+                                            .withValues(alpha: 0.85),
                                         fontSize: 12,
                                       ),
                                     ),
@@ -195,13 +203,15 @@ class _LoginPageState extends State<LoginPage> {
                                     // _controller.signIn(context, ref, _formKey);
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
-                                        content: Text('Login feature coming soon'),
+                                        content:
+                                            Text('Login feature coming soon'),
                                       ),
                                     );
                                   },
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.white,
-                                    foregroundColor: widget.userRole.primaryColor,
+                                    foregroundColor:
+                                        widget.userRole.primaryColor,
                                     padding: const EdgeInsets.symmetric(
                                       vertical: 16,
                                     ),
