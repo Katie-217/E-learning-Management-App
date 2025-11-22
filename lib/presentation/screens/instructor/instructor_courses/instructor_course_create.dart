@@ -130,20 +130,12 @@ class _CreateCoursePageState extends ConsumerState<CreateCoursePage> {
       final result = await notifier.createCourse(course);
 
       if (result.isSuccess) {
-        // Auto-refresh course list
-        ref.invalidate(courseInstructorProvider);
-
         if (mounted) {
           _showSuccess(
             '✅ Course created successfully!\n'
             'Code: ${_courseCodeController.text}\n'
             'Name: ${_courseNameController.text}',
           );
-
-          await Future.delayed(const Duration(seconds: 1));
-          if (mounted && widget.onSuccess != null) {
-            widget.onSuccess!();
-          }
         }
       } else {
         // Handle validation errors - display specific field errors
@@ -214,8 +206,15 @@ class _CreateCoursePageState extends ConsumerState<CreateCoursePage> {
         actions: [
           ElevatedButton(
             onPressed: () {
+              // Close success dialog first
               Navigator.pop(context);
+              print('✅ Success dialog closed');
+              // Close create course page
+              Navigator.pop(context);
+              print('✅ Create Course page closed');
+              // Call success callback
               if (widget.onSuccess != null) {
+                print('🚀 Calling success callback...');
                 widget.onSuccess!();
               }
             },
@@ -400,200 +399,210 @@ class _CreateCoursePageState extends ConsumerState<CreateCoursePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF111827),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[800]!),
+    return Scaffold(
+      backgroundColor: const Color(0xFF0F172A),
+      appBar: AppBar(
+        title:
+            const Text('Create Course', style: TextStyle(color: Colors.white)),
+        backgroundColor: const Color(0xFF111827),
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
-      child: isLoading
-          ? const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(color: Colors.indigo),
-                  SizedBox(height: 16),
-                  Text(
-                    '🔄 Creating course...',
-                    style: TextStyle(color: Colors.white70),
-                  ),
-                ],
-              ),
-            )
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(24.0),
-              child: Form(
-                key: _formKey,
+      body: Container(
+        margin: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFF111827),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[800]!),
+        ),
+        child: isLoading
+            ? const Center(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    /// 📌 NOTE AT TOP
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      margin: const EdgeInsets.only(bottom: 16),
-                      decoration: BoxDecoration(
-                        color: Colors.blue[900]?.withValues(alpha: 0.3),
-                        border: Border.all(color: Colors.blue[700]!),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'ℹ️ Note:',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                              color: Colors.blue,
-                            ),
-                          ),
-                          SizedBox(height: 8),
-                          Text(
-                            '• Course code must be unique\n'
-                            '• Course name is required\n'
-                            '• Select appropriate semester\n'
-                            '• Set maximum capacity for enrollments',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.white70,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    _buildSection(
-                      '📚 Basic Information',
-                      [
-                        _buildTextField(
-                          controller: _courseCodeController,
-                          label: 'Course Code',
-                          hint: 'E.g.: CS101',
-                          errorText: _courseCodeError,
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter course code';
-                            }
-                            if (value.length < 3) {
-                              return 'Course code must be at least 3 characters';
-                            }
-                            return null;
-                          },
-                        ),
-                        _buildTextField(
-                          controller: _courseNameController,
-                          label: 'Course Name',
-                          hint: 'E.g.: Introduction to Programming',
-                          errorText: _courseNameError,
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter course name';
-                            }
-                            if (value.length < 5) {
-                              return 'Course name must be at least 5 characters';
-                            }
-                            return null;
-                          },
-                        ),
-                        _buildTextField(
-                          controller: _descriptionController,
-                          label: 'Description',
-                          hint: 'Brief description of the course...',
-                          minLines: 3,
-                          maxLines: 5,
-                          errorText: _descriptionError,
-                        ),
-                      ],
-                    ),
-
-                    _buildSection(
-                      '⚙️ Course Settings',
-                      [
-                        _buildSemesterDropdownMenu(),
-                        _buildTextField(
-                          controller: _sessionsController,
-                          label: 'Number of Sessions',
-                          hint: 'E.g.: 10, 15, 20',
-                          keyboardType: TextInputType.number,
-                          errorText: _sessionsError,
-                          validator: (value) {
-                            // UI validation: Only check format and empty - business rules in Controller
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter number of sessions';
-                            }
-                            final sessions = int.tryParse(value);
-                            if (sessions == null) {
-                              return 'Please enter a valid number';
-                            }
-                            return null;
-                          },
-                        ),
-                      ],
-                    ),
-
-                    SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: ElevatedButton.icon(
-                        onPressed: isLoading ? null : _createCourse,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          disabledBackgroundColor: Colors.grey,
-                        ),
-                        icon: isLoading
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    Colors.white,
-                                  ),
-                                ),
-                              )
-                            : const Icon(Icons.add, size: 24),
-                        label: Text(
-                          isLoading ? 'Creating...' : 'Create Course',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: OutlinedButton.icon(
-                        onPressed: isLoading ? null : _handleCancel,
-                        style: OutlinedButton.styleFrom(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          side: const BorderSide(color: Colors.red),
-                        ),
-                        icon: const Icon(Icons.close,
-                            size: 24, color: Colors.red),
-                        label: const Text(
-                          'Cancel',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
+                    CircularProgressIndicator(color: Colors.indigo),
+                    SizedBox(height: 16),
+                    Text(
+                      '🔄 Creating course...',
+                      style: TextStyle(color: Colors.white70),
                     ),
                   ],
                 ),
+              )
+            : SingleChildScrollView(
+                padding: const EdgeInsets.all(24.0),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      /// 📌 NOTE AT TOP
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        margin: const EdgeInsets.only(bottom: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.blue[900]?.withValues(alpha: 0.3),
+                          border: Border.all(color: Colors.blue[700]!),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'ℹ️ Note:',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: Colors.blue,
+                              ),
+                            ),
+                            SizedBox(height: 8),
+                            Text(
+                              '• Course code must be unique\n'
+                              '• Course name is required\n'
+                              '• Select appropriate semester\n'
+                              '• Set maximum capacity for enrollments',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.white70,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      _buildSection(
+                        '📚 Basic Information',
+                        [
+                          _buildTextField(
+                            controller: _courseCodeController,
+                            label: 'Course Code',
+                            hint: 'E.g.: CS101',
+                            errorText: _courseCodeError,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter course code';
+                              }
+                              if (value.length < 3) {
+                                return 'Course code must be at least 3 characters';
+                              }
+                              return null;
+                            },
+                          ),
+                          _buildTextField(
+                            controller: _courseNameController,
+                            label: 'Course Name',
+                            hint: 'E.g.: Introduction to Programming',
+                            errorText: _courseNameError,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter course name';
+                              }
+                              if (value.length < 5) {
+                                return 'Course name must be at least 5 characters';
+                              }
+                              return null;
+                            },
+                          ),
+                          _buildTextField(
+                            controller: _descriptionController,
+                            label: 'Description',
+                            hint: 'Brief description of the course...',
+                            minLines: 3,
+                            maxLines: 5,
+                            errorText: _descriptionError,
+                          ),
+                        ],
+                      ),
+
+                      _buildSection(
+                        '⚙️ Course Settings',
+                        [
+                          _buildSemesterDropdownMenu(),
+                          _buildTextField(
+                            controller: _sessionsController,
+                            label: 'Number of Sessions',
+                            hint: 'E.g.: 10, 15, 20',
+                            keyboardType: TextInputType.number,
+                            errorText: _sessionsError,
+                            validator: (value) {
+                              // UI validation: Only check format and empty - business rules in Controller
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter number of sessions';
+                              }
+                              final sessions = int.tryParse(value);
+                              if (sessions == null) {
+                                return 'Please enter a valid number';
+                              }
+                              return null;
+                            },
+                          ),
+                        ],
+                      ),
+
+                      SizedBox(
+                        width: double.infinity,
+                        height: 56,
+                        child: ElevatedButton.icon(
+                          onPressed: isLoading ? null : _createCourse,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            disabledBackgroundColor: Colors.grey,
+                          ),
+                          icon: isLoading
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white,
+                                    ),
+                                  ),
+                                )
+                              : const Icon(Icons.add, size: 24),
+                          label: Text(
+                            isLoading ? 'Creating...' : 'Create Course',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      SizedBox(
+                        width: double.infinity,
+                        height: 56,
+                        child: OutlinedButton.icon(
+                          onPressed: isLoading ? null : _handleCancel,
+                          style: OutlinedButton.styleFrom(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            side: const BorderSide(color: Colors.red),
+                          ),
+                          icon: const Icon(Icons.close,
+                              size: 24, color: Colors.red),
+                          label: const Text(
+                            'Cancel',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ),
+      ),
     );
   }
 

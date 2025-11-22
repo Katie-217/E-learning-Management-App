@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 import '../../../../application/controllers/student/student_controller.dart';
 import '../../../../domain/models/user_model.dart';
 import '../../../../data/repositories/auth/auth_repository.dart';
+import 'instructor_student_create.dart';
+import '../csv_import/csv_import_screen.dart';
 
 class InstructorStudentsPage extends StatefulWidget {
   // Callbacks
@@ -28,6 +30,42 @@ class _InstructorStudentsPageState extends State<InstructorStudentsPage> {
 
   final TextEditingController _searchController = TextEditingController();
 
+  void _navigateToCreateStudent() {
+    print('🚀 Navigate to Create Student');
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CreateStudentPage(
+          onSuccess: () {
+            print('🔄 Student created successfully! Refreshing list...');
+            _loadStudents(); // Refresh student list
+          },
+        ),
+      ),
+    );
+  }
+
+  void _navigateToImportCSV() {
+    print('🚀 Navigate to Import CSV');
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CsvImportScreen(
+          dataType: 'students',
+          onImportComplete: (success, message) {
+            print('🔄 CSV import completed: $success - $message');
+            if (success) {
+              _loadStudents(); // Refresh student list
+            }
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(message)),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -47,8 +85,7 @@ class _InstructorStudentsPageState extends State<InstructorStudentsPage> {
         _applyFilter();
       });
 
-      if (mounted) {
-      }
+      if (mounted) {}
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -132,7 +169,8 @@ class _InstructorStudentsPageState extends State<InstructorStudentsPage> {
   }
 
   void _showEditStudentDialog(UserModel student) {
-    final phoneController = TextEditingController(text: student.phoneNumber ?? '');
+    final phoneController =
+        TextEditingController(text: student.phoneNumber ?? '');
 
     showDialog(
       context: context,
@@ -169,7 +207,8 @@ class _InstructorStudentsPageState extends State<InstructorStudentsPage> {
             child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
           ),
           ElevatedButton(
-            onPressed: () => _updateStudent(student, phoneController.text.trim()),
+            onPressed: () =>
+                _updateStudent(student, phoneController.text.trim()),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.green,
               foregroundColor: Colors.white,
@@ -257,7 +296,8 @@ class _InstructorStudentsPageState extends State<InstructorStudentsPage> {
           Expanded(
             flex: 2,
             child: Text(label,
-                style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+                style: const TextStyle(
+                    fontWeight: FontWeight.bold, color: Colors.grey)),
           ),
           Expanded(
             flex: 3,
@@ -279,12 +319,14 @@ class _InstructorStudentsPageState extends State<InstructorStudentsPage> {
           backgroundColor: Colors.indigo[600],
           child: Text(
             student.name.isNotEmpty ? student.name[0].toUpperCase() : '?',
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+                color: Colors.white, fontWeight: FontWeight.bold),
           ),
         ),
         title: Text(
           student.name,
-          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+          style:
+              const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
         ),
         subtitle: Text(
           '${student.email}',
@@ -317,7 +359,10 @@ class _InstructorStudentsPageState extends State<InstructorStudentsPage> {
             const SizedBox(height: 16),
             const Text(
               'No students found',
-              style: TextStyle(color: Colors.grey, fontSize: 18, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                  color: Colors.grey,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600),
             ),
           ],
         ),
@@ -326,7 +371,8 @@ class _InstructorStudentsPageState extends State<InstructorStudentsPage> {
 
     return ListView.builder(
       itemCount: filteredStudents.length,
-      itemBuilder: (context, index) => _buildStudentCard(filteredStudents[index]),
+      itemBuilder: (context, index) =>
+          _buildStudentCard(filteredStudents[index]),
     );
   }
 
@@ -341,31 +387,38 @@ class _InstructorStudentsPageState extends State<InstructorStudentsPage> {
           children: [
             const Text(
               'My Students',
-              style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
+              style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white),
             ),
             Row(
               children: [
                 ElevatedButton.icon(
-                  onPressed: widget.onCreateStudentPressed,
+                  onPressed: () => _navigateToCreateStudent(),
                   icon: const Icon(Icons.add, size: 18),
                   label: const Text('Create'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.indigo[600],
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
                   ),
                 ),
                 const SizedBox(width: 12),
                 ElevatedButton.icon(
-                  onPressed: widget.onImportCSVPressed,
+                  onPressed: () => _navigateToImportCSV(),
                   icon: const Icon(Icons.upload_file, size: 18),
                   label: const Text('CSV'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green[600],
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
                   ),
                 ),
               ],
@@ -423,7 +476,8 @@ class _InstructorStudentsPageState extends State<InstructorStudentsPage> {
         // Results count
         Text(
           'Results: ${filteredStudents.length} students',
-          style: TextStyle(color: Colors.indigo[400], fontWeight: FontWeight.w500),
+          style:
+              TextStyle(color: Colors.indigo[400], fontWeight: FontWeight.w500),
         ),
         const SizedBox(height: 16),
 

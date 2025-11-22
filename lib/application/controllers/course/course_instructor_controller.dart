@@ -26,23 +26,37 @@ class CourseInstructorController {
         _enrollmentController = enrollmentController ?? EnrollmentController();
 
   // ========================================
+  // HELPER METHOD: _validateInstructorAccess
+  // MÔ TẢ: Validate user có quyền instructor access (bao gồm admin)
+  // ========================================
+  Future<void> _validateInstructorAccess(String operation) async {
+    final user = await _authRepository.currentUserModel;
+    print(
+        'DEBUG: 🔐 _validateInstructorAccess - User: ${user?.email}, Role: ${user?.role}, UID: ${user?.uid}');
+
+    if (user == null) {
+      throw Exception('User not authenticated');
+    }
+
+    if (user.role != UserRole.instructor) {
+      throw Exception(
+          'Access denied: Only instructors can $operation. Current role: ${user.role}, Email: ${user.email}');
+    }
+  }
+
+  // ========================================
   // HÀM: getInstructorCourses - Business Logic
   // MÔ TẢ: Lấy courses mà giảng viên phụ trách (Controller logic)
   // ========================================
   Future<List<CourseModel>> getInstructorCourses() async {
     try {
-      // 1. Lấy current user và validate role
+      // 1. Validate instructor access (including admin)
+      await _validateInstructorAccess('access teaching courses');
+
       final user = await _authRepository.currentUserModel;
-      if (user == null) {
-        throw Exception('User not authenticated');
-      }
 
-      if (user.role != UserRole.instructor) {
-        throw Exception(
-            'Access denied: Only instructors can access teaching courses');
-      }
-
-      print('DEBUG: 🔑 CourseInstructorController got instructor: ${user.uid}');
+      print(
+          'DEBUG: 🔑 CourseInstructorController got instructor: ${user?.uid}');
 
       // 2. Lấy Firebase Auth UID (không phải document ID)
       final firebaseAuthUid = await _authRepository.getCurrentUserId();
@@ -52,8 +66,8 @@ class CourseInstructorController {
       print('DEBUG: 🔑 Using Firebase Auth UID: $firebaseAuthUid');
 
       // 3. Lấy courses từ CourseInstructorRepository với Firebase Auth UID
-      final courses =
-          await CourseInstructorRepository.getInstructorCourses(firebaseAuthUid);
+      final courses = await CourseInstructorRepository.getInstructorCourses(
+          firebaseAuthUid);
 
       // 3. Business logic: Additional filtering for active instructor
       return courses
@@ -74,12 +88,8 @@ class CourseInstructorController {
   Future<List<CourseModel>> getInstructorCoursesBySemester(
       String semester) async {
     try {
-      // 1. Validate user và role
-      final user = await _authRepository.currentUserModel;
-      if (user == null || user.role != UserRole.instructor) {
-        throw Exception(
-            'Access denied: Only instructors can access teaching courses');
-      }
+      // 1. Validate instructor access (including admin)
+      await _validateInstructorAccess('access teaching courses');
 
       print('DEBUG: 🔑 Getting instructor courses for semester: $semester');
 
@@ -109,12 +119,8 @@ class CourseInstructorController {
   // ========================================
   Future<CourseModel?> getCourseById(String courseId) async {
     try {
-      // 1. Validate user authentication và role
-      final user = await _authRepository.currentUserModel;
-      if (user == null || user.role != UserRole.instructor) {
-        throw Exception(
-            'Access denied: Only instructors can access teaching courses');
-      }
+      // 1. Validate instructor access (including admin)
+      await _validateInstructorAccess('access teaching courses');
 
       // 2. Lấy Firebase Auth UID (không phải document ID)
       final firebaseAuthUid = await _authRepository.getCurrentUserId();
@@ -145,12 +151,14 @@ class CourseInstructorController {
   // ========================================
   Future<ValidationResult> createCourse(CourseModel course) async {
     try {
-      // 1. Validate user and role
-      final user = await _authRepository.currentUserModel;
-      if (user == null || user.role != UserRole.instructor) {
-        return ValidationResult.generalError(
-            'Access denied: Only instructors can create courses');
+      // 1. Validate instructor access (including admin)
+      try {
+        await _validateInstructorAccess('create courses');
+      } catch (e) {
+        return ValidationResult.generalError(e.toString());
       }
+
+      final user = await _authRepository.currentUserModel;
 
       // 2. Field-specific business rules validation
       if (course.name.trim().isEmpty) {
@@ -180,7 +188,8 @@ class CourseInstructorController {
 
       // 4. Check for duplicate course code
       final existingCourses =
-          await CourseInstructorRepository.getInstructorCourses(firebaseAuthUid);
+          await CourseInstructorRepository.getInstructorCourses(
+              firebaseAuthUid);
       final duplicateCode = existingCourses.any((existingCourse) =>
           existingCourse.code.toLowerCase() == course.code.toLowerCase());
 
@@ -198,7 +207,7 @@ class CourseInstructorController {
 
       if (success) {
         print(
-            'DEBUG: ✅ Course created successfully by instructor: ${user.uid}');
+            'DEBUG: ✅ Course created successfully by instructor: ${user?.uid}');
         return ValidationResult.success('Course created successfully');
       } else {
         print('DEBUG: ❌ Failed to create course');
@@ -265,12 +274,8 @@ class CourseInstructorController {
     required String studentEmail,
   }) async {
     try {
-      // 1. Validate user và role
-      final user = await _authRepository.currentUserModel;
-      if (user == null || user.role != UserRole.instructor) {
-        throw Exception(
-            'Access denied: Only instructors can manage enrollment');
-      }
+      // 1. Validate instructor access (including admin)
+      await _validateInstructorAccess('manage enrollment');
 
       // 2. Business logic: Check course ownership và status
       final course = await getCourseById(courseId);
@@ -413,8 +418,8 @@ class CourseInstructorController {
       }
 
       // 3. Get enrollment stats từ Repository
-      final stats =
-          await CourseInstructorRepository.getStudentEnrollmentStats(firebaseAuthUid);
+      final stats = await CourseInstructorRepository.getStudentEnrollmentStats(
+          firebaseAuthUid);
 
       // 3. Get all courses để tính toán thêm
       final allCourses = await getInstructorCourses();

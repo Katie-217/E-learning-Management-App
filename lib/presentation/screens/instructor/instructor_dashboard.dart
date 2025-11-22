@@ -80,7 +80,9 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
                 final profileAsync = ref.watch(instructorProfileProvider);
                 return profileAsync.when(
                   data: (profile) => UserMenuDropdown(
-                    userName: profile?['name'] ?? profile?['displayName'] ?? 'Dr. Johnson',
+                    userName: profile?['name'] ??
+                        profile?['displayName'] ??
+                        'Dr. Johnson',
                     userEmail: profile?['email'] ?? 'dr.johnson@university.edu',
                     userPhotoUrl: profile?['photoUrl'],
                   ),
@@ -132,7 +134,8 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
         );
       default: // dashboard
         final semesterName = _selectedSemester?.name ?? 'Fall 2024';
-        final kpiStatsAsync = ref.watch(instructorKPIStatsProvider(semesterName));
+        final kpiStatsAsync =
+            ref.watch(instructorKPIStatsProvider(semesterName));
         return SingleChildScrollView(
           padding: const EdgeInsets.all(18),
           child: Column(
@@ -155,7 +158,8 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
                                 color: Colors.white)),
                         const SizedBox(height: 4),
                         Text("Ready to inspire your students today?",
-                            style: TextStyle(color: Colors.grey[400], fontSize: 16)),
+                            style: TextStyle(
+                                color: Colors.grey[400], fontSize: 16)),
                       ],
                     ),
                   ),
@@ -248,7 +252,8 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
                           // Charts in a row on mobile if space allows
                           LayoutBuilder(
                             builder: (context, constraints) {
-                              final canFitTwoCharts = constraints.maxWidth > 600;
+                              final canFitTwoCharts =
+                                  constraints.maxWidth > 600;
                               return canFitTwoCharts
                                   ? Row(
                                       children: [

@@ -125,6 +125,35 @@ class GroupController extends StateNotifier<AsyncValue<List<GroupModel>>> {
   // NEW: Use EnrollmentRepository.getStudentCurrentGroup()
 
   // ========================================
+  // HÀM: createGroup
+  // MÔ TẢ: Tạo group mới và refresh state
+  // ========================================
+  Future<String> createGroup({
+    required String courseId,
+    required String groupName,
+    required String groupCode,
+    String? description,
+    int maxMembers = 30,
+  }) async {
+    try {
+      final groupId = await GroupRepository.createGroup(
+        courseId: courseId,
+        groupName: groupName,
+        groupCode: groupCode,
+        description: description,
+        maxMembers: maxMembers,
+      );
+
+      // Refresh groups list
+      await getGroupsByCourse(courseId);
+
+      return groupId;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // ========================================
   // NOTE: All student-group operations now go through EnrollmentController
   // for proper business logic and "1 student per group per course" validation
   // ========================================
