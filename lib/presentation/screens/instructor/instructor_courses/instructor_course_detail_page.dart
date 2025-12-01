@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // ✅ 1. Thêm thư viện Auth
 import 'package:elearning_management_app/domain/models/course_model.dart';
 import 'package:elearning_management_app/presentation/screens/student/course/course_detail.dart';
 import 'package:elearning_management_app/presentation/widgets/course/Instructor_Course/widget_course/instructor_course_tabs_widget.dart';
@@ -59,7 +60,14 @@ class _InstructorCourseDetailContentState
 
   @override
   Widget build(BuildContext context) {
+    // Lấy thông tin khóa học từ Provider
     final courseAsyncValue = ref.watch(courseDetailProvider(widget.courseId));
+    
+    // ✅ 2. Lấy thông tin Giảng viên đang đăng nhập (Current User)
+    // Chúng ta dùng cái này vì CourseModel không lưu instructorId
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final String currentUserId = currentUser?.uid ?? '';
+    final String currentUserName = currentUser?.displayName ?? 'Instructor';
 
     return courseAsyncValue.when(
       loading: () => const Center(
@@ -114,6 +122,10 @@ class _InstructorCourseDetailContentState
               child: InstructorCourseTabsWidget(
                 tabController: _tabController,
                 course: course,
+                instructorId: currentUserId,
+                instructorName: course.instructor.isNotEmpty 
+                    ? course.instructor 
+                    : currentUserName,
               ),
             ),
           ],
