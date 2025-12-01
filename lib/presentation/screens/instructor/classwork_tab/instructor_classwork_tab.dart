@@ -11,6 +11,8 @@ import 'package:elearning_management_app/presentation/widgets/course/Instructor_
 import 'package:elearning_management_app/presentation/widgets/course/Instructor_Course/classwork_tab_widget/material/create_material_page.dart';
 import 'package:elearning_management_app/presentation/screens/instructor/classwork_tab/assignment/assignment_detail_card.dart';
 import 'package:elearning_management_app/presentation/screens/instructor/classwork_tab/material/material_detail_card.dart';
+import 'package:elearning_management_app/presentation/screens/instructor/classwork_tab/quiz/question_bank_page.dart';
+import 'package:elearning_management_app/presentation/screens/instructor/classwork_tab/quiz/create_quiz.dart';
 
 // StreamProvider for real-time assignment updates
 final assignmentStreamProvider =
@@ -729,6 +731,42 @@ class _InstructorClassworkTabState
             ],
           ),
         ),
+        PopupMenuItem(
+          value: 'question_bank',
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.purple[600]?.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.lightbulb_outline,
+                    color: Colors.purple, size: 20),
+              ),
+              const SizedBox(width: 12),
+              const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Question Bank',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                  Text(
+                    'Manage quiz questions',
+                    style: TextStyle(color: Colors.grey, fontSize: 12),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ],
     ).then((value) {
       if (value != null) {
@@ -889,9 +927,11 @@ class _InstructorClassworkTabState
         );
         break;
       case 'quiz':
-        // TODO: Navigate to Create Quiz page
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Quiz creation coming soon!')),
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => CreateQuizPage(course: widget.course),
+          ),
         );
         break;
       case 'material':
@@ -899,6 +939,14 @@ class _InstructorClassworkTabState
           context,
           MaterialPageRoute(
             builder: (context) => CreateMaterialPage(course: widget.course),
+          ),
+        );
+        break;
+      case 'question_bank':
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => QuestionBankPage(courseId: widget.course.id),
           ),
         );
         break;
