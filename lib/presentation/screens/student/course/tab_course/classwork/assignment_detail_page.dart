@@ -1258,20 +1258,22 @@ class _AssignmentDetailViewState extends State<AssignmentDetailView> {
                     '${_formatDate(widget.assignment.deadline)} at ${_formatTime(widget.assignment.deadline)}',
                     Icons.calendar_today,
                   ),
+                  if (widget.assignment.allowLateSubmissions &&
+                      widget.assignment.lateDeadline != null) ...[
+                    const SizedBox(height: 12),
+                    _buildDetailItem(
+                      'Late Deadline',
+                      '${_formatDate(widget.assignment.lateDeadline!)} at ${_formatTime(widget.assignment.lateDeadline!)}',
+                      Icons.schedule,
+                      isWarning: true,
+                    ),
+                  ],
                   const SizedBox(height: 12),
                   _buildDetailItem(
                     'Attempts',
                     '${widget.assignment.maxSubmissionAttempts}',
                     Icons.repeat,
                   ),
-                  if (widget.assignment.allowLateSubmissions) ...[
-                    const SizedBox(height: 12),
-                    _buildDetailItem(
-                      'Late submission',
-                      'Allowed',
-                      Icons.schedule,
-                    ),
-                  ],
                 ],
               ),
             ),
@@ -1281,10 +1283,12 @@ class _AssignmentDetailViewState extends State<AssignmentDetailView> {
     );
   }
 
-  Widget _buildDetailItem(String label, String value, IconData icon) {
+  Widget _buildDetailItem(String label, String value, IconData icon,
+      {bool isWarning = false}) {
     return Row(
       children: [
-        Icon(icon, size: 18, color: AppColors.textSecondary),
+        Icon(icon,
+            size: 18, color: isWarning ? Colors.red : AppColors.textSecondary),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
@@ -1292,18 +1296,18 @@ class _AssignmentDetailViewState extends State<AssignmentDetailView> {
             children: [
               Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
-                  color: AppColors.textSecondary,
+                  color: isWarning ? Colors.red[300] : AppColors.textSecondary,
                 ),
               ),
               const SizedBox(height: 2),
               Text(
                 value,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
-                  color: AppColors.textPrimary,
                   fontWeight: FontWeight.w500,
+                  color: isWarning ? Colors.red : AppColors.textPrimary,
                 ),
               ),
             ],

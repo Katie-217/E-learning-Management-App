@@ -266,63 +266,114 @@ class EnrollmentRepository {
   }
 
   // ========================================
-  // HÀM: bulkEnrollStudents() - STRICT ENROLLMENT
-  // MÔ TẢ: Import hàng loạt sinh viên vào nhóm (cho CSV import)
+  // ========================================
+  // 🚀 HÀM: bulkEnrollStudents() - ULTRA-FAST WriteBatch ENROLLMENT
+  // MÔ TẢ: Ghi danh hàng loạt sinh viên với WriteBatch (1 request duy nhất)
+  // PERFORMANCE: Giảm từ N requests → 1 request
   // RULE: Tất cả sinh viên đều phải có groupId
   // ========================================
-  Future<Map<String, dynamic>> bulkEnrollStudents({
+  Future<BulkEnrollmentResult> bulkEnrollStudents({
     required String courseId,
-    required String groupId, // ✅ BẮT BUỘC cho Strict Enrollment
-    required List<Map<String, String>> students, // [{userId, name, email}, ...]
+    required String groupId,
+    required List<Map<String, dynamic>> students, // [{uid, name, email}, ...]
   }) async {
+    final result = BulkEnrollmentResult();
+
+    if (students.isEmpty) {
+      return result;
+    }
+
+    print(
+        '🚀 BULK ENROLLMENT: Starting bulk enrollment for ${students.length} students');
+    print('   Course: $courseId');
+    print('   Group: $groupId');
+
     try {
+      // 🚀 STEP 1: Initialize WriteBatch
       final batch = _firestore.batch();
-      final results = <String, String>{}; // enrollmentId -> status
+      final now = DateTime.now();
 
-      for (final student in students) {
-        final userId = student['userId']!;
-        final enrollmentId = '${courseId}_$userId';
+      // 🚀 STEP 2: Loop through students and add to batch (NO await here!)
+      for (int i = 0; i < students.length; i++) {
+        final student = students[i];
+        final userId =
+            student['uid']?.toString() ?? student['userId']?.toString() ?? '';
+        final studentName = student['name']?.toString() ?? '';
+        final studentEmail = student['email']?.toString() ?? '';
 
-        // Kiểm tra trùng lặp
-        final existing =
-            await _firestore.collection(_collection).doc(enrollmentId).get();
-
-        if (existing.exists) {
-          results[enrollmentId] = 'duplicate';
+        if (userId.isEmpty || studentName.isEmpty || studentEmail.isEmpty) {
+          result.failedStudents.add({
+            'student': student,
+            'error': 'Missing required fields (uid/userId, name, or email)',
+          });
           continue;
         }
 
-        // ✅ STRICT ENROLLMENT: Mọi enrollment đều có groupId
-        final enrollment = EnrollmentModel(
-          id: enrollmentId,
-          courseId: courseId,
-          userId: userId,
-          studentName: student['name'],
-          studentEmail: student['email'],
-          enrolledAt: DateTime.now(),
-          role: 'student',
-          status: 'active',
-          groupId: groupId, // ✅ Tất cả import vào cùng 1 nhóm
-        );
+        try {
+          // Create enrollment ID
+          final enrollmentId = '${courseId}_$userId';
 
-        batch.set(
-          _firestore.collection(_collection).doc(enrollmentId),
-          enrollment.toMap(),
-        );
+          // Create enrollment model with correct parameters
+          final enrollment = EnrollmentModel(
+            id: enrollmentId,
+            courseId: courseId,
+            userId: userId,
+            studentName: studentName,
+            studentEmail: studentEmail,
+            enrolledAt: now,
+            role: 'student',
+            status: 'active',
+            groupId:
+                groupId, // ✅ STRICT ENROLLMENT: All students get assigned to group
+          );
 
-        results[enrollmentId] = 'success';
+          // 🔥 ADD TO BATCH (not await) - This is the key optimization!
+          final docRef = _firestore.collection(_collection).doc(enrollmentId);
+          batch.set(docRef, enrollment.toMap());
+
+          result.successStudents.add({
+            'enrollmentId': enrollmentId,
+            'userId': userId,
+            'studentName': studentName,
+            'studentEmail': studentEmail,
+          });
+
+          print('   ✅ Added to batch: $studentEmail');
+        } catch (e) {
+          result.failedStudents.add({
+            'student': student,
+            'error': e.toString(),
+          });
+          print('   ❌ Failed to prepare: ${student['email']} - $e');
+        }
       }
 
-      await batch.commit();
+      // 🚀 STEP 3: Commit ALL writes in ONE atomic operation
+      if (result.successStudents.isNotEmpty) {
+        print(
+            '🔥 BULK ENROLLMENT: Committing ${result.successStudents.length} enrollments in one batch...');
+        await batch.commit();
+        print(
+            '✅ BULK ENROLLMENT: Successfully enrolled ${result.successStudents.length} students!');
+      }
 
-      return {
-        'total': students.length,
-        'successful': results.values.where((v) => v == 'success').length,
-        'duplicates': results.values.where((v) => v == 'duplicate').length,
-        'details': results,
-      };
+      print(
+          '❌ BULK ENROLLMENT: ${result.failedStudents.length} students failed');
+
+      return result;
     } catch (e) {
-      throw Exception('Lỗi ghi danh hàng loạt: $e');
+      print('❌ BULK ENROLLMENT: Batch commit failed: $e');
+
+      // Move all successful students to failed since batch failed
+      for (final student in result.successStudents) {
+        result.failedStudents.add({
+          'student': student,
+          'error': 'Batch commit failed: $e',
+        });
+      }
+      result.successStudents.clear();
+
+      throw Exception('Bulk enrollment failed: $e');
     }
   }
 
@@ -515,5 +566,25 @@ class EnrollmentRepository {
     } catch (e) {
       return null;
     }
+  }
+}
+
+// ========================================
+// CLASS: BulkEnrollmentResult - Kết quả bulk enrollment
+// ========================================
+class BulkEnrollmentResult {
+  final List<Map<String, dynamic>> successStudents = [];
+  final List<Map<String, dynamic>> failedStudents = [];
+
+  int get successCount => successStudents.length;
+  int get failureCount => failedStudents.length;
+  int get totalCount => successCount + failureCount;
+
+  double get successRate =>
+      totalCount > 0 ? (successCount / totalCount) * 100 : 0;
+
+  @override
+  String toString() {
+    return 'BulkEnrollment: ${successCount}/${totalCount} successful (${successRate.toStringAsFixed(1)}%)';
   }
 }

@@ -220,14 +220,13 @@ class _CreateStudentPageState extends ConsumerState<CreateStudentPage> {
         );
       }
 
-      // Step 2: Enroll student in selected group (Strict Enrollment)
+      // Step 2: Enroll student in selected group (No capacity limit check)
       await _enrollmentController.enrollStudentInGroup(
         courseId: _selectedCourse!.id,
         userId: uid,
         studentName: _nameController.text.trim(),
         studentEmail: email,
         groupId: _selectedGroup!.id,
-        groupMaxMembers: _selectedGroup!.maxMembers,
       );
 
       if (mounted) {

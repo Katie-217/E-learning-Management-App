@@ -25,11 +25,22 @@ class RawCsvRecord {
   });
 
   factory RawCsvRecord.fromMap(Map<String, dynamic> map, int rowIndex) {
+    // Support both formats: "Semester"/"templateId" and "Year"/"year"
+    final templateId = (map['Semester'] ??
+                map['templateId'] ??
+                map['semester'] ??
+                map['templateid'])
+            ?.toString()
+            .trim() ??
+        '';
+    final year = (map['Year'] ?? map['year'])?.toString().trim() ?? '';
+    final name = (map['Name'] ?? map['name'])?.toString().trim();
+
     return RawCsvRecord(
       rowIndex: rowIndex,
-      templateId: map['templateId']?.toString().trim() ?? '',
-      year: map['year']?.toString().trim() ?? '',
-      name: map['name']?.toString().trim(),
+      templateId: templateId,
+      year: year,
+      name: name,
       originalData: map,
     );
   }
@@ -44,6 +55,7 @@ class SemesterImportItem {
   final List<String> validationErrors;
   final String? generatedCode;
   final SemesterModel? previewSemester;
+  final String? normalizedTemplateId; // Store normalized ID (S1, S2, S3)
 
   const SemesterImportItem({
     required this.rawRecord,
@@ -51,6 +63,7 @@ class SemesterImportItem {
     required this.validationErrors,
     this.generatedCode,
     this.previewSemester,
+    this.normalizedTemplateId,
   });
 
   bool get isValid => status == ImportItemStatus.willBeAdded;

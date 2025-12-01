@@ -15,6 +15,7 @@ import '../presentation/screens/instructor/instructor_courses/instructor_courses
 import '../presentation/screens/instructor/instructor_courses/instructor_course_detail_page.dart';
 import '../presentation/screens/assignment/assignments_page.dart';
 import '../presentation/screens/instructor/manage_student/instructor_student_create.dart';
+import '../presentation/screens/admin/admin_cleanup_screen.dart';
 
 class AppRouter {
   AppRouter._();
@@ -112,6 +113,12 @@ class AppRouter {
         path: '/instructor/assignments',
         name: 'instructor-assignments',
         builder: (context, state) => const AssignmentsPage(),
+      ),
+      // Admin routes
+      GoRoute(
+        path: '/admin/cleanup',
+        name: 'admin-cleanup',
+        builder: (context, state) => const AdminCleanupScreen(),
       ),
       // GoRoute(
       //   path: '/instructor/grades',

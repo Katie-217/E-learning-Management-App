@@ -10,10 +10,11 @@ class MaterialModel {
   final String courseId;
   final String title;
   final String? description;
-  final MaterialType type;
   final String? url; // Link tài liệu hoặc file URL
   final String? filePath; // Đường dẫn file local
   final AttachmentModel? attachment; // File đính kèm
+  final LinkMetadataModel?
+      linkMetadata; // Metadata của link (title, image, description)
   final String authorId;
   final String authorName;
   final DateTime createdAt;
@@ -25,10 +26,10 @@ class MaterialModel {
     required this.courseId,
     required this.title,
     this.description,
-    required this.type,
     this.url,
     this.filePath,
     this.attachment,
+    this.linkMetadata,
     required this.authorId,
     required this.authorName,
     required this.createdAt,
@@ -123,28 +124,18 @@ class MaterialModel {
     description ??= data['details']?.toString();
     description ??= data['content']?.toString();
 
-    // Lấy type từ files.type hoặc data.type
-    String typeStr = data['type']?.toString() ??
-        (data['files'] != null && data['files'] is Map
-            ? (data['files'] as Map)['type']?.toString() ?? 'document'
-            : 'document');
-
-    // Xác định MaterialType từ MIME type nếu cần
-    if (typeStr.contains('pdf') || typeStr.contains('document')) {
-      typeStr = 'document';
-    } else if (typeStr.contains('video')) {
-      typeStr = 'video';
-    } else if (typeStr.contains('audio')) {
-      typeStr = 'audio';
-    } else if (typeStr.contains('image')) {
-      typeStr = 'document'; // Images as documents
-    }
-
     // Lấy URL từ files.url hoặc data.url
     String? url = data['url']?.toString() ??
         (data['files'] != null && data['files'] is Map
             ? (data['files'] as Map)['url']?.toString()
             : null);
+
+    // Parse linkMetadata nếu có
+    LinkMetadataModel? linkMetadata;
+    if (data['linkMetadata'] != null && data['linkMetadata'] is Map) {
+      linkMetadata = LinkMetadataModel.fromMap(
+          (data['linkMetadata'] as Map).cast<String, dynamic>());
+    }
 
     return MaterialModel(
       id: doc.id,
@@ -152,10 +143,10 @@ class MaterialModel {
           '', // Có thể cần lấy từ parent collection
       title: title,
       description: description,
-      type: _parseMaterialType(typeStr),
       url: url,
       filePath: data['filePath']?.toString(),
       attachment: attachment,
+      linkMetadata: linkMetadata,
       authorId: data['authorId']?.toString() ?? '',
       authorName: data['authorName']?.toString() ?? '',
       createdAt: parseDate(data['createdAt']) ?? DateTime.now(),
@@ -175,11 +166,14 @@ class MaterialModel {
       courseId: map['courseId'] ?? '',
       title: map['title'] ?? '',
       description: map['description'],
-      type: _parseMaterialType(map['type'] ?? 'document'),
       url: map['url'],
       filePath: map['filePath'],
       attachment: map['attachment'] != null
           ? AttachmentModel.fromMap(map['attachment'] as Map<String, dynamic>)
+          : null,
+      linkMetadata: map['linkMetadata'] != null
+          ? LinkMetadataModel.fromMap(
+              map['linkMetadata'] as Map<String, dynamic>)
           : null,
       authorId: map['authorId'] ?? '',
       authorName: map['authorName'] ?? '',
@@ -199,10 +193,10 @@ class MaterialModel {
       'courseId': courseId,
       'title': title,
       'description': description,
-      'type': type.name,
       'url': url,
       'filePath': filePath,
       'attachment': attachment?.toMap(),
+      'linkMetadata': linkMetadata?.toMap(),
       'authorId': authorId,
       'authorName': authorName,
       'createdAt': createdAt.toIso8601String(),
@@ -220,10 +214,10 @@ class MaterialModel {
     String? courseId,
     String? title,
     String? description,
-    MaterialType? type,
     String? url,
     String? filePath,
     AttachmentModel? attachment,
+    LinkMetadataModel? linkMetadata,
     String? authorId,
     String? authorName,
     DateTime? createdAt,
@@ -235,10 +229,10 @@ class MaterialModel {
       courseId: courseId ?? this.courseId,
       title: title ?? this.title,
       description: description ?? this.description,
-      type: type ?? this.type,
       url: url ?? this.url,
       filePath: filePath ?? this.filePath,
       attachment: attachment ?? this.attachment,
+      linkMetadata: linkMetadata ?? this.linkMetadata,
       authorId: authorId ?? this.authorId,
       authorName: authorName ?? this.authorName,
       createdAt: createdAt ?? this.createdAt,
@@ -259,28 +253,19 @@ class MaterialModel {
   // ========================================
   bool get hasUrl => url != null && url!.isNotEmpty;
 
-  // ========================================
-  // HÀM: _parseMaterialType()
-  // MÔ TẢ: Parse MaterialType từ string
-  // ========================================
-  static MaterialType _parseMaterialType(String type) {
-    switch (type.toLowerCase()) {
-      case 'document':
-        return MaterialType.document;
-      case 'presentation':
-        return MaterialType.presentation;
-      case 'video':
-        return MaterialType.video;
-      case 'audio':
-        return MaterialType.audio;
-      case 'link':
-        return MaterialType.link;
-      case 'ebook':
-        return MaterialType.ebook;
-      default:
-        return MaterialType.other;
-    }
+  @override
+  String toString() {
+    return 'MaterialModel(id: $id, title: $title)';
   }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is MaterialModel && other.id == id;
+  }
+
+  @override
+  int get hashCode => id.hashCode;
 
   // ========================================
   // HÀM: _parseDateTime()
@@ -297,92 +282,45 @@ class MaterialModel {
       return null;
     }
   }
-
-  @override
-  String toString() {
-    return 'MaterialModel(id: $id, title: $title, type: $type)';
-  }
-
-  @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-    return other is MaterialModel && other.id == id;
-  }
-
-  @override
-  int get hashCode => id.hashCode;
 }
 
 // ========================================
-// ENUM: MaterialType
-// MÔ TẢ: Loại tài liệu
+// CLASS: LinkMetadataModel
+// MÔ TẢ: Metadata của link (title, imageUrl, description, domain)
 // ========================================
-enum MaterialType {
-  document, // Tài liệu
-  presentation, // Slide thuyết trình
-  video, // Video
-  audio, // Audio
-  link, // Link website
-  ebook, // Sách điện tử
-  other, // Khác
-}
+class LinkMetadataModel {
+  final String url;
+  final String title;
+  final String? imageUrl;
+  final String? description;
+  final String domain;
 
-extension MaterialTypeExtension on MaterialType {
-  String get displayName {
-    switch (this) {
-      case MaterialType.document:
-        return 'Tài liệu';
-      case MaterialType.presentation:
-        return 'Slide thuyết trình';
-      case MaterialType.video:
-        return 'Video';
-      case MaterialType.audio:
-        return 'Audio';
-      case MaterialType.link:
-        return 'Link website';
-      case MaterialType.ebook:
-        return 'Sách điện tử';
-      case MaterialType.other:
-        return 'Khác';
-    }
+  const LinkMetadataModel({
+    required this.url,
+    required this.title,
+    this.imageUrl,
+    this.description,
+    required this.domain,
+  });
+
+  factory LinkMetadataModel.fromMap(Map<String, dynamic> map) {
+    return LinkMetadataModel(
+      url: map['url'] ?? '',
+      title: map['title'] ?? '',
+      imageUrl: map['imageUrl'],
+      description: map['description'],
+      domain: map['domain'] ?? '',
+    );
   }
 
-  String get name {
-    switch (this) {
-      case MaterialType.document:
-        return 'document';
-      case MaterialType.presentation:
-        return 'presentation';
-      case MaterialType.video:
-        return 'video';
-      case MaterialType.audio:
-        return 'audio';
-      case MaterialType.link:
-        return 'link';
-      case MaterialType.ebook:
-        return 'ebook';
-      case MaterialType.other:
-        return 'other';
-    }
-  }
-
-  static MaterialType fromString(String type) {
-    switch (type.toLowerCase()) {
-      case 'document':
-        return MaterialType.document;
-      case 'presentation':
-        return MaterialType.presentation;
-      case 'video':
-        return MaterialType.video;
-      case 'audio':
-        return MaterialType.audio;
-      case 'link':
-        return MaterialType.link;
-      case 'ebook':
-        return MaterialType.ebook;
-      default:
-        return MaterialType.other;
-    }
+  Map<String, dynamic> toMap() {
+    return {
+      'url': url,
+      'title': title,
+      'imageUrl': imageUrl,
+      'description': description,
+      'domain': domain,
+    };
   }
 }
 

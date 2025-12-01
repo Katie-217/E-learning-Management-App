@@ -103,7 +103,6 @@ class GroupRepository {
     required String groupName,
     required String groupCode,
     String? description,
-    int maxMembers = 30,
   }) async {
     try {
       print('DEBUG: Creating group $groupName for course: $courseId');
@@ -112,7 +111,6 @@ class GroupRepository {
         'name': groupName,
         'code': groupCode,
         'description': description ?? '',
-        'maxMembers': maxMembers,
         'courseId': courseId,
         'createdAt': FieldValue.serverTimestamp(),
         'isActive': true,

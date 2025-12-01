@@ -387,17 +387,16 @@ class _CsvImportSemesterScreenState extends State<CsvImportSemesterScreen> {
               const SizedBox(height: 8),
               Text(
                 '✓ Required columns:\n'
-                ' • templateId (${templates.map((t) => t.id).join(', ')})\n'
-                ' • year (example: 2025)\n\n'
+                ' • Semester (Semester 1, Semester 2, or Semester 3)\n'
+                ' • Year (example: 2025)\n\n'
                 '✓ Optional columns:\n'
-                ' • name (custom name, auto-generated if empty)\n\n'
-                '✓ Available Templates:\n'
-                '${templates.map((t) => ' • ${t.id}: ${t.name}').join('\n')}\n\n'
+                ' • Name \n\n'
                 '✓ Example CSV:\n'
-                'templateId,year,name\n'
-                'S1,2025,Fall Semester 2025\n'
-                'S2,2025,Spring Semester 2025\n'
-                'S3,2025,Summer Semester 2025',
+                'Semester,Year,Name\n'
+                'Semester 1,2025,Semester 1 2025\n'
+                'Semester 2,2025,Semester 2 2025\n'
+                'Semester 3,2025,Semester 3 2025\n\n'
+                '💡 Note: Column names must be "Semester", "Year", and "Name" ',
                 style: const TextStyle(fontSize: 12, color: Colors.white70),
               ),
             ],
@@ -541,11 +540,13 @@ class _CsvImportSemesterScreenState extends State<CsvImportSemesterScreen> {
               itemBuilder: (context, index) {
                 final item = invalidItems[index];
                 final errors = item.validationErrors.join(', ');
+                // Show original input from CSV for invalid records
+                final displayName =
+                    '${item.rawRecord.templateId} - ${item.rawRecord.year}';
                 return ListTile(
                   dense: true,
                   leading: const Icon(Icons.error, color: Colors.red, size: 16),
-                  title: Text(
-                      'Row ${item.rawRecord.rowIndex}: ${item.rawRecord.templateId}_${item.rawRecord.year}',
+                  title: Text('Row ${item.rawRecord.rowIndex}: $displayName',
                       style:
                           const TextStyle(fontSize: 12, color: Colors.white)),
                   subtitle: Text(errors,
@@ -577,15 +578,57 @@ class _CsvImportSemesterScreenState extends State<CsvImportSemesterScreen> {
               itemCount: existingItems.length,
               itemBuilder: (context, index) {
                 final item = existingItems[index];
+                // Convert S1_2025 to "Semester 1 - 2025"
+                final friendlyName = item.generatedCode?.replaceAllMapped(
+                      RegExp(r'S(\d)_(\d{4})'),
+                      (match) => 'Semester ${match[1]} - ${match[2]}',
+                    ) ??
+                    'Unknown';
+
+                // Get existing semester name if available
+                final existingName =
+                    item.previewSemester?.name ?? 'Unknown name';
+                final existingCode = item.previewSemester?.code ?? '';
+
+                // Determine which field is duplicate
+                final isDuplicateCode =
+                    item.validationErrors.any((e) => e.contains('code'));
+                final isDuplicateName =
+                    item.validationErrors.any((e) => e.contains('name'));
+
+                String titleText;
+                String subtitleText;
+
+                if (isDuplicateCode && isDuplicateName) {
+                  titleText =
+                      'Row ${item.rawRecord.rowIndex}: $friendlyName already exists';
+                  subtitleText =
+                      'with name: $existingName (both semester and name duplicate)';
+                } else if (isDuplicateCode) {
+                  titleText =
+                      'Row ${item.rawRecord.rowIndex}: $friendlyName already exists';
+                  subtitleText = 'with name: $existingName';
+                } else {
+                  // Name duplicate only
+                  titleText =
+                      'Row ${item.rawRecord.rowIndex}: Name "$existingName" already exists';
+                  final existingFriendlyCode = existingCode.replaceAllMapped(
+                    RegExp(r'S(\d)_(\d{4})'),
+                    (match) => 'Semester ${match[1]} - ${match[2]}',
+                  );
+                  subtitleText = 'in semester: $existingFriendlyCode';
+                }
+
                 return ListTile(
                   dense: true,
                   leading:
                       const Icon(Icons.warning, color: Colors.orange, size: 16),
-                  title: Text('${item.generatedCode}',
+                  title: Text(titleText,
                       style:
                           const TextStyle(fontSize: 12, color: Colors.white)),
-                  subtitle: const Text('Already exists in system',
-                      style: TextStyle(fontSize: 10, color: Colors.orange)),
+                  subtitle: Text(subtitleText,
+                      style:
+                          const TextStyle(fontSize: 10, color: Colors.orange)),
                 );
               },
             ),
@@ -624,7 +667,7 @@ class _CsvImportSemesterScreenState extends State<CsvImportSemesterScreen> {
                   children: [
                     Expanded(
                         flex: 2,
-                        child: Text('Semester Code',
+                        child: Text('Semester',
                             style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 color: Colors.green,
@@ -685,11 +728,20 @@ class _CsvImportSemesterScreenState extends State<CsvImportSemesterScreen> {
                         children: [
                           Expanded(
                               flex: 2,
-                              child: Text(semester.code,
-                                  style: const TextStyle(
-                                      fontSize: 11,
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold))),
+                              child: () {
+                                // Convert S2_2026 to "Semester 2 - 2026"
+                                final friendlyCode =
+                                    semester.code.replaceAllMapped(
+                                  RegExp(r'S(\d)_(\d{4})'),
+                                  (match) =>
+                                      'Semester ${match[1]} - ${match[2]}',
+                                );
+                                return Text(friendlyCode,
+                                    style: const TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold));
+                              }()),
                           Expanded(
                               flex: 3,
                               child: Text(semester.name,
@@ -1068,12 +1120,15 @@ class _CsvImportSemesterScreenState extends State<CsvImportSemesterScreen> {
         if (_currentStep == 2)
           Expanded(
             child: ElevatedButton(
-              onPressed: () {
-                setState(() => _currentStep = 3);
-              },
+              onPressed: _sessionData!.summary.newCount > 0
+                  ? () {
+                      setState(() => _currentStep = 3);
+                    }
+                  : null, // Disable if no new semesters
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blue,
                 foregroundColor: Colors.white,
+                disabledBackgroundColor: Colors.grey,
               ),
               child: const Text('Continue'),
             ),

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
@@ -8,6 +9,7 @@ import '../../../../application/controllers/csv/bulk_import_controller.dart';
 import '../../../../application/controllers/course/course_instructor_provider.dart';
 import '../../../../application/controllers/group/group_controller.dart';
 import '../../../../application/controllers/course/enrollment_controller.dart';
+import '../../../../data/repositories/course/enrollment_repository.dart';
 import '../../../../data/repositories/student/student_repository.dart';
 import '../../../../domain/models/course_model.dart';
 import '../../../../domain/models/group_model.dart';
@@ -139,15 +141,25 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
 
         String content;
         if (file.bytes != null) {
-          // Web/mobile: use bytes
-          content = String.fromCharCodes(file.bytes!);
+          // Web/mobile: use bytes with UTF-8 decoding
+          try {
+            content = utf8.decode(file.bytes!);
+          } catch (e) {
+            // Fallback to simple conversion if UTF-8 fails
+            content = String.fromCharCodes(file.bytes!);
+          }
         } else if (file.path != null) {
-          // Desktop: read from path
-          final fileContent = await File(file.path!).readAsString();
+          // Desktop: read from path with UTF-8 encoding
+          final fileContent =
+              await File(file.path!).readAsString(encoding: utf8);
           content = fileContent;
         } else {
           throw Exception('Unable to read file content');
         }
+
+        // Debug: log first few characters to check content
+        print(
+            '🔄 FILE DEBUG: File content preview (first 200 chars): ${content.substring(0, content.length > 200 ? 200 : content.length)}');
 
         setState(() {
           _selectedFileName = file.name;
@@ -314,37 +326,59 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
         }
       }
 
-      // Step 3: Enroll all successfully imported students into the selected group
-      print('🔄 DEBUG: Starting enrollment process...');
+      // 🚀 Step 3: BULK ENROLLMENT - Enroll all students in ONE batch operation
+      print(
+          '🔥 DEBUG: Starting BULK enrollment process for ${result.successRecords.length} students...');
       int enrolledCount = 0;
       final enrollmentErrors = <String>[];
 
-      for (final successRecord in result.successRecords) {
+      if (result.successRecords.isNotEmpty) {
         try {
-          final email = successRecord['email']?.toString();
-          final name = successRecord['name']?.toString();
-          final userId = successRecord['uid']?.toString();
+          // Prepare student data for bulk enrollment
+          final studentsForEnrollment = result.successRecords
+              .where((record) =>
+                  record['uid'] != null &&
+                  record['name'] != null &&
+                  record['email'] != null)
+              .map((record) => {
+                    'uid': record['uid'],
+                    'name': record['name'],
+                    'email': record['email'],
+                  })
+              .toList();
 
-          print('🔄 DEBUG: Enrolling student: $email (UID: $userId)');
-
-          if (email != null && name != null && userId != null) {
-            await enrollmentController.enrollStudentInGroup(
-              courseId: _selectedCourse!.id,
-              userId: userId,
-              studentName: name,
-              studentEmail: email,
-              groupId: _selectedGroup!.id,
-              groupMaxMembers: _selectedGroup!.maxMembers,
-            );
-            enrolledCount++;
-            print('✅ DEBUG: Successfully enrolled: $email');
-          } else {
+          if (studentsForEnrollment.isNotEmpty) {
             print(
-                '❌ DEBUG: Missing data for student: email=$email, name=$name, uid=$userId');
+                '🚀 DEBUG: Using BULK enrollment for ${studentsForEnrollment.length} students...');
+
+            // Use direct repository access for bulk enrollment
+            final enrollmentRepository = EnrollmentRepository();
+            final bulkResult = await enrollmentRepository.bulkEnrollStudents(
+              courseId: _selectedCourse!.id,
+              groupId: _selectedGroup!.id,
+              students: studentsForEnrollment,
+            );
+
+            enrolledCount = bulkResult.successCount;
+
+            // Convert failures to error strings
+            for (final failure in bulkResult.failedStudents) {
+              final studentInfo = failure['student'];
+              final error = failure['error'];
+              enrollmentErrors.add('${studentInfo['email']}: $error');
+            }
+
+            print('✅ BULK DEBUG: Bulk enrollment completed!');
+            print('   ✅ Successfully enrolled: ${bulkResult.successCount}');
+            print('   ❌ Failed enrollments: ${bulkResult.failureCount}');
+            print(
+                '   🎯 Success rate: ${bulkResult.successRate.toStringAsFixed(1)}%');
+          } else {
+            print('❌ DEBUG: No valid students found for enrollment');
           }
         } catch (e) {
-          print('❌ DEBUG: Enrollment failed for ${successRecord['email']}: $e');
-          enrollmentErrors.add('${successRecord['email']}: $e');
+          print('❌ DEBUG: BULK enrollment failed completely: $e');
+          enrollmentErrors.add('Bulk enrollment failed: $e');
         }
       }
 
