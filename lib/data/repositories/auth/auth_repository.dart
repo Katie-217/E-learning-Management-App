@@ -424,3 +424,8 @@ class AuthRepository {
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return AuthRepository.defaultClient();
 });
+
+final currentUserProvider = StreamProvider<UserModel?>((ref) {
+  final authRepository = ref.watch(authRepositoryProvider);
+  return authRepository.userModelStream;
+});
