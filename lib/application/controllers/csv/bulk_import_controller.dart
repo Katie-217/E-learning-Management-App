@@ -18,10 +18,16 @@ class BulkImportController {
     FirebaseApp? tempApp;
     try {
       final currentOptions = Firebase.app().options;
-      tempApp = await Firebase.initializeApp(
-        name: 'TemporaryRegisterApp',
-        options: currentOptions,
-      );
+
+      // Try to reuse existing secondary app or create new one
+      try {
+        tempApp = Firebase.app('SecondaryApp');
+      } catch (e) {
+        tempApp = await Firebase.initializeApp(
+          name: 'SecondaryApp',
+          options: currentOptions,
+        );
+      }
 
       final tempAuth = FirebaseAuth.instanceFor(app: tempApp);
 
@@ -30,12 +36,15 @@ class BulkImportController {
         password: password,
       );
 
+      // Sign out from secondary app immediately to avoid confusion
+      await tempAuth.signOut();
+
       return credential.user!.uid;
     } catch (e) {
+      print('❌ DEBUG: Failed to create account for $email: $e');
       rethrow;
-    } finally {
-      await tempApp?.delete();
     }
+    // Don't delete the app - reuse it for next student
   }
 
   // Main import function
@@ -55,13 +64,21 @@ class BulkImportController {
       totalRecords: csvData.length,
     );
 
+    print('🔄 BULK DEBUG: Starting to process ${csvData.length} students');
+
     for (int i = 0; i < csvData.length; i++) {
       final record = csvData[i];
+      print(
+          '🔄 BULK DEBUG: Processing student ${i + 1}/${csvData.length}: ${record['email']}');
+
       try {
         // Extract and validate fields
         final email = record['email']?.toString().trim() ?? '';
         final name = record['name']?.toString().trim() ?? '';
         final phone = record['phone']?.toString().trim();
+
+        print(
+            '🔄 BULK DEBUG: Extracted data - Email: $email, Name: $name, Phone: $phone');
 
         if (!_isValidEmail(email)) {
           throw Exception('Invalid email: $email');
@@ -71,7 +88,10 @@ class BulkImportController {
           throw Exception('Invalid name: must be at least 2 characters');
         }
 
+        print('🔄 BULK DEBUG: Validation passed for $email');
+
         // Check for existing profile by email
+        print('🔄 BULK DEBUG: Checking if $email already exists...');
         final existingProfile = await _firestore
             .collection('users')
             .where('email', isEqualTo: email)
@@ -79,14 +99,36 @@ class BulkImportController {
             .get();
 
         if (existingProfile.docs.isNotEmpty) {
-          throw Exception('Profile already exists with email: $email');
+          print(
+              '🔄 BULK DEBUG: User $email already exists, using existing profile for enrollment');
+          final existingDoc = existingProfile.docs.first;
+          final existingData = existingDoc.data();
+
+          // Add existing user to success records for enrollment
+          result.successRecords.add({
+            'email': email,
+            'name': existingData['name'] ??
+                name, // Use existing name or CSV name as fallback
+            'uid': existingData['uid'] ?? existingDoc.id,
+            'isExistingUser':
+                true, // Flag to indicate this user already existed
+          });
+
+          print(
+              '✅ BULK DEBUG: Successfully processed existing student $email (${i + 1}/${csvData.length})');
+          continue; // Skip account creation, move to next student
         }
+
+        print('🔄 BULK DEBUG: User $email does not exist, creating account...');
 
         // Create Auth account using secondary app
         final authUid = await _createStudentAccountWithoutLogout(
           email: email,
           password: tempPassword,
         );
+
+        print(
+            '✅ BULK DEBUG: Successfully created auth account for $email with UID: $authUid');
 
         // Create UserModel instance
         final newUser = UserModel(
@@ -107,7 +149,10 @@ class BulkImportController {
         );
 
         // Save to Firestore using Auth UID as document ID
-        await _firestore.collection('users').doc(authUid).set(newUser.toFirestore());
+        await _firestore
+            .collection('users')
+            .doc(authUid)
+            .set(newUser.toFirestore());
 
         // Record success
         result.successRecords.add({
@@ -116,7 +161,11 @@ class BulkImportController {
           'uid': authUid,
           'tempPassword': tempPassword,
         });
+
+        print(
+            '✅ BULK DEBUG: Successfully processed student $email (${i + 1}/${csvData.length})');
       } catch (e) {
+        print('❌ BULK DEBUG: Failed to process ${record['email']}: $e');
         result.failedRecords.add({
           'email': record['email'] ?? 'unknown',
           'name': record['name'] ?? 'unknown',
@@ -125,6 +174,8 @@ class BulkImportController {
       }
     }
 
+    print(
+        '🔄 BULK DEBUG: Completed processing all students. Success: ${result.successCount}, Failed: ${result.failureCount}');
     // Optional: verify instructor is still signed in (silent check)
     final finalUser = _firebaseAuth.currentUser;
     if (finalUser == null || finalUser.uid != instructorUid) {
@@ -136,7 +187,8 @@ class BulkImportController {
 
   // Helper: email validation
   bool _isValidEmail(String email) {
-    return RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$').hasMatch(email);
+    return RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
+        .hasMatch(email);
   }
 
   // Temporary password (change to stronger generator in production if needed)
@@ -159,7 +211,8 @@ class ImportResult {
 
   int get successCount => successRecords.length;
   int get failureCount => failedRecords.length;
-  double get successRate => totalRecords > 0 ? (successCount / totalRecords) * 100 : 0;
+  double get successRate =>
+      totalRecords > 0 ? (successCount / totalRecords) * 100 : 0;
 
   Map<String, dynamic> toMap() {
     return {

@@ -183,7 +183,7 @@ class _SemesterFilterInstructorState
       dropdownMenuEntries:
           items.map<DropdownMenuEntry<String>>((SemesterModel item) {
         return DropdownMenuEntry<String>(
-          value: item.id,
+          value: item.name, // Use semester name instead of ID for filtering
           label: item.name,
           labelWidget: Container(
             width: double.infinity,
