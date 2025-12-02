@@ -2,139 +2,24 @@
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_core/firebase_core.dart';
-import '../../../domain/models/user_model.dart';
-import '../../../core/config/users-role.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
+/// **MIGRATED TO HTTP CLOUD FUNCTIONS**
+///
+/// This controller now uses HTTP requests to call Firebase Cloud Functions
+/// Works on ALL platforms: Web, Mobile, AND Desktop
+///
+/// Benefits:
+/// - No plugin compatibility issues
+/// - Works on Windows/Linux/macOS desktop
+/// - Much faster (parallel processing on Google infrastructure)
+/// - Manual authentication with ID Token
+/// - One request for entire batch
 class BulkImportController {
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // 🚀 OPTIMIZED: Create Auth user using shared secondary app (no repeated app initialization)
-  Future<String> _createStudentAccountWithSharedApp({
-    required FirebaseAuth tempAuth,
-    required String email,
-    required String password,
-  }) async {
-    try {
-      final credential = await tempAuth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-
-      // ✅ PERFORMANCE: No need to sign out from temporary app - saves 1 network request per user
-
-      return credential.user!.uid;
-    } catch (e) {
-      print('❌ DEBUG: Failed to create Firebase Auth account for $email: $e');
-      rethrow;
-    }
-  }
-
-  // 🚀 ULTRA-OPTIMIZED: Process single student with WriteBatch (no individual Firestore writes)
-  Future<void> _processSingleStudentWithBatch({
-    required Map<String, dynamic> record,
-    required FirebaseAuth tempAuth,
-    required String tempPassword,
-    required ImportResult result,
-    required WriteBatch firestoreBatch,
-  }) async {
-    final email = record['email']?.toString().trim() ?? '';
-    final name = record['name']?.toString().trim() ?? '';
-    final phone = record['phone']?.toString().trim();
-
-    try {
-      print('🔄 BULK DEBUG: [PARALLEL+BATCH] Processing: $email');
-
-      // Validation
-      if (!_isValidEmail(email)) {
-        throw Exception('Invalid email: $email');
-      }
-      if (name.isEmpty || name.length < 2) {
-        throw Exception('Invalid name: must be at least 2 characters');
-      }
-
-      // Check for existing profile by email
-      final existingProfile = await _firestore
-          .collection('users')
-          .where('email', isEqualTo: email)
-          .limit(1)
-          .get();
-
-      if (existingProfile.docs.isNotEmpty) {
-        final existingDoc = existingProfile.docs.first;
-        final existingData = existingDoc.data();
-
-        // Add existing user to success records for enrollment
-        result.successRecords.add({
-          'email': email,
-          'name': existingData['name'] ?? name,
-          'uid': existingData['uid'] ?? existingDoc.id,
-          'isExistingUser': true,
-        });
-
-        print('✅ BULK DEBUG: [PARALLEL+BATCH] Existing user processed: $email');
-        return;
-      }
-
-      // Create new Firebase Auth account ONLY (no Firestore write yet)
-      final authUid = await _createStudentAccountWithSharedApp(
-        tempAuth: tempAuth,
-        email: email,
-        password: tempPassword,
-      );
-
-      // Create UserModel instance
-      final newUser = UserModel(
-        uid: authUid,
-        email: email,
-        name: name,
-        displayName: name,
-        phoneNumber: phone,
-        createdAt: DateTime.now(),
-        settings: const UserSettings(
-          language: 'vi',
-          theme: 'light',
-          status: 'active',
-        ),
-        role: UserRole.student,
-        isActive: true,
-        isDefault: false,
-      );
-
-      // 🚀 ADD TO BATCH instead of writing immediately
-      firestoreBatch.set(
-        _firestore.collection('users').doc(authUid),
-        newUser.toFirestore(),
-      );
-
-      // Record success (Firestore write will happen later in batch)
-      result.successRecords.add({
-        'email': email,
-        'name': name,
-        'uid': authUid,
-        'tempPassword': tempPassword,
-        'isNewAccount': true,
-      });
-
-      print(
-          '✅ BULK DEBUG: [PARALLEL+BATCH] Auth created, added to batch: $email');
-    } catch (e) {
-      print('❌ BULK DEBUG: [PARALLEL+BATCH] Failed to process $email: $e');
-      result.failedRecords.add({
-        'email': email,
-        'name': name,
-        'error': e.toString(),
-      });
-    }
-  }
-
-  // Temporary password generator
-  String _generateTempPassword() {
-    return '123456';
-  }
-
-  // Main import function
+  /// Main import function - calls HTTP Cloud Function for bulk user creation
   Future<ImportResult> importStudents(
     List<Map<String, dynamic>> csvData,
   ) async {
@@ -143,164 +28,88 @@ class BulkImportController {
       throw Exception('Instructor must be logged in to import students');
     }
 
-    final instructorUid = currentUser.uid;
-    final tempPassword = _generateTempPassword();
-
     final result = ImportResult(
       dataType: 'students',
       totalRecords: csvData.length,
     );
 
-    print('🔄 BULK DEBUG: Starting to process ${csvData.length} students');
-
-    // 🚀 OPTIMIZATION: Initialize Secondary Firebase App ONCE outside the loop
-    FirebaseApp? tempApp;
-    late FirebaseAuth tempAuth;
-    try {
-      final currentOptions = Firebase.app().options;
-
-      // Try to reuse existing secondary app or create new one
-      try {
-        tempApp = Firebase.app('SecondaryApp');
-      } catch (e) {
-        tempApp = await Firebase.initializeApp(
-          name: 'SecondaryApp',
-          options: currentOptions,
-        );
-      }
-
-      tempAuth = FirebaseAuth.instanceFor(app: tempApp);
-      print(
-          '✅ BULK DEBUG: Secondary Firebase App initialized once for batch processing');
-    } catch (e) {
-      print('❌ BULK DEBUG: Failed to initialize Secondary Firebase App: $e');
-      throw Exception('Failed to initialize Firebase for bulk import: $e');
-    }
-
-    // 🚀 ULTRA-FAST PROCESSING: Parallel Auth + Batched Firestore
-    int batchSize =
-        50; // 🔥 OPTIMIZED: Process entire class simultaneously (30-50 students)
-    final batches = <List<Map<String, dynamic>>>[];
-
-    for (int i = 0; i < csvData.length; i += batchSize) {
-      final end =
-          (i + batchSize < csvData.length) ? i + batchSize : csvData.length;
-      batches.add(csvData.sublist(i, end));
-    }
-
     print(
-        '🚀 BULK DEBUG: Processing ${batches.length} batches of ~$batchSize students each');
-    print('🔥 OPTIMIZATION: Using parallel Auth + WriteBatch for Firestore');
+        '🚀 BULK DEBUG: Calling HTTP Cloud Function to create ${csvData.length} users...');
+    print('   Using HTTP request with ID Token for authentication');
 
-    // Collection to store all Firestore writes for batching
-    final firestoreBatch = _firestore.batch();
-
-    for (int batchIndex = 0; batchIndex < batches.length; batchIndex++) {
-      final batch = batches[batchIndex];
-      print(
-          '🔄 BULK DEBUG: Processing batch ${batchIndex + 1}/${batches.length} (${batch.length} students)');
-
-      // Process batch concurrently with rate limit retry
-      bool batchSuccess = false;
-      int retryCount = 0;
-      const maxRetries = 3;
-
-      while (!batchSuccess && retryCount < maxRetries) {
-        try {
-          final batchFutures = batch
-              .map((record) => _processSingleStudentWithBatch(
-                    record: record,
-                    tempAuth: tempAuth,
-                    tempPassword: tempPassword,
-                    result: result,
-                    firestoreBatch: firestoreBatch,
-                  ))
-              .toList();
-
-          await Future.wait(batchFutures);
-          batchSuccess = true;
-          print('✅ BULK DEBUG: Batch ${batchIndex + 1} completed successfully');
-        } catch (e) {
-          retryCount++;
-          print(
-              '❌ BULK DEBUG: Batch ${batchIndex + 1} failed (attempt $retryCount): $e');
-
-          if (e.toString().contains('too-many-requests') ||
-              e.toString().contains('rate-limit')) {
-            // Reduce batch size and add longer delay for rate limiting
-            batchSize = (batchSize / 2)
-                .ceil()
-                .clamp(5, 50); // 🔥 Keep minimum at 5, max at 50
-            print(
-                '⚠️ BULK DEBUG: Rate limited! Reducing batch size to $batchSize and retrying...');
-            await Future.delayed(Duration(
-                milliseconds:
-                    500 * retryCount)); // 🔥 Shorter delay for faster recovery
-          } else if (retryCount >= maxRetries) {
-            print(
-                '❌ BULK DEBUG: Batch ${batchIndex + 1} failed permanently after $maxRetries attempts');
-            batchSuccess = true; // Exit retry loop
-          } else {
-            await Future.delayed(Duration(milliseconds: 500 * retryCount));
-          }
-        }
-      }
-
-      // 🔥 OPTIMIZED: Smaller delay since we use bigger batches
-      if (batchIndex < batches.length - 1) {
-        await Future.delayed(
-            const Duration(milliseconds: 50)); // Reduced from 100ms
-      }
-    }
-
-    // 🚀 MEGA OPTIMIZATION: Commit ALL Firestore writes in ONE batch operation!
-    print(
-        '🔥 BULK DEBUG: Committing ALL Firestore writes in one batch operation...');
     try {
-      await firestoreBatch.commit();
-      print(
-          '✅ BULK DEBUG: WriteBatch committed successfully - ALL profiles saved!');
-    } catch (e) {
-      print('❌ BULK DEBUG: WriteBatch failed: $e');
-      // Move successful Auth users to failed records since Firestore write failed
-      final authOnlyUsers = result.successRecords
-          .where((r) => r['isNewAccount'] == true)
+      // Get ID Token
+      final idToken = await currentUser.getIdToken();
+      print('🔑 BULK DEBUG: Got ID Token');
+
+      // Prepare data for Cloud Function
+      final studentsData = csvData.map((record) {
+        return {
+          'email': record['email']?.toString().trim() ?? '',
+          'name': record['name']?.toString().trim() ?? '',
+          'phone': record['phone']?.toString().trim() ?? '',
+        };
+      }).toList();
+
+      // Call HTTP Cloud Function
+      const functionUrl = 'https://bulkcreateusers-lx2litqtla-uc.a.run.app';
+
+      print('🌐 BULK DEBUG: Sending HTTP POST to $functionUrl');
+      final response = await http.post(
+        Uri.parse(functionUrl),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $idToken',
+        },
+        body: jsonEncode({
+          'students': studentsData,
+        }),
+      );
+
+      print('📡 BULK DEBUG: Response status: ${response.statusCode}');
+
+      if (response.statusCode != 200) {
+        final errorBody = jsonDecode(response.body);
+        throw Exception(
+            'HTTP ${response.statusCode}: ${errorBody['error'] ?? 'Unknown error'}');
+      }
+
+      // Parse response
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final successCount = data['successCount'] as int;
+      final failureCount = data['failureCount'] as int;
+      final successRecords = (data['successRecords'] as List<dynamic>)
+          .map((e) => Map<String, dynamic>.from(e as Map))
           .toList();
-      for (final user in authOnlyUsers) {
+      final failedRecords = (data['failedRecords'] as List<dynamic>)
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
+
+      // Populate result object
+      result.successRecords.addAll(successRecords);
+      result.failedRecords.addAll(failedRecords);
+
+      print('✅ BULK DEBUG: HTTP Cloud Function completed!');
+      print('   Success: $successCount');
+      print('   Failed: $failureCount');
+      print(
+          '   Success rate: ${((successCount / csvData.length) * 100).toStringAsFixed(1)}%');
+
+      return result;
+    } catch (e) {
+      print('❌ BULK DEBUG: HTTP Cloud Function call failed: $e');
+
+      // If Cloud Function fails completely, mark all as failed
+      for (final record in csvData) {
         result.failedRecords.add({
-          'email': user['email'],
-          'name': user['name'],
-          'error': 'Auth created but Firestore write failed: $e',
+          'email': record['email'] ?? 'unknown',
+          'name': record['name'] ?? 'unknown',
+          'error': 'HTTP Cloud Function error: $e',
         });
       }
-      result.successRecords.removeWhere((r) => r['isNewAccount'] == true);
+
+      throw Exception('Failed to create users via HTTP Cloud Function: $e');
     }
-
-    print(
-        '🔄 BULK DEBUG: Completed processing all students. Success: ${result.successCount}, Failed: ${result.failureCount}');
-
-    // 🧹 CLEANUP: Clean up secondary Firebase App after all operations
-    try {
-      await tempAuth.signOut(); // Ensure sign out
-      // Note: Don't delete the app as it might be reused for future imports
-      print('✅ BULK DEBUG: Secondary Firebase App cleaned up');
-    } catch (e) {
-      print('⚠️ BULK DEBUG: Minor cleanup issue: $e');
-    }
-
-    // Optional: verify instructor is still signed in (silent check)
-    final finalUser = _firebaseAuth.currentUser;
-    if (finalUser == null || finalUser.uid != instructorUid) {
-      print('⚠️ BULK DEBUG: Instructor session may have been affected');
-    }
-
-    return result;
-  }
-
-  // Helper: email validation
-  bool _isValidEmail(String email) {
-    return RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
-        .hasMatch(email);
   }
 }
 

@@ -26,6 +26,8 @@ class StudentImportRecord {
   final bool isValid;
   final String status;
   final String? duplicateEmail;
+  final String? existingName; // Name in database
+  final bool hasNameMismatch; // CSV name != DB name
 
   StudentImportRecord({
     required this.rowIndex,
@@ -34,6 +36,8 @@ class StudentImportRecord {
     required this.isValid,
     required this.status,
     this.duplicateEmail,
+    this.existingName,
+    this.hasNameMismatch = false,
   });
 
   bool get hasErrors => validations.any((v) => !v.isValid);
@@ -48,8 +52,9 @@ class CsvImportService {
   // ========================================
   static Future<List<StudentImportRecord>> parseAndValidateStudentsCsv(
     String csvContent,
-    List<String> existingEmails,
-  ) async {
+    List<String> existingEmails, {
+    Map<String, String>? existingUserNames, // email -> name mapping
+  }) async {
     try {
       print('🔄 CSV DEBUG: Starting parseAndValidateStudentsCsv...');
 
@@ -110,27 +115,53 @@ class CsvImportService {
         final validations = _validateUserRecord(user);
         final isFieldValid = validations.every((v) => v.isValid);
 
-        // Check for duplicate email
+        // Check for duplicate email in THIS COURSE
         final email = user['email']?.toString() ?? '';
-        final isDuplicate = existingEmails.contains(email.toLowerCase());
+        final isEnrolledInThisCourse =
+            existingEmails.contains(email.toLowerCase());
+
+        // Check for name mismatch with system-wide user
+        final csvName = user['name']?.toString() ?? '';
+        final existingName = existingUserNames?[email.toLowerCase()];
+        final isInSystem = existingName != null;
+        final hasNameMismatch =
+            isInSystem && existingName.trim() != csvName.trim();
+
+        print('🔍 DEBUG Row $i: email=$email');
+        print('   - isEnrolledInThisCourse: $isEnrolledInThisCourse');
+        print('   - isInSystem: $isInSystem');
+        print('   - existingName: $existingName');
+        print('   - csvName: $csvName');
+        print('   - hasNameMismatch: $hasNameMismatch');
 
         // Determine status
         String status = 'new';
         String? duplicateEmail;
         if (!isFieldValid) {
           status = 'invalid';
-        } else if (isDuplicate) {
+        } else if (isEnrolledInThisCourse) {
+          // Case 1: Already enrolled in THIS course → skip
           status = 'duplicate';
           duplicateEmail = email;
+          print('   → Status: DUPLICATE (already in this course)');
+        } else if (hasNameMismatch) {
+          // Case 2: In system but NOT in this course + name different → enroll with old name
+          status = 'name_mismatch';
+          print(
+              '   → Status: NAME_MISMATCH (in system, will enroll with existing name)');
+        } else {
+          print('   → Status: NEW');
         }
 
         records.add(StudentImportRecord(
           rowIndex: i,
           data: user,
           validations: validations,
-          isValid: isFieldValid && !isDuplicate,
+          isValid: isFieldValid && !isEnrolledInThisCourse,
           status: status,
           duplicateEmail: duplicateEmail,
+          existingName: existingName,
+          hasNameMismatch: hasNameMismatch,
         ));
       }
 
