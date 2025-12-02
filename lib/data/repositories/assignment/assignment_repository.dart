@@ -5,7 +5,6 @@
 // ========================================
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../../../domain/models/assignment_model.dart';
 
 class AssignmentRepository {
@@ -26,11 +25,11 @@ class AssignmentRepository {
 
       QuerySnapshot snapshot;
       try {
-        // ✅ NEW: Root Collection with where filter
+        // ✅ NEW: Root Collection with where filter - sort by createdAt descending (newest first)
         snapshot = await _firestore
             .collection(_assignmentCollectionName)
             .where('courseId', isEqualTo: courseId)
-            .orderBy('deadline', descending: false)
+            .orderBy('createdAt', descending: true)
             .get();
       } catch (e) {
         // Nếu orderBy fail (có thể do thiếu index), thử query không orderBy
@@ -62,8 +61,8 @@ class AssignmentRepository {
         }
       }
 
-      // Sort by deadline if not already sorted
-      assignments.sort((a, b) => a.deadline.compareTo(b.deadline));
+      // Sort by createdAt descending (newest first) if not already sorted
+      assignments.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
       print('DEBUG: ✅ Successfully loaded ${assignments.length} assignments');
       print('DEBUG: ===========================================');
@@ -319,7 +318,7 @@ class AssignmentRepository {
     }
 
     return query
-        .orderBy('deadline', descending: false)
+        .orderBy('createdAt', descending: true) // Sort by newest first
         .snapshots()
         .map((snapshot) {
       final assignments = <Assignment>[];

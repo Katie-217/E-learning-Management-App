@@ -42,6 +42,7 @@ dependencies:
   # Networking
   dio: ^5.7.0
   http: ^1.2.2
+  metadata_fetch: ^0.4.1  # For link preview metadata
   # Local databases
   hive: ^2.2.3
   hive_flutter: ^1.1.0
@@ -49,7 +50,7 @@ dependencies:
   path: ^1.9.0
   shared_preferences: ^2.2.2
   # Utils
-  intl: ^0.20.2
+  intl: 0.19.0
   csv: ^6.0.0
   url_launcher: ^6.3.1
   # Notifications (optional, platform-specific setup required)
@@ -59,6 +60,14 @@ dependencies:
   # File/media pickers
   file_picker: ^8.0.7
   image_picker: ^1.1.2
+  # PDF and WebView
+  syncfusion_flutter_pdfviewer: ^25.2.7
+  syncfusion_flutter_core: ^25.2.7
+  universal_html: ^2.2.4
+  pointer_interceptor: ^0.10.1+2
+  webview_flutter: ^4.10.0
+  webview_windows: ^0.4.0
+  open_file: ^3.5.9
   # UI Effects
   shimmer: ^3.0.0
   # Firebase core and common services
@@ -69,6 +78,11 @@ dependencies:
   firebase_storage: ^12.4.10
   google_sign_in: ^6.0.0
   cloud_functions: ^5.6.2
+  syncfusion_pdfviewer_platform_interface: 25.2.7
+  timeago: ^3.6.1 
+  flutter_markdown: 0.7.7+1
+  markdown: ^7.2.2
+  
 
 dev_dependencies:
   flutter_test:

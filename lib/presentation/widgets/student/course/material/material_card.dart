@@ -1,59 +1,57 @@
 // Material card widget
-import 'package:flutter/material.dart' hide MaterialType;
+import 'package:flutter/material.dart';
 import 'package:elearning_management_app/domain/models/material_model.dart';
 import 'package:elearning_management_app/core/theme/app_colors.dart';
 
 class MaterialCard extends StatelessWidget {
   final MaterialModel material;
   final VoidCallback? onTap;
-  
+
   const MaterialCard({
-    super.key, 
+    super.key,
     required this.material,
     this.onTap,
   });
 
   IconData _getIcon() {
-    switch (material.type) {
-      case MaterialType.document:
-        return Icons.description_outlined;
-      case MaterialType.presentation:
-        return Icons.slideshow_outlined;
-      case MaterialType.video:
-        return Icons.video_library_outlined;
-      case MaterialType.audio:
-        return Icons.audiotrack_outlined;
-      case MaterialType.link:
-        return Icons.link_outlined;
-      case MaterialType.ebook:
-        return Icons.menu_book_outlined;
-      case MaterialType.other:
-        return Icons.insert_drive_file_outlined;
+    // Quyết định icon dựa vào có file hay link
+    final hasAttachment = material.attachment != null;
+    final hasUrl = material.url != null && material.url!.isNotEmpty;
+
+    if (hasUrl) {
+      return Icons.link_outlined; // Link icon
+    } else if (hasAttachment) {
+      return Icons.description_outlined; // File icon
+    } else {
+      return Icons.folder_outlined; // Default
     }
   }
 
   Color _getIconColor() {
-    switch (material.type) {
-      case MaterialType.document:
-        return Colors.blueAccent;
-      case MaterialType.presentation:
-        return Colors.orangeAccent;
-      case MaterialType.video:
-        return Colors.redAccent;
-      case MaterialType.audio:
-        return Colors.purpleAccent;
-      case MaterialType.link:
-        return Colors.greenAccent;
-      case MaterialType.ebook:
-        return Colors.brown;
-      case MaterialType.other:
-        return Colors.grey;
+    final hasUrl = material.url != null && material.url!.isNotEmpty;
+
+    if (hasUrl) {
+      return Colors.greenAccent; // Link màu xanh lá
+    } else {
+      return Colors.blueAccent; // File màu blue
     }
   }
 
   String _formatDate(DateTime date) {
-    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
-                    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    final months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
 
@@ -61,7 +59,7 @@ class MaterialCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final iconColor = _getIconColor();
     final iconBg = iconColor.withOpacity(0.12);
-    
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
@@ -113,7 +111,8 @@ class MaterialCard extends StatelessWidget {
                   // Description or type
                   Row(
                     children: [
-                      if (material.description != null && material.description!.isNotEmpty)
+                      if (material.description != null &&
+                          material.description!.isNotEmpty)
                         Expanded(
                           child: Text(
                             material.description!,
@@ -123,14 +122,6 @@ class MaterialCard extends StatelessWidget {
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                          ),
-                        )
-                      else
-                        Text(
-                          material.type.displayName,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: AppColors.textSecondary,
                           ),
                         ),
                       const SizedBox(width: 8),

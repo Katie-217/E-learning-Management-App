@@ -11,6 +11,7 @@ import 'package:elearning_management_app/presentation/widgets/instructor/quiz_re
 import 'package:elearning_management_app/application/controllers/instructor/instructor_kpi_provider.dart';
 import 'package:elearning_management_app/presentation/widgets/instructor/kpi_cards.dart';
 import 'package:elearning_management_app/presentation/widgets/common/user_menu_dropdown.dart';
+import 'package:elearning_management_app/presentation/screens/admin/admin_cleanup_screen.dart';
 
 class InstructorDashboard extends ConsumerStatefulWidget {
   const InstructorDashboard({super.key});
@@ -116,6 +117,19 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
             child: _buildMainContent(),
           ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => const AdminCleanupScreen(),
+            ),
+          );
+        },
+        backgroundColor: Colors.red[700],
+        icon: const Icon(Icons.cleaning_services, color: Colors.white),
+        label: const Text('🧹 Cleanup', style: TextStyle(color: Colors.white)),
+        tooltip: 'Admin: Clean up test users',
       ),
     );
   }

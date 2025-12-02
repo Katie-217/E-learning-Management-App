@@ -9,7 +9,6 @@ class GroupModel {
   final String name;
   final String code;
   final String? description;
-  final int maxMembers;
   final DateTime createdAt;
   final String createdBy; // UID của instructor
   final bool isActive;
@@ -20,7 +19,6 @@ class GroupModel {
     required this.name,
     required this.code,
     this.description,
-    this.maxMembers = 30,
     required this.createdAt,
     required this.createdBy,
     this.isActive = true,
@@ -37,7 +35,6 @@ class GroupModel {
       name: map['name'] ?? '',
       code: map['code'] ?? '',
       description: map['description'],
-      maxMembers: map['maxMembers'] ?? 30,
       createdAt: _parseDateTime(map['createdAt']),
       createdBy: map['createdBy'] ?? '',
       isActive: map['isActive'] ?? true,
@@ -55,7 +52,6 @@ class GroupModel {
       'name': name,
       'code': code,
       'description': description,
-      'maxMembers': maxMembers,
       'createdAt': createdAt.toIso8601String(),
       'createdBy': createdBy,
       'isActive': isActive,
@@ -72,7 +68,6 @@ class GroupModel {
     String? name,
     String? code,
     String? description,
-    int? maxMembers,
     DateTime? createdAt,
     String? createdBy,
     bool? isActive,
@@ -83,7 +78,6 @@ class GroupModel {
       name: name ?? this.name,
       code: code ?? this.code,
       description: description ?? this.description,
-      maxMembers: maxMembers ?? this.maxMembers,
       createdAt: createdAt ?? this.createdAt,
       createdBy: createdBy ?? this.createdBy,
       isActive: isActive ?? this.isActive,
@@ -127,7 +121,7 @@ class GroupModel {
 
   @override
   String toString() {
-    return 'GroupModel(id: $id, code: $code, name: $name, maxMembers: $maxMembers)';
+    return 'GroupModel(id: $id, code: $code, name: $name)';
   }
 
   @override

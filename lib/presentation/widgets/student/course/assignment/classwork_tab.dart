@@ -7,7 +7,6 @@ import 'package:elearning_management_app/data/repositories/material/material_rep
 import 'package:elearning_management_app/domain/models/assignment_model.dart';
 import 'package:elearning_management_app/domain/models/material_model.dart';
 import 'package:elearning_management_app/presentation/screens/student/course/tab_course/classwork/assignment_detail_page.dart';
-import 'package:elearning_management_app/presentation/screens/student/course/tab_course/classwork/material_detail_page.dart';
 
 class ClassworkTab extends StatefulWidget {
   final CourseModel course;
@@ -158,14 +157,6 @@ class _ClassworkTabState extends State<ClassworkTab>
       );
     }
 
-    // Show material detail view if selected
-    if (_showMaterialDetail && _selectedMaterial != null) {
-      return MaterialDetailView(
-        material: _selectedMaterial!,
-        course: widget.course,
-        onBack: _hideMaterialDetail,
-      );
-    }
 
     // Show assignments and materials list
     return RefreshIndicator(

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
@@ -8,6 +9,7 @@ import '../../../../application/controllers/csv/bulk_import_controller.dart';
 import '../../../../application/controllers/course/course_instructor_provider.dart';
 import '../../../../application/controllers/group/group_controller.dart';
 import '../../../../application/controllers/course/enrollment_controller.dart';
+import '../../../../data/repositories/course/enrollment_repository.dart';
 import '../../../../data/repositories/student/student_repository.dart';
 import '../../../../domain/models/course_model.dart';
 import '../../../../domain/models/group_model.dart';
@@ -63,6 +65,9 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
   List<CourseModel> _courses = [];
   List<GroupModel> _groups = [];
   bool _isLoadingGroups = false;
+
+  // Cache for ALL system user names (email -> name mapping)
+  Map<String, String> _systemUserNames = {};
 
   @override
   void initState() {
@@ -139,15 +144,25 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
 
         String content;
         if (file.bytes != null) {
-          // Web/mobile: use bytes
-          content = String.fromCharCodes(file.bytes!);
+          // Web/mobile: use bytes with UTF-8 decoding
+          try {
+            content = utf8.decode(file.bytes!);
+          } catch (e) {
+            // Fallback to simple conversion if UTF-8 fails
+            content = String.fromCharCodes(file.bytes!);
+          }
         } else if (file.path != null) {
-          // Desktop: read from path
-          final fileContent = await File(file.path!).readAsString();
+          // Desktop: read from path with UTF-8 encoding
+          final fileContent =
+              await File(file.path!).readAsString(encoding: utf8);
           content = fileContent;
         } else {
           throw Exception('Unable to read file content');
         }
+
+        // Debug: log first few characters to check content
+        print(
+            '🔄 FILE DEBUG: File content preview (first 200 chars): ${content.substring(0, content.length > 200 ? 200 : content.length)}');
 
         setState(() {
           _selectedFileName = file.name;
@@ -197,10 +212,42 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
         print('   - $email');
       }
 
+      // Load ALL existing user names from system for name mismatch detection
+      print('🔄 DEBUG: Loading ALL user names from Firestore...');
+      final existingUserNamesMap = <String, String>{};
+      final firestore = FirebaseFirestore.instance;
+
+      try {
+        // Get ALL users from Firestore (not just enrolled in this course)
+        final allUsersSnapshot = await firestore.collection('users').get();
+
+        for (final doc in allUsersSnapshot.docs) {
+          final userData = doc.data();
+          final email = userData['email']?.toString().toLowerCase();
+          final name = userData['name'] ?? userData['displayName'] ?? '';
+
+          if (email != null && email.isNotEmpty && name.isNotEmpty) {
+            existingUserNamesMap[email] = name;
+            print('   📝 System user: $email -> $name');
+          }
+        }
+
+        print(
+            '🔄 DEBUG: Loaded ${existingUserNamesMap.length} users from system');
+
+        // Store in state for later use during enrollment
+        setState(() {
+          _systemUserNames = existingUserNamesMap;
+        });
+      } catch (e) {
+        print('   ⚠️ Failed to load user names: $e');
+      }
+
       print('🔄 DEBUG: Parsing CSV with course-specific duplicates check...');
       final records = await CsvImportService.parseAndValidateStudentsCsv(
         _fileContent!,
         existingEmailsInThisCourse, // Use course-specific emails instead of system-wide
+        existingUserNames: existingUserNamesMap, // Pass existing names
       );
 
       print('🔄 DEBUG: CSV parsing results:');
@@ -209,7 +256,9 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
             '   Row ${record.rowIndex}: ${record.data['email']} - Status: ${record.status}');
       }
 
-      _newCount = records.where((r) => r.status == 'new').length;
+      _newCount = records
+          .where((r) => r.status == 'new' || r.status == 'name_mismatch')
+          .length;
       _duplicateCount = records.where((r) => r.status == 'duplicate').length;
       _invalidCount = records.where((r) => r.status == 'invalid').length;
 
@@ -246,8 +295,9 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
       final enrollmentController = EnrollmentController();
       final controller = BulkImportController();
 
+      // Include both 'new' and 'name_mismatch' records (name_mismatch will enroll with existing name)
       final recordsToImport = _parsedRecords!
-          .where((r) => r.status == 'new')
+          .where((r) => r.status == 'new' || r.status == 'name_mismatch')
           .map((r) => r.data)
           .toList();
 
@@ -314,37 +364,67 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
         }
       }
 
-      // Step 3: Enroll all successfully imported students into the selected group
-      print('🔄 DEBUG: Starting enrollment process...');
+      // 🚀 Step 3: BULK ENROLLMENT - Enroll all students in ONE batch operation
+      print(
+          '🔥 DEBUG: Starting BULK enrollment process for ${result.successRecords.length} students...');
       int enrolledCount = 0;
       final enrollmentErrors = <String>[];
 
-      for (final successRecord in result.successRecords) {
+      if (result.successRecords.isNotEmpty) {
         try {
-          final email = successRecord['email']?.toString();
-          final name = successRecord['name']?.toString();
-          final userId = successRecord['uid']?.toString();
+          // Prepare student data for bulk enrollment
+          final studentsForEnrollment = result.successRecords
+              .where((record) =>
+                  record['uid'] != null &&
+                  record['name'] != null &&
+                  record['email'] != null)
+              .map((record) {
+            final email = record['email']?.toString().toLowerCase();
+            // Use existing name from system if available (for name_mismatch cases)
+            final nameToUse = _systemUserNames[email] ?? record['name'];
 
-          print('🔄 DEBUG: Enrolling student: $email (UID: $userId)');
-
-          if (email != null && name != null && userId != null) {
-            await enrollmentController.enrollStudentInGroup(
-              courseId: _selectedCourse!.id,
-              userId: userId,
-              studentName: name,
-              studentEmail: email,
-              groupId: _selectedGroup!.id,
-              groupMaxMembers: _selectedGroup!.maxMembers,
-            );
-            enrolledCount++;
-            print('✅ DEBUG: Successfully enrolled: $email');
-          } else {
             print(
-                '❌ DEBUG: Missing data for student: email=$email, name=$name, uid=$userId');
+                '🔄 DEBUG: Enrolling $email with name: $nameToUse (CSV name: ${record['name']})');
+
+            return {
+              'uid': record['uid'],
+              'name': nameToUse, // Use existing name if available
+              'email': record['email'],
+            };
+          }).toList();
+
+          if (studentsForEnrollment.isNotEmpty) {
+            print(
+                '🚀 DEBUG: Using BULK enrollment for ${studentsForEnrollment.length} students...');
+
+            // Use direct repository access for bulk enrollment
+            final enrollmentRepository = EnrollmentRepository();
+            final bulkResult = await enrollmentRepository.bulkEnrollStudents(
+              courseId: _selectedCourse!.id,
+              groupId: _selectedGroup!.id,
+              students: studentsForEnrollment,
+            );
+
+            enrolledCount = bulkResult.successCount;
+
+            // Convert failures to error strings
+            for (final failure in bulkResult.failedStudents) {
+              final studentInfo = failure['student'];
+              final error = failure['error'];
+              enrollmentErrors.add('${studentInfo['email']}: $error');
+            }
+
+            print('✅ BULK DEBUG: Bulk enrollment completed!');
+            print('   ✅ Successfully enrolled: ${bulkResult.successCount}');
+            print('   ❌ Failed enrollments: ${bulkResult.failureCount}');
+            print(
+                '   🎯 Success rate: ${bulkResult.successRate.toStringAsFixed(1)}%');
+          } else {
+            print('❌ DEBUG: No valid students found for enrollment');
           }
         } catch (e) {
-          print('❌ DEBUG: Enrollment failed for ${successRecord['email']}: $e');
-          enrollmentErrors.add('${successRecord['email']}: $e');
+          print('❌ DEBUG: BULK enrollment failed completely: $e');
+          enrollmentErrors.add('Bulk enrollment failed: $e');
         }
       }
 
@@ -737,7 +817,12 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
     if (_parsedRecords == null || _parsedRecords!.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
-    final newRecords = _parsedRecords!.where((r) => r.status == 'new').toList();
+    // New records include both 'new' and 'name_mismatch' (name_mismatch will use existing name)
+    final newRecords = _parsedRecords!
+        .where((r) => r.status == 'new' || r.status == 'name_mismatch')
+        .toList();
+    final nameMismatchRecords =
+        _parsedRecords!.where((r) => r.status == 'name_mismatch').toList();
     final duplicateRecords =
         _parsedRecords!.where((r) => r.status == 'duplicate').toList();
     final invalidRecords =
@@ -753,7 +838,7 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
             Expanded(
               child: _buildStatBox(
                 title: 'New to add',
-                count: newRecords.length,
+                count: newRecords.length + nameMismatchRecords.length,
                 color: Colors.green,
                 icon: Icons.add_circle,
               ),
@@ -780,28 +865,32 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
         ),
         const SizedBox(height: 20),
 
-        // Show duplicate records section
-        if (duplicateRecords.isNotEmpty) ...[
+        // Show NEW records to add (including name mismatch)
+        if (newRecords.isNotEmpty || nameMismatchRecords.isNotEmpty) ...[
           const Text(
-            'Already enrolled in this course (will skip):',
+            'New students to be added:',
             style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Colors.orange,
-                fontSize: 14),
+                fontWeight: FontWeight.bold, color: Colors.green, fontSize: 14),
           ),
           const SizedBox(height: 8),
           Container(
-            constraints: const BoxConstraints(maxHeight: 150),
+            constraints: const BoxConstraints(maxHeight: 200),
             decoration: BoxDecoration(
-              color: Colors.orange[900]?.withValues(alpha: 0.2),
-              border: Border.all(color: Colors.orange[700]!),
+              color: Colors.green[900]?.withValues(alpha: 0.2),
+              border: Border.all(color: Colors.green[700]!),
               borderRadius: BorderRadius.circular(8),
             ),
             child: ListView.builder(
               shrinkWrap: true,
-              itemCount: duplicateRecords.length,
+              itemCount: newRecords.length + nameMismatchRecords.length,
               itemBuilder: (context, index) {
-                final record = duplicateRecords[index];
+                final record = index < newRecords.length
+                    ? newRecords[index]
+                    : nameMismatchRecords[index - newRecords.length];
+                final csvName = record.data['name']?.toString() ?? 'N/A';
+                final existingName = record.existingName;
+                final hasNameMismatch = record.status == 'name_mismatch';
+
                 return Padding(
                   padding: const EdgeInsets.all(8),
                   child: Column(
@@ -812,17 +901,150 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
                         style: const TextStyle(
                             fontWeight: FontWeight.bold, color: Colors.white),
                       ),
+                      const SizedBox(height: 4),
+                      if (hasNameMismatch && existingName != null) ...[
+                        // Case: Name mismatch - will enroll with existing name
+                        Row(
+                          children: [
+                            Icon(Icons.warning_amber,
+                                color: Colors.orange[400], size: 16),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                ' Account exists as: "$existingName"',
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.orange[400],
+                                    fontWeight: FontWeight.w500),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Will enroll using existing name',
+                          style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.grey[400],
+                              fontStyle: FontStyle.italic),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'CSV name (will be ignored): $csvName',
+                          style:
+                              TextStyle(fontSize: 11, color: Colors.grey[500]),
+                        ),
+                      ] else ...[
+                        // Case: New student - show CSV name
+                        Text(
+                          'Name: $csvName',
+                          style:
+                              TextStyle(fontSize: 12, color: Colors.grey[300]),
+                        ),
+                      ],
+                      if (index <
+                          newRecords.length + nameMismatchRecords.length - 1)
+                        const Divider(color: Colors.green, height: 8),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 20),
+        ],
+
+        // Show duplicate records section (already enrolled - will SKIP)
+        if (duplicateRecords.isNotEmpty || nameMismatchRecords.isNotEmpty) ...[
+          const Text(
+            'Already exists in system:',
+            style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.orange,
+                fontSize: 14),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            constraints: const BoxConstraints(maxHeight: 200),
+            decoration: BoxDecoration(
+              color: Colors.brown[900]?.withValues(alpha: 0.3),
+              border: Border.all(color: Colors.brown[700]!),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: duplicateRecords.length + nameMismatchRecords.length,
+              itemBuilder: (context, index) {
+                final isDuplicate = index < duplicateRecords.length;
+                final record = isDuplicate
+                    ? duplicateRecords[index]
+                    : nameMismatchRecords[index - duplicateRecords.length];
+                final csvName = record.data['name']?.toString() ?? 'N/A';
+                final existingName = record.existingName ??
+                    _getExistingUserName(
+                        record.data['email']?.toString() ?? '');
+
+                return Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text(
-                        'Already enrolled in this course with name: ${_getExistingUserName(record.data['email']?.toString() ?? '')}',
-                        style:
-                            TextStyle(fontSize: 12, color: Colors.orange[300]),
+                        'Row ${record.rowIndex}: ${record.data['email'] ?? 'N/A'}',
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, color: Colors.white),
                       ),
-                      Text(
-                        'CSV name: ${record.data['name'] ?? 'N/A'}',
-                        style: TextStyle(fontSize: 11, color: Colors.grey[400]),
-                      ),
-                      if (index < duplicateRecords.length - 1)
-                        const Divider(color: Colors.orange, height: 8),
+                      const SizedBox(height: 4),
+                      if (isDuplicate) ...[
+                        // Already enrolled - will skip
+                        Text(
+                          'Already enrolled in this course with name: $existingName',
+                          style: TextStyle(
+                              fontSize: 12, color: Colors.orange[300]),
+                        ),
+                        Text(
+                          'CSV name: $csvName',
+                          style:
+                              TextStyle(fontSize: 11, color: Colors.grey[400]),
+                        ),
+                      ] else ...[
+                        // Name mismatch - will enroll with existing name
+                        Row(
+                          children: [
+                            Icon(Icons.warning_amber,
+                                color: Colors.amber[400], size: 16),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                ' Account exists as: "$existingName"',
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.amber[400],
+                                    fontWeight: FontWeight.w500),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Will enroll using existing name',
+                          style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.grey[400],
+                              fontStyle: FontStyle.italic),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'CSV name: $csvName',
+                          style:
+                              TextStyle(fontSize: 11, color: Colors.grey[500]),
+                        ),
+                      ],
+                      if (index <
+                          duplicateRecords.length +
+                              nameMismatchRecords.length -
+                              1)
+                        const Divider(color: Colors.brown, height: 8),
                     ],
                   ),
                 );
@@ -877,61 +1099,15 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
           ),
           const SizedBox(height: 20),
         ],
-        // Show new records section
-        if (newRecords.isNotEmpty) ...[
-          const Text(
-            'New students to be added:',
-            style: TextStyle(
-                fontWeight: FontWeight.bold, color: Colors.green, fontSize: 14),
-          ),
-          const SizedBox(height: 8),
-          Container(
-            constraints: const BoxConstraints(maxHeight: 150),
-            decoration: BoxDecoration(
-              color: Colors.green[900]?.withValues(alpha: 0.2),
-              border: Border.all(color: Colors.green[700]!),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: ListView.builder(
-              shrinkWrap: true,
-              itemCount: newRecords.length,
-              itemBuilder: (context, index) {
-                final record = newRecords[index];
-                return Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Row ${record.rowIndex}: ${record.data['email'] ?? 'N/A'}',
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold, color: Colors.white),
-                      ),
-                      Text(
-                        'Name: ${record.data['name'] ?? 'N/A'}',
-                        style:
-                            TextStyle(fontSize: 12, color: Colors.green[300]),
-                      ),
-                      Text(
-                        'Will be enrolled in: ${_selectedGroup?.name ?? 'Selected Group'}',
-                        style: TextStyle(fontSize: 11, color: Colors.grey[400]),
-                      ),
-                      if (index < newRecords.length - 1)
-                        const Divider(color: Colors.green, height: 8),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 20),
-        ],
       ],
     );
   }
 
   Widget _buildStep3Confirm() {
-    final newRecords = _parsedRecords!.where((r) => r.status == 'new').toList();
+    // New records include both 'new' and 'name_mismatch' (name_mismatch will use existing name)
+    final newRecords = _parsedRecords!
+        .where((r) => r.status == 'new' || r.status == 'name_mismatch')
+        .toList();
     final duplicateCount =
         _parsedRecords!.where((r) => r.status == 'duplicate').length;
     final invalidCount =

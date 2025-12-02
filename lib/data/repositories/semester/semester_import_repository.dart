@@ -45,21 +45,23 @@ class SemesterImportRepository {
           'DEBUG: 🔍 Cleaned headers: ${headers.map((h) => "\"$h\"").join(", ")}');
 
       // Validate required columns with case-insensitive matching
-      final requiredColumns = ['templateId', 'year'];
-      final missingColumns = <String>[];
+      // Support both "Semester"/"templateId" and "Year"/"year" formats
+      final requiredSemesterColumn = headers.any((h) =>
+          h.toLowerCase() == 'semester' || h.toLowerCase() == 'templateid');
+      final requiredYearColumn = headers.any((h) => h.toLowerCase() == 'year');
 
-      for (final required in requiredColumns) {
-        final found = headers
-            .any((header) => header.toLowerCase() == required.toLowerCase());
-        if (!found) {
-          missingColumns.add(required);
-        }
+      final missingColumns = <String>[];
+      if (!requiredSemesterColumn) {
+        missingColumns.add('Semester (or templateId)');
+      }
+      if (!requiredYearColumn) {
+        missingColumns.add('Year');
       }
 
       if (missingColumns.isNotEmpty) {
         throw Exception(
             'Missing required columns: ${missingColumns.join(", ")}. '
-            'Required: ${requiredColumns.join(", ")}. '
+            'Required: Semester, Year. '
             'Found headers: ${headers.map((h) => "\"$h\"").join(", ")}');
       }
 

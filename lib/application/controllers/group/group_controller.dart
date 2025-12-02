@@ -82,19 +82,6 @@ class GroupController extends StateNotifier<AsyncValue<List<GroupModel>>> {
   }
 
   // ========================================
-  // HÀM: checkGroupCapacity
-  // MÔ TẢ: Kiểm tra group có còn chỗ không
-  // ========================================
-  Future<bool> checkGroupCapacity(String groupId, int maxMembers) async {
-    try {
-      final currentCount = await getStudentCount(groupId);
-      return currentCount < maxMembers;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  // ========================================
   // HÀM: getStudentCurrentGroup
   // MÔ TẢ: Lấy group hiện tại của student trong course
   // ========================================
@@ -133,7 +120,6 @@ class GroupController extends StateNotifier<AsyncValue<List<GroupModel>>> {
     required String groupName,
     required String groupCode,
     String? description,
-    int maxMembers = 30,
   }) async {
     try {
       final groupId = await GroupRepository.createGroup(
@@ -141,7 +127,6 @@ class GroupController extends StateNotifier<AsyncValue<List<GroupModel>>> {
         groupName: groupName,
         groupCode: groupCode,
         description: description,
-        maxMembers: maxMembers,
       );
 
       // Refresh groups list

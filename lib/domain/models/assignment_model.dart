@@ -14,9 +14,12 @@ class Assignment {
   final int maxSubmissionAttempts;
   final List<String> allowedFileFormats;
   final int maxFileSizeMB;
+  final double maxPoints; // ✅ NEW: Maximum points for grading
+  final DateTime? updatedAt; // ✅ NEW: Last edit timestamp
   final List<Map<String, dynamic>>
       attachments; // e.g., [{'fileName': 'name', 'url': '...'}]
   final List<String> groupIds; // IDs của các nhóm được giao
+  final DateTime createdAt; // ✅ NEW: For sorting by newest first
 
   Assignment({
     required this.id,
@@ -31,9 +34,12 @@ class Assignment {
     this.maxSubmissionAttempts = 1,
     this.allowedFileFormats = const [], // Mặc định là trống (cho phép tất cả)
     this.maxFileSizeMB = 10, // Mặc định 10MB
+    this.maxPoints = 100.0, // ✅ Default 100 points
+    this.updatedAt, // ✅ Nullable - null when first created
     this.attachments = const [],
     this.groupIds = const [],
-  });
+    DateTime? createdAt,
+  }) : createdAt = createdAt ?? DateTime.now();
 
   // "Phiên dịch" từ Firebase (Firestore Document) về đối tượng Dart
   factory Assignment.fromFirestore(DocumentSnapshot doc) {
@@ -85,8 +91,13 @@ class Assignment {
       maxSubmissionAttempts: data['maxSubmissionAttempts'] ?? 1,
       allowedFileFormats: allowedFileFormats,
       maxFileSizeMB: data['maxFileSizeMB'] ?? 10,
+      maxPoints: (data['maxPoints'] ?? 100.0).toDouble(), // ✅ Read maxPoints
+      updatedAt: data['updatedAt'] != null
+          ? parseDate(data['updatedAt'])
+          : null, // ✅ Read updatedAt
       attachments: attachments,
       groupIds: groupIds,
+      createdAt: parseDate(data['createdAt']), // ✅ Parse createdAt
     );
   }
 
@@ -105,8 +116,13 @@ class Assignment {
       'maxSubmissionAttempts': maxSubmissionAttempts,
       'allowedFileFormats': allowedFileFormats,
       'maxFileSizeMB': maxFileSizeMB,
+      'maxPoints': maxPoints, // ✅ Write maxPoints
+      'updatedAt': updatedAt != null
+          ? Timestamp.fromDate(updatedAt!)
+          : null, // ✅ Write updatedAt
       'attachments': attachments,
       'groupIds': groupIds,
+      'createdAt': Timestamp.fromDate(createdAt), // ✅ Write createdAt
     };
   }
 
@@ -126,8 +142,11 @@ class Assignment {
     int? maxSubmissionAttempts,
     List<String>? allowedFileFormats,
     int? maxFileSizeMB,
+    double? maxPoints, // ✅ Support maxPoints updates
+    DateTime? updatedAt, // ✅ Support updatedAt updates
     List<Map<String, dynamic>>? attachments,
     List<String>? groupIds,
+    DateTime? createdAt,
   }) {
     return Assignment(
       id: id ?? this.id,
@@ -143,8 +162,11 @@ class Assignment {
           maxSubmissionAttempts ?? this.maxSubmissionAttempts,
       allowedFileFormats: allowedFileFormats ?? this.allowedFileFormats,
       maxFileSizeMB: maxFileSizeMB ?? this.maxFileSizeMB,
+      maxPoints: maxPoints ?? this.maxPoints, // ✅ Copy maxPoints
+      updatedAt: updatedAt ?? this.updatedAt, // ✅ Copy updatedAt
       attachments: attachments ?? this.attachments,
       groupIds: groupIds ?? this.groupIds,
+      createdAt: createdAt ?? this.createdAt,
     );
   }
 }

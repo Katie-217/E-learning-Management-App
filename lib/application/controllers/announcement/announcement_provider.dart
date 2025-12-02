@@ -1,21 +1,22 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../domain/models/comment_model.dart';
-import '../../../domain/models/user_model.dart'; // Import user model của bạn
+import '../../../domain/models/user_model.dart';
 import '../../../data/repositories/announcement/announcement_repository.dart';
+
 // ===========================================================================
 // 1. STREAMS PROVIDERS (Dữ liệu Realtime)
 // ===========================================================================
 
 // Provider lấy danh sách thông báo theo CourseId
 final announcementListProvider = StreamProvider.family<List<Map<String, dynamic>>, String>((ref, courseId) {
-  final repo = ref.watch(announcementRepositoryProvider);
+  final repo = ref.watch(AnnouncementRepositoryProvider);
   return repo.getAnnouncementsStream(courseId);
 });
 
 // Provider lấy danh sách comments theo AnnouncementId
 final commentListProvider = StreamProvider.family<List<CommentModel>, String>((ref, announcementId) {
-  final repo = ref.watch(announcementRepositoryProvider);
+  final repo = ref.watch(AnnouncementRepositoryProvider);
   return repo.getCommentsStream(announcementId);
 });
 
@@ -34,21 +35,18 @@ class AnnouncementController extends StateNotifier<AsyncValue<void>> {
   Future<void> markAsViewed({
     required String announcementId,
     required String courseId,
-    required UserModel currentUser, // Lấy từ UserProvider
-    required String? groupId,       // Lấy từ logic lớp học phần
+    required UserModel currentUser,
   }) async {
     // Chỉ tracking nếu user là Student
     if (!currentUser.isStudent) return;
 
     try {
-      // Gọi repository để upsert tracking data
       await _repo.trackView(
         announcementId: announcementId,
-        studentId: currentUser.uid, // Dùng UID làm studentId (theo discussion cũ)
+        studentId: currentUser.uid,
         courseId: courseId,
-        groupId: groupId ?? 'ungrouped', // Xử lý trường hợp không có nhóm
       );
-    } catch (e, st) {
+    } catch (e) {
       // Tracking thất bại không nên chặn UI, chỉ log lỗi
       print('Tracking view error: $e');
     }
@@ -59,7 +57,6 @@ class AnnouncementController extends StateNotifier<AsyncValue<void>> {
     required String announcementId,
     required String courseId,
     required UserModel currentUser,
-    required String? groupId,
   }) async {
     if (!currentUser.isStudent) return;
 
@@ -68,7 +65,6 @@ class AnnouncementController extends StateNotifier<AsyncValue<void>> {
         announcementId: announcementId,
         studentId: currentUser.uid,
         courseId: courseId,
-        groupId: groupId ?? 'ungrouped',
       );
     } catch (e) {
       print('Tracking download error: $e');
@@ -84,73 +80,60 @@ class AnnouncementController extends StateNotifier<AsyncValue<void>> {
   }) async {
     state = const AsyncValue.loading();
     try {
-      final comment = CommentModel(
-        id: '', // Repository sẽ tạo ID
+      await _repo.addComment(
         announcementId: announcementId,
         courseId: courseId,
         content: content,
         authorId: currentUser.uid,
         authorName: currentUser.displayName,
-        authorRole: currentUser.role.name, // 'student' hoặc 'instructor'
-        createdAt: DateTime.now(),
+        authorRole: currentUser.role.name,
       );
-
-      await _repo.addComment(comment);
+      
       state = const AsyncValue.data(null);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
   }
 
-  /// Create a new announcement
+  /// Create a new announcement - WITHOUT isPinned
   Future<bool> createAnnouncement({
     required String courseId,
     required String title,
     required String content,
     required UserModel currentUser,
+    List<Map<String, dynamic>> attachments = const [],
+    List<String> targetGroupIds = const [],
   }) async {
-    // Set loading state
     state = const AsyncValue.loading();
 
     try {
-      // Prepare data map
-      final announcementData = {
-        'courseId': courseId,
-        'title': title,
-        'content': content,
-        'authorId': currentUser.uid,
-        'authorName': currentUser.displayName,
-        'authorAvatar': currentUser.photoUrl,
-        'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-        'attachmentCount': 0, // Default
-        'viewCount': 0,       // Default
-      };
-
-      // Call repository
-      await _repo.addAnnouncement(
+      await _repo.createAnnouncement(
         courseId: courseId,
-        data: announcementData,
+        title: title,
+        content: content,
+        authorId: currentUser.uid,
+        authorName: currentUser.displayName,
+        authorAvatar: currentUser.photoUrl,
+        attachments: attachments,
+        targetGroupIds: targetGroupIds,
       );
 
-      // Success
       state = const AsyncValue.data(null);
       return true;
     } catch (e, st) {
-      // Error
       state = AsyncValue.error(e, st);
       return false;
     }
   }
 
-  // ... inside AnnouncementController class
-
-  /// Update announcement
+  /// Update announcement - WITHOUT isPinned
   Future<bool> updateAnnouncement({
     required String courseId,
     required String announcementId,
     required String title,
     required String content,
+    List<Map<String, dynamic>>? attachments,
+    List<String>? targetGroupIds,
   }) async {
     state = const AsyncValue.loading();
     try {
@@ -159,6 +142,8 @@ class AnnouncementController extends StateNotifier<AsyncValue<void>> {
         announcementId: announcementId,
         title: title,
         content: content,
+        attachments: attachments,
+        targetGroupIds: targetGroupIds,
       );
       state = const AsyncValue.data(null);
       return true;
@@ -173,15 +158,12 @@ class AnnouncementController extends StateNotifier<AsyncValue<void>> {
     required String courseId,
     required String announcementId,
   }) async {
-    // We don't necessarily need to set loading state for delete 
-    // because the item will disappear from the stream automatically.
     try {
       await _repo.deleteAnnouncement(
         courseId: courseId,
         announcementId: announcementId,
       );
     } catch (e) {
-      // Handle error (e.g., show toast)
       print("Delete failed: $e");
     }
   }
@@ -189,6 +171,6 @@ class AnnouncementController extends StateNotifier<AsyncValue<void>> {
 
 // Provider cho Controller
 final announcementControllerProvider = StateNotifierProvider<AnnouncementController, AsyncValue<void>>((ref) {
-  final repo = ref.watch(announcementRepositoryProvider);
+  final repo = ref.watch(AnnouncementRepositoryProvider);
   return AnnouncementController(repo, ref);
 });

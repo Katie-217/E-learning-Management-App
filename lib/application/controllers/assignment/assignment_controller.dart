@@ -134,33 +134,33 @@ class AssignmentController extends StateNotifier<AssignmentState> {
   // HÀM: createAssignment
   // MÔ TẢ: Create new assignment (for instructors)
   // ========================================
-  // Future<bool> createAssignment(Assignment assignment) async {
-  //   try {
-  //     state = state.copyWith(isLoading: true, error: null);
+  Future<bool> createAssignment(Assignment assignment) async {
+    try {
+      state = state.copyWith(isLoading: true, error: null);
 
-  //     print('DEBUG: 📝 Creating assignment: ${assignment.title}');
-  //     final assignmentId =
-  //         await AssignmentRepository.createAssignment(assignment);
+      print('DEBUG: 📝 Creating assignment: ${assignment.title}');
+      final assignmentId =
+          await AssignmentRepository.createAssignment(assignment);
 
-  //     if (assignmentId.isNotEmpty) {
-  //       // Reload assignments to include new one
-  //       await loadAssignmentsByCourse(assignment.courseId);
-  //       print('DEBUG: ✅ Assignment created with ID: $assignmentId');
-  //       return true;
-  //     } else {
-  //       state = state.copyWith(
-  //           isLoading: false, error: 'Failed to create assignment');
-  //       return false;
-  //     }
-  //   } catch (e) {
-  //     print('DEBUG: ❌ Error creating assignment: $e');
-  //     state = state.copyWith(
-  //       isLoading: false,
-  //       error: e.toString(),
-  //     );
-  //     return false;
-  //   }
-  // }
+      if (assignmentId.isNotEmpty) {
+        // Reload assignments to include new one
+        await loadAssignmentsByCourse(assignment.courseId);
+        print('DEBUG: ✅ Assignment created with ID: $assignmentId');
+        return true;
+      } else {
+        state = state.copyWith(
+            isLoading: false, error: 'Failed to create assignment');
+        return false;
+      }
+    } catch (e) {
+      print('DEBUG: ❌ Error creating assignment: $e');
+      state = state.copyWith(
+        isLoading: false,
+        error: e.toString(),
+      );
+      return false;
+    }
+  }
 
   // ========================================
   // HÀM: updateAssignment

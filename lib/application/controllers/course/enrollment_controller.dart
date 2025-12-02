@@ -39,13 +39,12 @@ class EnrollmentController {
   // MÔ TẢ: Thêm sinh viên vào khóa học VÀ nhóm cùng lúc (single action)
   // RULE: KHÔNG tồn tại enrollment mà groupId = null
   // ========================================
-  Future<String> enrollStudentInGroup({
+  Future<void> enrollStudentInGroup({
     required String courseId,
     required String userId,
     required String studentName,
     required String studentEmail,
     required String groupId,
-    required int groupMaxMembers,
   }) async {
     try {
       // 1. Validation: Kiểm tra sinh viên đã có trong khóa học chưa
@@ -55,14 +54,8 @@ class EnrollmentController {
         throw Exception('Sinh viên đã được ghi danh trong khóa học này');
       }
 
-      // 2. Validation: Kiểm tra sức chứa nhóm
-      final currentCount = await _repository.countStudentsInGroup(groupId);
-      if (currentCount >= groupMaxMembers) {
-        throw Exception('Nhóm đã đầy ($currentCount/$groupMaxMembers)');
-      }
-
-      // 3. Thực hiện enrollment với groupId (Strict Enrollment)
-      final enrollmentId = await _repository.enrollStudent(
+      // 2. Thực hiện enrollment với groupId (No capacity limit)
+      await _repository.enrollStudent(
         courseId: courseId,
         userId: userId,
         studentName: studentName,
@@ -72,7 +65,6 @@ class EnrollmentController {
 
       print(
           '✅ STRICT ENROLLMENT: Đã thêm sinh viên $userId vào khóa học $courseId, nhóm $groupId');
-      return enrollmentId;
     } catch (e) {
       print('❌ Lỗi thêm sinh viên vào nhóm: $e');
       rethrow;
@@ -138,20 +130,10 @@ class EnrollmentController {
   Future<Map<String, dynamic>> bulkEnrollStudents({
     required String courseId,
     required String groupId, // ✅ BẮT BUỘC cho Strict Enrollment
-    required int groupMaxMembers,
     required List<Map<String, String>> students,
   }) async {
     try {
-      // 1. Validation: Kiểm tra sức chứa nhóm trước khi import
-      final currentCount = await _repository.countStudentsInGroup(groupId);
-      final remainingCapacity = groupMaxMembers - currentCount;
-
-      if (students.length > remainingCapacity) {
-        throw Exception(
-            'Nhóm không đủ chỗ cho ${students.length} sinh viên. Chỉ còn $remainingCapacity/$groupMaxMembers chỗ trống.');
-      }
-
-      // 2. Validation: Kiểm tra trùng lặp trong khóa học (không chỉ nhóm)
+      // 1. Validation: Kiểm tra trùng lặp trong khóa học (không chỉ nhóm)
       final duplicates = <String>[];
       for (final student in students) {
         final userId = student['userId']!;
@@ -167,12 +149,45 @@ class EnrollmentController {
             'Các sinh viên sau đã có trong khóa học: ${duplicates.join(", ")}');
       }
 
-      // 3. Thực hiện bulk import với groupId (Strict Enrollment)
-      return await _repository.bulkEnrollStudents(
+      // 🚀 2. Convert data format for new repository method
+      final studentsForBulk = students
+          .map((student) => {
+                'uid': student['userId']!,
+                'name': student['name']!,
+                'email': student['email']!,
+              })
+          .toList();
+
+      // 🚀 4. Perform ULTRA-FAST bulk enrollment with WriteBatch
+      final bulkResult = await _repository.bulkEnrollStudents(
         courseId: courseId,
         groupId: groupId, // ✅ Mọi enrollment đều có groupId
-        students: students,
+        students: studentsForBulk,
       );
+
+      // 🚀 5. Convert BulkEnrollmentResult back to expected format for backward compatibility
+      final details = <String, String>{};
+
+      // Add successful enrollments
+      for (final success in bulkResult.successStudents) {
+        details[success['enrollmentId']] = 'success';
+      }
+
+      // Add failed enrollments
+      for (final failure in bulkResult.failedStudents) {
+        final student = failure['student'];
+        final enrollmentId = '${courseId}_${student['uid']}';
+        details[enrollmentId] = 'failed';
+      }
+
+      return {
+        'total': students.length,
+        'successful': bulkResult.successCount,
+        'duplicates': 0, // Duplicates are already filtered out in step 2
+        'failed': bulkResult.failureCount,
+        'details': details,
+        'successRate': bulkResult.successRate,
+      };
     } catch (e) {
       throw Exception('Lỗi import sinh viên vào nhóm: $e');
     }
@@ -288,7 +303,6 @@ class EnrollmentController {
     required String courseId,
     required String userId,
     required String newGroupId,
-    required int newGroupMaxMembers,
   }) async {
     try {
       // 1. Validation: Kiểm tra sinh viên có nhóm hiện tại không
@@ -303,14 +317,7 @@ class EnrollmentController {
         throw Exception('Sinh viên đã ở trong nhóm này rồi');
       }
 
-      // 2. Validation: Kiểm tra sức chứa nhóm mới
-      final newGroupCount = await _repository.countStudentsInGroup(newGroupId);
-      if (newGroupCount >= newGroupMaxMembers) {
-        throw Exception(
-            'Nhóm đích đã đầy (${newGroupCount}/${newGroupMaxMembers})');
-      }
-
-      // 3. Thực hiện chuyển nhóm (atomic operation)
+      // 2. Thực hiện chuyển nhóm (No capacity limit)
       final success = await _repository.changeStudentGroup(
         courseId: courseId,
         userId: userId,

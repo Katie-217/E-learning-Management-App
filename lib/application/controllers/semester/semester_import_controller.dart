@@ -45,6 +45,7 @@ class SemesterImportController {
         'templateMap': templateMap,
         'existingCodes': existingCodes,
         'existingNames': existingNames,
+        'existingSemesters': existingSemesters, // Pass full semester objects
       };
     } catch (e) {
       print('DEBUG: ❌ Failed to load reference data: $e');
@@ -74,12 +75,14 @@ class SemesterImportController {
           (referenceData['existingCodes'] as List<String>).toSet();
       final existingNames =
           (referenceData['existingNames'] as List<String>).toSet();
+      final existingSemesters =
+          referenceData['existingSemesters'] as List<SemesterModel>;
 
       final validatedItems = <SemesterImportItem>[];
 
       for (final rawRecord in rawRecords) {
-        final validatedItem = await _validateSingleRecord(
-            rawRecord, templateMap, existingCodes, existingNames);
+        final validatedItem = await _validateSingleRecord(rawRecord,
+            templateMap, existingCodes, existingNames, existingSemesters);
         validatedItems.add(validatedItem);
 
         print(
@@ -108,11 +111,31 @@ class SemesterImportController {
     Map<String, SemesterTemplateModel> templateMap,
     Set<String> existingCodes,
     Set<String> existingNames,
+    List<SemesterModel> existingSemesters,
   ) async {
     final validationErrors = <String>[];
 
+    // 🔄 Normalize templateId: Support both "S1" and "Semester 1" formats
+    String normalizedTemplateId = rawRecord.templateId.trim();
+    final lowerTemplate = normalizedTemplateId.toLowerCase();
+
+    // Create mapping for user-friendly names (Semester 1 -> S1)
+    final templateNameMap = <String, String>{
+      'semester 1': 'S1',
+      'semester 2': 'S2',
+      'semester 3': 'S3',
+      'summer semester': 'S3',
+    };
+
+    // Try to map user-friendly names to template IDs
+    if (templateNameMap.containsKey(lowerTemplate)) {
+      normalizedTemplateId = templateNameMap[lowerTemplate]!;
+      print(
+          '📝 DEBUG: Normalized "${rawRecord.templateId}" → "$normalizedTemplateId"');
+    }
+
     // 1. Template validation
-    final template = templateMap[rawRecord.templateId];
+    final template = templateMap[normalizedTemplateId];
     if (rawRecord.templateId.isEmpty) {
       validationErrors.add('Template ID cannot be empty');
     } else if (template == null) {
@@ -138,7 +161,7 @@ class SemesterImportController {
     SemesterModel? previewSemester;
 
     if (template != null && year != null && validationErrors.isEmpty) {
-      generatedCode = '${rawRecord.templateId}_$year'; // S1_2025
+      generatedCode = '${normalizedTemplateId}_$year'; // S1_2025
       final finalName = rawRecord.name?.isNotEmpty == true
           ? rawRecord.name!
           : template.generateSemesterName(year);
@@ -158,6 +181,27 @@ class SemesterImportController {
 
       if (isCodeDuplicate || isNameDuplicate) {
         status = ImportItemStatus.exists;
+
+        // Find and attach existing semester for display
+        final codeToMatch = generatedCode.toLowerCase();
+        final nameToMatch = finalName.toLowerCase().trim();
+
+        previewSemester = existingSemesters.firstWhere(
+          (s) =>
+              s.code.toLowerCase() == codeToMatch ||
+              s.name.toLowerCase().trim() == nameToMatch,
+          orElse: () => SemesterModel(
+            id: '',
+            code: generatedCode ?? 'UNKNOWN',
+            name: finalName,
+            startDate: template.generateStartDate(year),
+            endDate: template.generateEndDate(year),
+            description: 'Unknown',
+            createdAt: DateTime.now(),
+            isActive: true,
+          ),
+        );
+
         if (isCodeDuplicate && isNameDuplicate) {
           validationErrors.add(
               'Both code "$generatedCode" and name "$finalName" already exist');
@@ -189,6 +233,7 @@ class SemesterImportController {
       validationErrors: validationErrors,
       generatedCode: generatedCode,
       previewSemester: previewSemester,
+      normalizedTemplateId: normalizedTemplateId, // Save normalized ID
     );
   }
 
@@ -216,7 +261,8 @@ class SemesterImportController {
 
           // Sử dụng SemesterController để tạo semester
           final semesterId = await _semesterController.handleCreateSemester(
-            templateId: item.rawRecord.templateId,
+            templateId: item.normalizedTemplateId ??
+                item.rawRecord.templateId, // Use normalized ID
             year: int.parse(item.rawRecord.year),
             name: previewSemester.name,
           );

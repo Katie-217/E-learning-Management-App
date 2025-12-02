@@ -23,12 +23,11 @@ class MaterialRepository {
       print(
           'DEBUG: 📂 Primary path: $_courseCollectionName/$courseId/$_materialSubCollectionName');
 
-      QuerySnapshot snapshot =
-          await _firestore
-              .collection(_courseCollectionName)
-              .doc(courseId)
-              .collection(_materialSubCollectionName)
-              .get();
+      QuerySnapshot snapshot = await _firestore
+          .collection(_courseCollectionName)
+          .doc(courseId)
+          .collection(_materialSubCollectionName)
+          .get();
 
       bool usedFallback = false;
 
@@ -111,6 +110,59 @@ class MaterialRepository {
       print('DEBUG: ❌ Error fetching materials: $e');
       print('DEBUG: ❌ Stack trace: ${StackTrace.current}');
       return [];
+    }
+  }
+
+  // ========================================
+  // HÀM: listenToMaterials
+  // MÔ TẢ: Listen real-time materials từ sub-collection trong course_of_study
+  // NOTE: Không dùng where + orderBy để tránh cần Composite Index
+  // Filter isPublished ở client-side
+  // ========================================
+  static Stream<List<MaterialModel>> listenToMaterials(String courseId) {
+    try {
+      print(
+          'DEBUG: 🔄 Setting up real-time listener for materials in course: $courseId');
+
+      return _firestore
+          .collection(_courseCollectionName)
+          .doc(courseId)
+          .collection(_materialSubCollectionName)
+          .orderBy('createdAt', descending: true)
+          .snapshots()
+          .map((snapshot) {
+        print(
+            'DEBUG: 🔔 Materials snapshot received: ${snapshot.docs.length} docs');
+
+        final materials = <MaterialModel>[];
+        for (var doc in snapshot.docs) {
+          try {
+            var material = MaterialModel.fromFirestore(doc);
+
+            // Nếu courseId trống, map lại từ tham số truyền vào
+            if (material.courseId.isEmpty) {
+              material = material.copyWith(courseId: courseId);
+            }
+
+            // Filter isPublished ở client-side (tránh cần Composite Index)
+            if (material.isPublished) {
+              materials.add(material);
+              print(
+                  'DEBUG: ✅ Parsed material: ${material.title} (ID: ${material.id})');
+            } else {
+              print(
+                  'DEBUG: ⏭️ Skipped unpublished material: ${material.title} (ID: ${material.id})');
+            }
+          } catch (e) {
+            print('DEBUG: ⚠️ Error parsing material doc ${doc.id}: $e');
+          }
+        }
+
+        return materials;
+      });
+    } catch (e) {
+      print('DEBUG: ❌ Error setting up materials listener: $e');
+      return Stream.value([]);
     }
   }
 }
