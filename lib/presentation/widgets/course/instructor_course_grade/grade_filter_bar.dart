@@ -49,7 +49,6 @@ class GradeFilterBar extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // Search bar
           TextField(
             onChanged: onSearchChanged,
             style: const TextStyle(color: AppColors.textPrimary),
@@ -72,10 +71,8 @@ class GradeFilterBar extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          // Filters row: Type | Item (Assignment) | Group | Status | Reset
           Row(
             children: [
-              // Type filter: All | Assignment | Quiz
               Expanded(
                 child: _buildFilterDropdown<String>(
                   label: 'Type',
@@ -96,7 +93,6 @@ class GradeFilterBar extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              // Item filter: Assignment/Quiz - phụ thuộc vào Type
               Expanded(
                 child: Opacity(
                   opacity: isItemDisabled ? 0.5 : 1.0,
@@ -128,7 +124,6 @@ class GradeFilterBar extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              // Group filter: phụ thuộc vào Item đã chọn
               Expanded(
                 child: Opacity(
                   opacity: selectedItemId == null || selectedItemId == 'All' ? 0.5 : 1.0,
@@ -144,7 +139,6 @@ class GradeFilterBar extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              // Status filter: phụ thuộc vào Item đã chọn
               Expanded(
                 child: Opacity(
                   opacity: selectedItemId == null || selectedItemId == 'All' ? 0.5 : 1.0,
@@ -170,8 +164,7 @@ class GradeFilterBar extends StatelessWidget {
                         }
                       },
                       iconBuilder: (value) {
-                        // Only show icon in dropdown items, not in prefixIcon
-                        if (value == 'all') return null; // Don't show icon for "all"
+                        if (value == 'all') return null;
                         switch (value) {
                           case 'submitted':
                             return const Icon(Icons.check_circle, color: Colors.blue, size: 20);
@@ -188,7 +181,6 @@ class GradeFilterBar extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              // Reset filters button
               IconButton(
                 onPressed: onReset,
                 tooltip: 'Reset filters',
@@ -222,7 +214,6 @@ class GradeFilterBar extends StatelessWidget {
   }
 }
 
-// Custom dropdown widget để force menu hiển thị bên dưới
 class _CustomDropdownButton<T> extends StatefulWidget {
   final String label;
   final T? value;
