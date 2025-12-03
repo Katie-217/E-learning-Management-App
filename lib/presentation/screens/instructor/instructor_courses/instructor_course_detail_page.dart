@@ -49,7 +49,8 @@ class _InstructorCourseDetailContentState
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    // 4 tabs: Stream, Classwork, People, Grade
+    _tabController = TabController(length: 4, vsync: this);
   }
 
   @override

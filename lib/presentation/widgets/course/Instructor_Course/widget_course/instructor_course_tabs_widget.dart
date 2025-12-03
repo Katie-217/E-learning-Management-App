@@ -9,6 +9,8 @@ import '../../../../screens/instructor/steam_tab/instructor_stream_tab.dart';
 import '../../../../screens/instructor/classwork_tab/instructor_classwork_tab.dart';
 import '../../../../screens/instructor/people_tab/instructor_people_tab.dart';
 
+import '../../instructor_course_grade/instructor_grade_tab.dart';
+
 class InstructorCourseTabsWidget extends StatelessWidget {
   final TabController tabController;
   final CourseModel course;
@@ -38,6 +40,7 @@ class InstructorCourseTabsWidget extends StatelessWidget {
               Tab(text: 'Stream'),
               Tab(text: 'Classwork'),
               Tab(text: 'People'),
+              Tab(text: 'Grade'),
             ],
           ),
         ),
@@ -50,6 +53,7 @@ class InstructorCourseTabsWidget extends StatelessWidget {
                 course: course,
               ),
               InstructorPeopleTab(course: course),
+              InstructorGradeTab(course: course),
             ],
           ),
         ),
