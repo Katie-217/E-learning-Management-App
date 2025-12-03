@@ -31,20 +31,11 @@ class _InstructorGradeTabState extends ConsumerState<InstructorGradeTab> {
   List<Assignment> _assignments = [];
   Map<String, Map<String, SubmissionModel?>> _gradebook = {};
   
-  // Mock data for UI/UX
   List<MockGradeData> _mockGradeData = [];
   List<MockGradeData> _filteredGradeData = [];
-  
-  // Cache filtered assignments để đảm bảo cùng instance được dùng
   List<Assignment> _cachedFilteredAssignments = [];
-  
-  // Selected students for export
   Set<String> _selectedStudentIds = {};
-  
-  // Scroll controllers
   final ScrollController _horizontalScrollController = ScrollController();
-  
-  // Filter and search
   String? _selectedGroup;
   String? _selectedType; // 'All', 'assignment', 'quiz'
   String? _selectedItemId; // ID của assignment/quiz được chọn
@@ -73,14 +64,12 @@ class _InstructorGradeTabState extends ConsumerState<InstructorGradeTab> {
       setState(() => _isLoading = true);
     }
     try {
-      // Load real data
       final enrollmentRepo = EnrollmentRepository();
       _students = await enrollmentRepo.getStudentsInCourse(widget.course.id);
       _assignments = await AssignmentRepository.getAssignmentsByCourse(widget.course.id);
       _assignments.sort((a, b) => a.deadline.compareTo(b.deadline));
       final submissions = await SubmissionRepository.getSubmissionsByCourse(widget.course.id);
 
-      // Build gradebook map
       _gradebook = {};
       for (final student in _students) {
         _gradebook[student.userId] = {};
@@ -96,7 +85,6 @@ class _InstructorGradeTabState extends ConsumerState<InstructorGradeTab> {
         }
       }
 
-      // Ensure we have at least some assignments for display
       if (_assignments.isEmpty) {
         final now = DateTime.now();
         _assignments = [
@@ -238,13 +226,10 @@ class _InstructorGradeTabState extends ConsumerState<InstructorGradeTab> {
         ];
       }
 
-      // Generate mock data 
       _generateMockData();
       _applyFilters();
     } catch (e) {
       print('DEBUG: ❌ Error loading gradebook: $e');
-      // Use mock data even if real data fails
-      // Ensure we have at least some assignments for display
       if (_assignments.isEmpty) {
         final now = DateTime.now();
         _assignments = [
@@ -399,10 +384,8 @@ class _InstructorGradeTabState extends ConsumerState<InstructorGradeTab> {
     
     _mockGradeData = [];
     
-    // Ensure we have at least some assignments for mock data
     List<Assignment> assignmentsToUse = _assignments;
     if (assignmentsToUse.isEmpty) {
-      // Create mock assignments if none exist
       final now = DateTime.now();
       assignmentsToUse = [
         Assignment(
@@ -543,7 +526,6 @@ class _InstructorGradeTabState extends ConsumerState<InstructorGradeTab> {
       ];
     }
     
-    // Use real students if available, otherwise create mock students with graded submissions
     final studentsToUse = _students.isNotEmpty ? _students : null;
     final studentCount = studentsToUse?.length ?? 15;
     
@@ -552,10 +534,8 @@ class _InstructorGradeTabState extends ConsumerState<InstructorGradeTab> {
           ? studentsToUse[i] 
           : null;
       
-      // Use group name instead of ID - map groupId to readable name
       String groupName;
       if (student?.groupId?.isNotEmpty == true) {
-        // Map groupId to readable name (e.g., "hRzv0Nssv8BdL TnvLra1" -> "Group A")
         final groupIndex = student!.groupId!.hashCode % groups.length;
         groupName = groups[groupIndex.abs()];
       } else {
@@ -564,7 +544,6 @@ class _InstructorGradeTabState extends ConsumerState<InstructorGradeTab> {
       
       final submissions = <String, MockSubmissionData>{};
       
-      // Generate mock submissions with various scenarios
       for (int j = 0; j < assignmentsToUse.length; j++) {
         final assignment = assignmentsToUse[j];
         SubmissionModel? realSubmission;
@@ -576,7 +555,6 @@ class _InstructorGradeTabState extends ConsumerState<InstructorGradeTab> {
         }
         
         if (realSubmission != null && realSubmission.isGraded) {
-          // Use real graded submission
           submissions[assignment.id] = MockSubmissionData(
             score: realSubmission.score,
             maxScore: realSubmission.maxScore ?? 100.0,
@@ -585,10 +563,9 @@ class _InstructorGradeTabState extends ConsumerState<InstructorGradeTab> {
             submittedAt: realSubmission.submittedAt,
             files: realSubmission.attachments.map((a) => a.name).toList(),
             feedback: realSubmission.feedback,
-            isPublished: false, // Mặc định chưa gửi
+            isPublished: false,
           );
         } else {
-          // Generate mock graded submissions with variety
           final pattern = (i + j) % 5; 
           String status;
           double? score;
@@ -598,37 +575,37 @@ class _InstructorGradeTabState extends ConsumerState<InstructorGradeTab> {
           String? feedback;
           
           switch (pattern) {
-            case 0: // Submitted on time, graded (high score)
+            case 0:
               status = 'submitted';
-              score = 85.0 + (i * 2.0) % 15; // 85-100
+              score = 85.0 + (i * 2.0) % 15;
               attemptNumber = 1;
               submittedAt = assignment.deadline.subtract(Duration(days: 2));
               files = ['assignment_${assignment.id}_student_$i.pdf'];
               feedback = 'Excellent work! Well done.';
               break;
               
-            case 1: // Submitted on time, graded (medium score)
+            case 1:
               status = 'submitted';
-              score = 70.0 + (i * 3.0) % 15; // 70-85
+              score = 70.0 + (i * 3.0) % 15;
               attemptNumber = 1;
               submittedAt = assignment.deadline.subtract(Duration(days: 1));
               files = ['homework_${assignment.id}_student_$i.docx'];
               feedback = 'Good effort. Consider reviewing the concepts.';
               break;
               
-            case 2: // Late submission, graded
+            case 2:
               status = 'late';
-              score = 65.0 + (i * 2.5) % 20; // 65-85
+              score = 65.0 + (i * 2.5) % 20;
               attemptNumber = 1;
               submittedAt = assignment.deadline.add(Duration(days: 1));
               files = ['late_submission_${assignment.id}_student_$i.pdf'];
               feedback = 'Submitted late. Points deducted.';
               break;
               
-            case 3: // Multiple attempts, graded
+            case 3:
               status = 'submitted';
-              score = 75.0 + (i * 2.0) % 20; // 75-95
-              attemptNumber = 2 + (i % 2); // 2 or 3 attempts
+              score = 75.0 + (i * 2.0) % 20;
+              attemptNumber = 2 + (i % 2);
               submittedAt = assignment.deadline.subtract(Duration(hours: 12));
               files = [
                 'attempt1_${assignment.id}_student_$i.pdf',
@@ -637,7 +614,7 @@ class _InstructorGradeTabState extends ConsumerState<InstructorGradeTab> {
               feedback = 'Improved on second attempt. Keep it up!';
               break;
               
-            default: // Not submitted
+            default:
               status = 'not_submitted';
               score = null;
               attemptNumber = 0;
@@ -655,7 +632,7 @@ class _InstructorGradeTabState extends ConsumerState<InstructorGradeTab> {
             submittedAt: submittedAt,
             files: files,
             feedback: feedback,
-            isPublished: false, // Mặc định chưa gửi
+            isPublished: false,
           );
         }
       }
@@ -673,30 +650,28 @@ class _InstructorGradeTabState extends ConsumerState<InstructorGradeTab> {
 
   void _applyFilters() {
     _filteredGradeData = List.from(_mockGradeData);
-    
-    // Cache filtered assignments để đảm bảo cùng instance được dùng
     _cachedFilteredAssignments = _getFilteredAssignments();
 
-    // 1. Search filter - tìm theo tên (bất kỳ phần nào của tên) và ID
     if (_searchQuery.isNotEmpty) {
       final q = _searchQuery.toLowerCase().trim();
       if (q.isNotEmpty) {
         _filteredGradeData = _filteredGradeData.where((data) {
           final studentName = data.studentName.toLowerCase();
           final studentId = data.studentId.toLowerCase();
+          final groupName = data.groupName.toLowerCase();
           
-          // Tìm theo ID - ID chứa query như một phần hoàn chỉnh
           if (studentId.contains(q)) {
             return true;
           }
+
+          if (groupName.contains(q)) {
+            return true;
+          }
           
-          // Tìm theo tên - kiểm tra từng từ trong tên có chứa query không
           final nameWords = studentName.split(' ').where((w) => w.isNotEmpty).toList();
           for (final word in nameWords) {
             if (word == q || word.contains(q)) {
-              // Kiểm tra thêm: nếu query là số, chỉ match khi nó xuất hiện như một số hoàn chỉnh
               if (RegExp(r'^\d+$').hasMatch(q)) {
-                // Query là số, kiểm tra xem word có chứa số này như một phần hoàn chỉnh không
                 final numbersInWord = RegExp(r'\d+').allMatches(word);
                 for (final match in numbersInWord) {
                   if (match.group(0) == q) {
@@ -704,7 +679,6 @@ class _InstructorGradeTabState extends ConsumerState<InstructorGradeTab> {
                   }
                 }
               } else {
-                // Query không phải là số, match bình thường
                 if (word.contains(q)) {
                   return true;
                 }
@@ -712,17 +686,13 @@ class _InstructorGradeTabState extends ConsumerState<InstructorGradeTab> {
             }
           }
           
-          // Nếu query có nhiều từ, kiểm tra xem các từ trong query có xuất hiện trong tên không
           final queryWords = q.split(' ').where((w) => w.isNotEmpty).toList();
           if (queryWords.length > 1) {
-            // Kiểm tra xem tất cả các từ trong query có xuất hiện trong tên không
             int matchedWords = 0;
             for (final queryWord in queryWords) {
-              // Kiểm tra queryWord có xuất hiện trong bất kỳ từ nào của tên
               bool found = false;
               for (final nameWord in nameWords) {
                 if (RegExp(r'^\d+$').hasMatch(queryWord)) {
-                  // Query word là số, kiểm tra chính xác
                   final numbersInWord = RegExp(r'\d+').allMatches(nameWord);
                   for (final match in numbersInWord) {
                     if (match.group(0) == queryWord) {
@@ -741,7 +711,6 @@ class _InstructorGradeTabState extends ConsumerState<InstructorGradeTab> {
                 matchedWords++;
               }
             }
-            // Nếu tất cả các từ trong query đều xuất hiện trong tên thì return true
             if (matchedWords == queryWords.length) {
               return true;
             }
@@ -752,24 +721,18 @@ class _InstructorGradeTabState extends ConsumerState<InstructorGradeTab> {
       }
     }
 
-    // 2. Item filter (bài tập đầu tiên) - filter students có submission cho Item đã chọn
     if (_selectedItemId != null && _selectedItemId!.isNotEmpty) {
       _filteredGradeData = _filteredGradeData.where((data) {
-        // Chỉ giữ sinh viên có entry cho bài này (kể cả chưa nộp)
         return data.submissions.containsKey(_selectedItemId);
       }).toList();
     }
 
-    // 3. Group filter (sau Item) - filter students theo Group đã chọn
-    // Chỉ áp dụng trên kết quả đã được filter bởi Item (nếu có)
     if (_selectedGroup != null && _selectedGroup!.isNotEmpty) {
       _filteredGradeData = _filteredGradeData.where((data) {
         return data.groupName == _selectedGroup;
       }).toList();
     }
 
-    // 4. Status filter (sau Group) - filter students theo Status của Item đã chọn
-    // Chỉ áp dụng khi đã chọn Item và trên kết quả đã được filter bởi Item + Group
     if (_selectedStatus != null && 
         _selectedStatus != 'all' && 
         _selectedItemId != null && 
@@ -781,7 +744,6 @@ class _InstructorGradeTabState extends ConsumerState<InstructorGradeTab> {
       }).toList();
     }
 
-    // 5. Score range filter
     if (_minScore != null || _maxScore != null) {
       _filteredGradeData = _filteredGradeData.where((data) {
         if (_selectedItemId == null || _selectedItemId!.isEmpty) return true;
@@ -794,7 +756,6 @@ class _InstructorGradeTabState extends ConsumerState<InstructorGradeTab> {
       }).toList();
     }
 
-    // 6. Sort
     _filteredGradeData.sort((a, b) {
       switch (_sortBy) {
         case 'name':
@@ -841,17 +802,18 @@ class _InstructorGradeTabState extends ConsumerState<InstructorGradeTab> {
       );
     }
 
+    final bool _shouldShowGradebook =
+        _selectedType != null && _selectedItemId != null;
+
     return Padding(
       padding: const EdgeInsets.all(16),
       child: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
             _buildHeader(),
             const SizedBox(height: 16),
             
-            // Search and Filters
             GradeFilterBar(
               searchQuery: _searchQuery,
               selectedGroup: _selectedGroup,
@@ -871,7 +833,6 @@ class _InstructorGradeTabState extends ConsumerState<InstructorGradeTab> {
               onGroupChanged: (value) {
                 setState(() {
                   _selectedGroup = value == 'All' ? null : value;
-                  // Reset Status khi chọn Group mới
                   _selectedStatus = null;
                   _applyFilters();
                 });
@@ -879,7 +840,6 @@ class _InstructorGradeTabState extends ConsumerState<InstructorGradeTab> {
               onTypeChanged: (value) {
                 setState(() {
                   _selectedType = value == 'All' ? null : value;
-                  // Reset Item, Group và Status khi chọn Type mới
                   _selectedItemId = null;
                   _selectedGroup = null;
                   _selectedStatus = null;
@@ -889,7 +849,6 @@ class _InstructorGradeTabState extends ConsumerState<InstructorGradeTab> {
               onItemChanged: (value) {
                 setState(() {
                   _selectedItemId = value == 'All' ? null : value;
-                  // Reset Group và Status khi chọn Item mới
                   _selectedGroup = null;
                   _selectedStatus = null;
                   _applyFilters();
@@ -916,11 +875,32 @@ class _InstructorGradeTabState extends ConsumerState<InstructorGradeTab> {
             ),
           const SizedBox(height: 16),
           
-            // Statistics Bar
+            if (!_shouldShowGradebook) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: const Center(
+                  child: Text(
+                    'Select Type and Item above to load the gradebook for a specific assignment or quiz.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+
+            if (_shouldShowGradebook) ...[
             _buildStatisticsBar(),
             const SizedBox(height: 16),
             
-            // Gradebook table - with fixed student column and scrollable columns
             GradebookTable(
               gradeData: _filteredGradeData,
               assignments: _cachedFilteredAssignments,
@@ -932,7 +912,6 @@ class _InstructorGradeTabState extends ConsumerState<InstructorGradeTab> {
                 });
               },
               onGradeUpdated: (studentId, assignmentId, score, feedback) {
-                // Cập nhật mock data với score và feedback mới
                 setState(() {
                   final studentIndex = _mockGradeData.indexWhere((data) => data.studentId == studentId);
                   if (studentIndex != -1) {
@@ -947,7 +926,7 @@ class _InstructorGradeTabState extends ConsumerState<InstructorGradeTab> {
                         submittedAt: oldSubmission.submittedAt,
                         files: oldSubmission.files,
                         feedback: feedback,
-                        isPublished: oldSubmission.isPublished, // Giữ nguyên trạng thái published
+                        isPublished: oldSubmission.isPublished,
                       );
                       
                       final updatedSubmissions = Map<String, MockSubmissionData>.from(student.submissions);
@@ -962,14 +941,12 @@ class _InstructorGradeTabState extends ConsumerState<InstructorGradeTab> {
                         submissions: updatedSubmissions,
                       );
                       
-                      // Re-apply filters để cập nhật filtered data
                       _applyFilters();
                     }
                   }
                 });
               },
               onGradeSent: (studentId, assignmentId) {
-                // Cập nhật trạng thái published trong mock data
                 setState(() {
                   final studentIndex = _mockGradeData.indexWhere((data) => data.studentId == studentId);
                   if (studentIndex != -1) {
@@ -984,7 +961,7 @@ class _InstructorGradeTabState extends ConsumerState<InstructorGradeTab> {
                         submittedAt: oldSubmission.submittedAt,
                         files: oldSubmission.files,
                         feedback: oldSubmission.feedback,
-                        isPublished: true, // Đánh dấu đã gửi
+                        isPublished: true,
                       );
                       
                       final updatedSubmissions = Map<String, MockSubmissionData>.from(student.submissions);
@@ -999,7 +976,6 @@ class _InstructorGradeTabState extends ConsumerState<InstructorGradeTab> {
                         submissions: updatedSubmissions,
                       );
                       
-                      // Re-apply filters để cập nhật filtered data
                       _applyFilters();
                     }
                   }
@@ -1009,6 +985,7 @@ class _InstructorGradeTabState extends ConsumerState<InstructorGradeTab> {
                 // Ví dụ: await SubmissionRepository.publishGrade(studentId, assignmentId);
               },
             ),
+            ],
           ],
         ),
       ),
@@ -1019,14 +996,100 @@ class _InstructorGradeTabState extends ConsumerState<InstructorGradeTab> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        const SizedBox.shrink(), // Xóa chữ "Grades"
-        // Export CSV button
-        IconButton(
-          onPressed: _exportToCSV,
-          icon: const Icon(Icons.download, color: AppColors.textSecondary),
-          tooltip: 'Export to CSV',
+        const SizedBox.shrink(),
+        Row(
+          children: [
+            IconButton(
+              onPressed: _exportToCSV,
+              icon:
+                  const Icon(Icons.download, color: AppColors.textSecondary),
+              tooltip: 'Export to CSV',
+            ),
+            const SizedBox(width: 8),
+            TextButton.icon(
+              onPressed: _returnGradesToStudents,
+              icon: const Icon(Icons.send, size: 18, color: AppColors.primary),
+              label: const Text(
+                'Return',
+                style: TextStyle(color: AppColors.primary),
+              ),
+            ),
+          ],
         ),
       ],
+    );
+  }
+
+  void _returnGradesToStudents() {
+    if (_selectedItemId == null || _selectedItemId!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select Type and Item before returning grades'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    final targetStudentIds = _selectedStudentIds.isNotEmpty
+        ? _selectedStudentIds
+        : _filteredGradeData.map((d) => d.studentId).toSet();
+
+    if (targetStudentIds.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No students to return grades for'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    final itemId = _selectedItemId!;
+
+    setState(() {
+      for (int i = 0; i < _mockGradeData.length; i++) {
+        final student = _mockGradeData[i];
+        if (!targetStudentIds.contains(student.studentId)) continue;
+
+        final submission = student.submissions[itemId];
+        if (submission == null || submission.score == null) continue;
+
+        final updatedSubmission = MockSubmissionData(
+          score: submission.score,
+          maxScore: submission.maxScore,
+          status: submission.status,
+          attemptNumber: submission.attemptNumber,
+          submittedAt: submission.submittedAt,
+          files: submission.files,
+          feedback: submission.feedback,
+          isPublished: true,
+        );
+
+        final updatedSubmissions =
+            Map<String, MockSubmissionData>.from(student.submissions);
+        updatedSubmissions[itemId] = updatedSubmission;
+
+        _mockGradeData[i] = MockGradeData(
+          studentId: student.studentId,
+          studentName: student.studentName,
+          studentEmail: student.studentEmail,
+          groupId: student.groupId,
+          groupName: student.groupName,
+          submissions: updatedSubmissions,
+        );
+      }
+
+      _applyFilters();
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Returned grades for ${targetStudentIds.length} student(s)',
+        ),
+        backgroundColor: Colors.green,
+      ),
     );
   }
 
@@ -1039,15 +1102,11 @@ class _InstructorGradeTabState extends ConsumerState<InstructorGradeTab> {
     );
   }
 
-
-  // Helper: Lấy danh sách Items (Assignments) - filter theo Type (cho dropdown)
   List<Assignment> _getAvailableItems() {
     if (_selectedType == null || _selectedType == 'All') {
       return [];
     }
     
-    // Filter assignments theo type dựa trên title
-    // Nếu title chứa "Quiz" hoặc "quiz" thì là quiz, còn lại là assignment
     return _assignments.where((assignment) {
       final titleLower = assignment.title.toLowerCase();
       if (_selectedType == 'quiz') {
@@ -1059,22 +1118,17 @@ class _InstructorGradeTabState extends ConsumerState<InstructorGradeTab> {
     }).toList();
   }
 
-  // Helper: Lấy danh sách Assignments đã filter theo Type và Item (cho gradebook table)
   List<Assignment> _getFilteredAssignments() {
-    // Nếu đã chọn Item, chỉ hiển thị cột của Item đó
     if (_selectedItemId != null && _selectedItemId!.isNotEmpty) {
       return _assignments.where((assignment) {
         return assignment.id == _selectedItemId;
       }).toList();
     }
     
-    // Nếu chưa chọn Type, hiển thị tất cả assignments
     if (_selectedType == null || _selectedType == 'All') {
       return _assignments;
     }
     
-    // Filter assignments theo type dựa trên title
-    // Nếu title chứa "Quiz" hoặc "quiz" thì là quiz, còn lại là assignment
     return _assignments.where((assignment) {
       final titleLower = assignment.title.toLowerCase();
       if (_selectedType == 'quiz') {
@@ -1086,21 +1140,16 @@ class _InstructorGradeTabState extends ConsumerState<InstructorGradeTab> {
     }).toList();
   }
 
-  // Helper: Lấy danh sách Group dựa trên Item đã chọn - filter phụ thuộc
   List<String> _getAvailableGroups() {
     final groupNames = <String>{};
-    
-    // Bắt đầu từ filtered data (đã được filter bởi search và item)
     List<MockGradeData> dataToUse = _mockGradeData;
     
-    // Nếu đã chọn Item, chỉ lấy groups có students với submission cho Item đó
     if (_selectedItemId != null && _selectedItemId!.isNotEmpty) {
       dataToUse = dataToUse.where((data) {
         return data.submissions.containsKey(_selectedItemId);
       }).toList();
     }
     
-    // Lấy groups từ students đã được filter
     for (final data in dataToUse) {
       groupNames.add(data.groupName);
     }

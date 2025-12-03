@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:webview_flutter/webview_flutter.dart';
 import 'package:elearning_management_app/domain/models/assignment_model.dart';
 import 'package:elearning_management_app/core/theme/app_colors.dart';
 import 'package:elearning_management_app/data/repositories/submission/submission_repository.dart';
@@ -74,6 +73,8 @@ class GradebookTable extends StatefulWidget {
 class _GradebookTableState extends State<GradebookTable> {
   late ScrollController _headerScrollController;
   late List<MockGradeData> _localGradeData;
+  final Set<String> _editingRows = {};
+  final Map<String, TextEditingController> _inlineScoreControllers = {};
 
   @override
   void initState() {
@@ -125,6 +126,9 @@ class _GradebookTableState extends State<GradebookTable> {
 
   @override
   void dispose() {
+    for (final controller in _inlineScoreControllers.values) {
+      controller.dispose();
+    }
     widget.horizontalScrollController.removeListener(_syncHeaderScroll);
     _headerScrollController.dispose();
     super.dispose();
@@ -143,6 +147,20 @@ class _GradebookTableState extends State<GradebookTable> {
     } catch (e) {
       // Ignore errors
     }
+  }
+
+  String _rowKey(String studentId, String assignmentId) =>
+      '$studentId|$assignmentId';
+
+  TextEditingController _getInlineScoreController(
+    String key,
+    double? initialScore,
+  ) {
+    return _inlineScoreControllers.putIfAbsent(key, () {
+      return TextEditingController(
+        text: initialScore != null ? initialScore.toStringAsFixed(1) : '',
+      );
+    });
   }
 
   void _updateGradeData(String studentId, String assignmentId, double? score, String? feedback) {
@@ -247,6 +265,15 @@ class _GradebookTableState extends State<GradebookTable> {
       );
     }
 
+    if (assignments.length == 1) {
+      return _buildSingleAssignmentTable(
+        context,
+        gradeData,
+        assignments.first,
+        horizontalScrollController,
+      );
+    }
+
     if (assignments.isEmpty) {
       return Container(
         height: 200,
@@ -321,6 +348,443 @@ class _GradebookTableState extends State<GradebookTable> {
                 ],
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Gradebook dạng hàng cho 1 assignment/quiz (giống design bạn gửi)
+  Widget _buildSingleAssignmentTable(
+    BuildContext context,
+    List<MockGradeData> gradeData,
+    Assignment assignment,
+    ScrollController horizontalScrollController,
+  ) {
+    const double baseUnitWidth = 160.0;
+    final allSelected = gradeData.isNotEmpty &&
+        gradeData
+            .every((data) => widget.selectedStudentIds.contains(data.studentId));
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const int totalUnits = 8;
+
+        double effectiveUnitWidth = baseUnitWidth;
+        if (constraints.maxWidth.isFinite && constraints.maxWidth > 0) {
+          final double widthPerUnit = constraints.maxWidth / totalUnits;
+          effectiveUnitWidth =
+              widthPerUnit > baseUnitWidth ? widthPerUnit : baseUnitWidth;
+        }
+
+        final double colStudent = effectiveUnitWidth * 2; // rộng hơn cho tên/email
+        final double colGroup = effectiveUnitWidth;
+        final double colStatus = effectiveUnitWidth;
+        final double colSubmissionTime = effectiveUnitWidth;
+        final double colAttempts = effectiveUnitWidth;
+        final double colLatestGrade = effectiveUnitWidth;
+        final double colFiles = effectiveUnitWidth;
+
+        final double totalWidth = colStudent +
+            colGroup +
+            colStatus +
+            colSubmissionTime +
+            colAttempts +
+            colLatestGrade +
+            colFiles;
+
+        final double minWidth = constraints.maxWidth.isFinite
+            ? (constraints.maxWidth > totalWidth
+                ? constraints.maxWidth
+                : totalWidth)
+            : totalWidth;
+
+        return Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            controller: horizontalScrollController,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minWidth: minWidth),
+              child: Column(
+                children: [
+                  // Header row
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    decoration: const BoxDecoration(
+                      color: AppColors.surfaceVariant,
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(12),
+                        topRight: Radius.circular(12),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        _buildSingleAssignmentHeaderCell(
+                          width: colStudent,
+                          alignment: Alignment.centerLeft,
+                          child: Row(
+                            children: [
+                              Checkbox(
+                                value: allSelected,
+                                tristate: true,
+                                onChanged: (value) {
+                                  final newSelection = <String>{};
+                                  if (value == true) {
+                                    newSelection.addAll(
+                                      gradeData.map((d) => d.studentId),
+                                    );
+                                  }
+                                  widget.onSelectionChanged(newSelection);
+                                },
+                              ),
+                              const SizedBox(width: 4),
+                              const Text(
+                                'Student',
+                                style: TextStyle(
+                                  color: AppColors.textPrimary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        _buildSingleAssignmentHeaderCell(
+                          width: colGroup,
+                          label: 'Group',
+                        ),
+                        _buildSingleAssignmentHeaderCell(
+                          width: colStatus,
+                          label: 'Status',
+                        ),
+                        _buildSingleAssignmentHeaderCell(
+                          width: colSubmissionTime,
+                          label: 'Submission Time',
+                        ),
+                        _buildSingleAssignmentHeaderCell(
+                          width: colAttempts,
+                          label: 'Attempts',
+                        ),
+                        _buildSingleAssignmentHeaderCell(
+                          width: colLatestGrade,
+                          label: 'Latest Grade',
+                        ),
+                        _buildSingleAssignmentHeaderCell(
+                          width: colFiles,
+                          label: 'Files',
+                          isLast: true,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(height: 1, color: AppColors.border),
+
+                  Column(
+                    children: [
+                      for (int index = 0;
+                          index < gradeData.length;
+                          index++) ...[
+                        if (index > 0)
+                          const Divider(height: 1, color: AppColors.border),
+                        _buildSingleAssignmentRow(
+                          context,
+                          gradeData[index],
+                          assignment,
+                          colStudent,
+                          colGroup,
+                          colStatus,
+                          colSubmissionTime,
+                          colAttempts,
+                          colLatestGrade,
+                          colFiles,
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSingleAssignmentHeaderCell({
+    required double width,
+    String? label,
+    Widget? child,
+    bool isLast = false,
+    Alignment alignment = Alignment.center,
+  }) {
+    return Container(
+      width: width,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      decoration: BoxDecoration(
+        border: Border(
+          right: isLast
+              ? BorderSide.none
+              : const BorderSide(color: AppColors.border, width: 0.5),
+        ),
+      ),
+      alignment: alignment,
+      child: child ??
+          Text(
+            label ?? '',
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+    );
+  }
+
+  Widget _buildSingleAssignmentBodyCell({
+    required double width,
+    required Widget child,
+    bool isLast = false,
+    Alignment alignment = Alignment.center,
+  }) {
+    return Container(
+      width: width,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      decoration: BoxDecoration(
+        border: Border(
+          right: isLast
+              ? BorderSide.none
+              : const BorderSide(color: AppColors.border, width: 0.5),
+        ),
+      ),
+      alignment: alignment,
+      child: child,
+    );
+  }
+
+  Widget _buildSingleAssignmentRow(
+    BuildContext context,
+    MockGradeData data,
+    Assignment assignment,
+    double colStudent,
+    double colGroup,
+    double colStatus,
+    double colSubmissionTime,
+    double colAttempts,
+    double colLatestGrade,
+    double colFiles,
+  ) {
+    final submission = data.submissions[assignment.id];
+    final rowKey = _rowKey(data.studentId, assignment.id);
+    final isEditingInline = _editingRows.contains(rowKey);
+
+    final statusText = submission != null
+        ? _rowStatusText(submission.status)
+        : '❌ Not submitted';
+    final statusColor = submission != null
+        ? _getStatusColor(submission.status)
+        : AppColors.textMuted;
+    final submissionTime = submission?.submittedAt != null
+        ? _rowFormatDateTime(submission!.submittedAt!)
+        : '-';
+    final attempts = submission?.attemptNumber ?? 0;
+    final latestGrade = submission?.score;
+    final latestGradeStr =
+        latestGrade != null ? latestGrade.toStringAsFixed(1) : '-';
+    final latestGradeColor = latestGrade != null
+        ? _getGradeColor(latestGrade)
+        : AppColors.textMuted;
+
+    final isSelected =
+        widget.selectedStudentIds.contains(data.studentId);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      color:
+          isSelected ? AppColors.surfaceVariant.withOpacity(0.3) : null,
+      child: Row(
+        children: [
+          _buildSingleAssignmentBodyCell(
+            width: colStudent,
+            alignment: Alignment.centerLeft,
+            child: Row(
+              children: [
+                Checkbox(
+                  value: isSelected,
+                  onChanged: (value) {
+                    final newSelection =
+                        Set<String>.from(widget.selectedStudentIds);
+                    if (value == true) {
+                      newSelection.add(data.studentId);
+                    } else {
+                      newSelection.remove(data.studentId);
+                    }
+                    widget.onSelectionChanged(newSelection);
+                  },
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: _getStudentColor(data.studentId),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text(
+                      _getInitials(data.studentName),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        data.studentName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      Text(
+                        data.studentEmail,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          _buildSingleAssignmentBodyCell(
+            width: colGroup,
+            child: Text(
+              data.groupName,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 13,
+              ),
+            ),
+          ),
+
+          _buildSingleAssignmentBodyCell(
+            width: colStatus,
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 8,
+                vertical: 4,
+              ),
+              decoration: BoxDecoration(
+                color: statusColor.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: statusColor, width: 1),
+              ),
+              child: Text(
+                statusText,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: statusColor,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ),
+
+          _buildSingleAssignmentBodyCell(
+            width: colSubmissionTime,
+            child: Text(
+              submissionTime,
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 12,
+              ),
+            ),
+          ),
+
+          _buildSingleAssignmentBodyCell(
+            width: colAttempts,
+            child: Text(
+              attempts.toString(),
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 12,
+              ),
+            ),
+          ),
+
+          _buildSingleAssignmentBodyCell(
+            width: colLatestGrade,
+            child: _buildLatestGradeCell(
+              context,
+              data,
+              assignment,
+              submission,
+              rowKey,
+              latestGradeStr,
+              latestGradeColor,
+            ),
+          ),
+
+          _buildSingleAssignmentBodyCell(
+            width: colFiles,
+            isLast: true,
+            child: submission == null || submission.files.isEmpty
+                ? const Text(
+                    '-',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
+                    ),
+                  )
+                : TextButton.icon(
+                    onPressed: () {
+                      _showFileListDialog(
+                        context,
+                        data,
+                        assignment,
+                        submission,
+                      );
+                    },
+                    icon: const Icon(
+                      Icons.attach_file,
+                      size: 16,
+                      color: AppColors.textSecondary,
+                    ),
+                    label: Text(
+                      '${submission.files.length} file${submission.files.length > 1 ? 's' : ''}',
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
           ),
         ],
       ),
@@ -787,6 +1251,445 @@ class _GradebookTableState extends State<GradebookTable> {
         return Colors.red;
       default:
         return AppColors.textMuted;
+    }
+  }
+
+  // Màu điểm cho view dạng hàng (0-100)
+  Color _getGradeColor(double score) {
+    if (score >= 85) return Colors.green;
+    if (score >= 65) return Colors.orange;
+    return Colors.red;
+  }
+
+  // Helpers riêng cho view dạng hàng
+  String _rowStatusText(String status) {
+    switch (status) {
+      case 'submitted':
+        return 'Submitted';
+      case 'late':
+        return 'Late';
+      case 'not_submitted':
+        return 'Not submitted';
+      default:
+        return status;
+    }
+  }
+
+  String _rowFormatDateTime(DateTime date) {
+    return '${date.day}/${date.month}/${date.year} '
+        '${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+  }
+
+  /// Ô Latest Grade: hiển thị điểm + icon edit, click cho phép sửa, mất focus thì lưu nếu hợp lệ
+  Widget _buildLatestGradeCell(
+    BuildContext context,
+    MockGradeData data,
+    Assignment assignment,
+    MockSubmissionData? submission,
+    String rowKey,
+    String latestGradeStr,
+    Color latestGradeColor,
+  ) {
+    if (submission == null) {
+      return const Text(
+        '-',
+        style: TextStyle(
+          color: AppColors.textSecondary,
+          fontSize: 12,
+        ),
+      );
+    }
+
+    final isEditing = _editingRows.contains(rowKey);
+
+    if (!isEditing) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            latestGradeStr,
+            style: TextStyle(
+              color: latestGradeColor,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(width: 4),
+          IconButton(
+            tooltip: 'Edit grade',
+            icon: const Icon(
+              Icons.edit,
+              size: 16,
+              color: AppColors.textSecondary,
+            ),
+            onPressed: () {
+              setState(() {
+                _editingRows.add(rowKey);
+                _getInlineScoreController(rowKey, submission.score);
+              });
+            },
+          ),
+        ],
+      );
+    }
+
+    final controller =
+        _getInlineScoreController(rowKey, submission.score);
+
+    return Focus(
+      onFocusChange: (hasFocus) {
+        if (!hasFocus && mounted) {
+          _commitInlineGradeEdit(
+            context,
+            data,
+            assignment,
+            submission,
+            rowKey,
+          );
+        }
+      },
+      child: TextField(
+        controller: controller,
+        decoration: InputDecoration(
+          isDense: true,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 8,
+            vertical: 6,
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(6),
+          ),
+          suffixText: '/ ${submission.maxScore.toStringAsFixed(0)}',
+        ),
+        style: const TextStyle(
+          fontSize: 12,
+          color: AppColors.textPrimary,
+        ),
+        keyboardType:
+            const TextInputType.numberWithOptions(decimal: true),
+        inputFormatters: [
+          FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
+        ],
+        autofocus: true,
+      ),
+    );
+  }
+
+  void _commitInlineGradeEdit(
+    BuildContext context,
+    MockGradeData data,
+    Assignment assignment,
+    MockSubmissionData submission,
+    String rowKey,
+  ) {
+    final controller = _inlineScoreControllers[rowKey];
+    if (controller == null) {
+      setState(() {
+        _editingRows.remove(rowKey);
+      });
+      return;
+    }
+
+    final originalScore = submission.score;
+    final text = controller.text.trim();
+
+    if (text.isEmpty) {
+      // Không nhập gì -> giữ nguyên
+      controller.text =
+          originalScore != null ? originalScore.toStringAsFixed(1) : '';
+      setState(() {
+        _editingRows.remove(rowKey);
+      });
+      return;
+    }
+
+    final newScore = double.tryParse(text);
+    if (newScore == null ||
+        newScore < 0 ||
+        newScore > submission.maxScore) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Score must be between 0 and ${submission.maxScore}',
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+      // Revert về điểm cũ
+      controller.text =
+          originalScore != null ? originalScore.toStringAsFixed(1) : '';
+      setState(() {
+        _editingRows.remove(rowKey);
+      });
+      return;
+    }
+
+    if (originalScore != null &&
+        (newScore - originalScore).abs() < 0.001) {
+      // Không thay đổi giá trị
+      setState(() {
+        _editingRows.remove(rowKey);
+      });
+      return;
+    }
+
+    // Cập nhật local state + callback ra ngoài
+    _updateGradeData(data.studentId, assignment.id, newScore, submission.feedback);
+    widget.onGradeUpdated?.call(
+      data.studentId,
+      assignment.id,
+      newScore,
+      submission.feedback,
+    );
+
+    setState(() {
+      _editingRows.remove(rowKey);
+    });
+  }
+
+  /// Dialog danh sách file: xem nhanh + preview / mở ngoài
+  void _showFileListDialog(
+    BuildContext context,
+    MockGradeData data,
+    Assignment assignment,
+    MockSubmissionData submission,
+  ) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: AppColors.surface,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              maxWidth: 480,
+              maxHeight: 420,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Files submitted',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${data.studentName} • ${assignment.title}',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  if (submission.files.isEmpty)
+                    const Text(
+                      'No files submitted.',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 14,
+                      ),
+                    )
+                  else
+                    Expanded(
+                      child: ListView.separated(
+                        itemCount: submission.files.length,
+                        separatorBuilder: (_, __) =>
+                            const Divider(color: AppColors.border),
+                        itemBuilder: (context, index) {
+                          final fileName = submission.files[index];
+                          return ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: const Icon(
+                              Icons.insert_drive_file,
+                              color: AppColors.textSecondary,
+                            ),
+                            title: Text(
+                              fileName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                            subtitle: const Text(
+                              'Click Preview to view or Open to download',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 11,
+                              ),
+                            ),
+                            trailing: Wrap(
+                              spacing: 4,
+                              children: [
+                                IconButton(
+                                  tooltip: 'Preview',
+                                  icon: const Icon(
+                                    Icons.visibility,
+                                    size: 18,
+                                    color: AppColors.primary,
+                                  ),
+                                  onPressed: () {
+                                    Navigator.of(context).pop();
+                                    _openFileFromTable(
+                                      context,
+                                      data.studentId,
+                                      assignment.id,
+                                      fileName,
+                                    );
+                                  },
+                                ),
+                                IconButton(
+                                  tooltip: 'Download',
+                                  icon: const Icon(
+                                    Icons.download,
+                                    size: 18,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                  onPressed: () {
+                                    Navigator.of(context).pop();
+                                    _openFileFromTable(
+                                      context,
+                                      data.studentId,
+                                      assignment.id,
+                                      fileName,
+                                      openExternallyOnly: true,
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  const SizedBox(height: 16),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text(
+                        'Close',
+                        style: TextStyle(color: AppColors.textSecondary),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// Mở danh sách file từ ô Files trong bảng (không mở dialog grade)
+  Future<void> _openFileFromTable(
+    BuildContext context,
+    String studentId,
+    String assignmentId,
+    String fileName, {
+    bool openExternallyOnly = false,
+  }) async {
+    try {
+      final allSubmissions =
+          await SubmissionRepository.getSubmissionsForAssignment(
+        assignmentId,
+      );
+
+      final submissions = allSubmissions
+          .where((s) => s.studentId == studentId)
+          .toList();
+
+      if (submissions.isEmpty) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Submission not found'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
+      final submission = submissions.reduce(
+        (a, b) => (a.attemptNumber > b.attemptNumber) ? a : b,
+      );
+
+      final attachment = submission.attachments.firstWhere(
+        (att) => att.name == fileName,
+        orElse: () => submission.attachments.first,
+      );
+
+      if (attachment.url.isEmpty) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('File URL not available'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+        return;
+      }
+
+      final uri = Uri.parse(attachment.url);
+
+      if (openExternallyOnly) {
+        try {
+          if (await canLaunchUrl(uri)) {
+            await launchUrl(
+              uri,
+              mode: LaunchMode.externalApplication,
+            );
+          } else if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Cannot open file URL'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        } catch (e) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Error opening file: $e'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
+        return;
+      }
+
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => _FilePreviewDialog(
+            fileName: fileName,
+            fileUrl: attachment.url,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading file: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -1404,74 +2307,6 @@ class _FilePreviewDialog extends StatefulWidget {
 }
 
 class _FilePreviewDialogState extends State<_FilePreviewDialog> {
-  late final WebViewController _controller;
-  bool _isLoading = true;
-  String? _errorMessage;
-
-  @override
-  void initState() {
-    super.initState();
-    _initializeWebView();
-  }
-
-  void _initializeWebView() {
-    _controller = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onPageStarted: (String url) {
-            setState(() {
-              _isLoading = true;
-              _errorMessage = null;
-            });
-          },
-          onPageFinished: (String url) {
-            setState(() {
-              _isLoading = false;
-            });
-          },
-          onWebResourceError: (WebResourceError error) {
-            setState(() {
-              _isLoading = false;
-              _errorMessage = error.description;
-            });
-          },
-        ),
-      );
-
-    // Xác định loại file và load tương ứng
-    final fileExtension = widget.fileName.split('.').last.toLowerCase();
-    final url = widget.fileUrl;
-
-    if (_isImageFile(fileExtension)) {
-      // Hiển thị hình ảnh trực tiếp
-      _controller.loadRequest(Uri.parse(url));
-    } else if (_isPdfFile(fileExtension)) {
-      // Sử dụng Google Docs Viewer hoặc PDF.js để preview PDF
-      final pdfViewerUrl = 'https://docs.google.com/viewer?url=${Uri.encodeComponent(url)}&embedded=true';
-      _controller.loadRequest(Uri.parse(pdfViewerUrl));
-    } else if (_isOfficeFile(fileExtension)) {
-      // Sử dụng Office Online Viewer
-      final officeViewerUrl = 'https://view.officeapps.live.com/op/embed.aspx?src=${Uri.encodeComponent(url)}';
-      _controller.loadRequest(Uri.parse(officeViewerUrl));
-    } else {
-      // Thử load trực tiếp, nếu không được thì mở trong browser
-      _controller.loadRequest(Uri.parse(url));
-    }
-  }
-
-  bool _isImageFile(String extension) {
-    return ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'].contains(extension);
-  }
-
-  bool _isPdfFile(String extension) {
-    return extension == 'pdf';
-  }
-
-  bool _isOfficeFile(String extension) {
-    return ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'].contains(extension);
-  }
-
   @override
   Widget build(BuildContext context) {
     return Dialog(
@@ -1512,101 +2347,57 @@ class _FilePreviewDialogState extends State<_FilePreviewDialog> {
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: AppColors.border),
                 ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Stack(
-                    children: [
-                      WebViewWidget(controller: _controller),
-                      if (_isLoading)
-                        Container(
-                          color: AppColors.surfaceVariant,
-                          child: const Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                CircularProgressIndicator(),
-                                SizedBox(height: 16),
-                                Text(
-                                  'Loading file...',
-                                  style: TextStyle(
-                                    color: AppColors.textSecondary,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ],
-                            ),
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.insert_drive_file,
+                          size: 64,
+                          color: AppColors.textSecondary,
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'In-app preview is not available.\nYou can open the file in your browser or default app.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 14,
                           ),
                         ),
-                      if (_errorMessage != null)
-                        Container(
-                          color: AppColors.surfaceVariant,
-                          child: Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(
-                                  Icons.error_outline,
-                                  size: 64,
-                                  color: Colors.red,
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  'Error loading file',
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    color: AppColors.textPrimary,
-                                    fontWeight: FontWeight.bold,
+                        const SizedBox(height: 16),
+                        ElevatedButton.icon(
+                          onPressed: () async {
+                            try {
+                              final uri = Uri.parse(widget.fileUrl);
+                              if (await canLaunchUrl(uri)) {
+                                await launchUrl(
+                                  uri,
+                                  mode: LaunchMode.externalApplication,
+                                );
+                              }
+                            } catch (e) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Error opening file: $e'),
+                                    backgroundColor: Colors.red,
                                   ),
-                                ),
-                                const SizedBox(height: 8),
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                                  child: Text(
-                                    _errorMessage!,
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      color: AppColors.textSecondary,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ),
-                                const SizedBox(height: 24),
-                                ElevatedButton.icon(
-                                  onPressed: () async {
-                                    try {
-                                      final uri = Uri.parse(widget.fileUrl);
-                                      if (await canLaunchUrl(uri)) {
-                                        await launchUrl(
-                                          uri,
-                                          mode: LaunchMode.externalApplication,
-                                        );
-                                        if (context.mounted) {
-                                          Navigator.pop(context);
-                                        }
-                                      }
-                                    } catch (e) {
-                                      if (context.mounted) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(
-                                            content: Text('Error opening file: $e'),
-                                            backgroundColor: Colors.red,
-                                          ),
-                                        );
-                                      }
-                                    }
-                                  },
-                                  icon: const Icon(Icons.open_in_browser),
-                                  label: const Text('Open in Browser'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppColors.primary,
-                                    foregroundColor: Colors.white,
-                                  ),
-                                ),
-                              ],
-                            ),
+                                );
+                              }
+                            }
+                          },
+                          icon: const Icon(Icons.open_in_new),
+                          label: const Text('Open File'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
                           ),
                         ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
