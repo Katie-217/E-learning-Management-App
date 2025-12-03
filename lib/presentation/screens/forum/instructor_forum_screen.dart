@@ -1,15 +1,16 @@
 // ========================================
 // FILE: instructor_forum_screen.dart
-// MÔ TẢ: Màn hình quản lý forum tập trung cho instructor
-// Instructor có thể xem tất cả courses và quản lý forum của từng course
+// MÃ” Táº¢: MÃ n hÃ¬nh quáº£n lÃ½ forum táº­p trung cho instructor
+// Instructor cÃ³ thá»ƒ xem táº¥t cáº£ courses vÃ  quáº£n lÃ½ forum cá»§a tá»«ng course
 // ========================================
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:elearning_management_app/application/controllers/course/course_instructor_provider.dart';
 import 'package:elearning_management_app/application/controllers/forum/forum_provider.dart';
-import 'package:elearning_management_app/presentation/widgets/student/forum/forum_topics_screen.dart';
 import 'package:elearning_management_app/core/theme/app_colors.dart';
+import '../../widgets/forum/Instructor/instructor_topic_detail_screen.dart';
+import 'instructor_forum_topics_screen.dart';
 
 class InstructorForumScreen extends ConsumerStatefulWidget {
   const InstructorForumScreen({super.key});
@@ -287,7 +288,7 @@ class _InstructorForumScreenState extends ConsumerState<InstructorForumScreen> {
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
-                                          builder: (context) => ForumTopicsScreen(
+                                          builder: (context) => InstructorForumTopicsScreen(
                                             courseId: course.id,
                                             courseName: '${course.code} - ${course.name}',
                                           ),

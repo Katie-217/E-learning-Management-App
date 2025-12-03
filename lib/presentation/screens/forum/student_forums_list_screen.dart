@@ -5,7 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:elearning_management_app/application/controllers/forum/forum_provider.dart';
-import 'package:elearning_management_app/presentation/widgets/student/forum/forum_topics_screen.dart';
+import 'package:elearning_management_app/presentation/widgets/forum/Student/forum_topics_screen.dart';
 import 'package:elearning_management_app/core/theme/app_colors.dart';
 import 'package:elearning_management_app/presentation/widgets/common/sidebar_model.dart';
 

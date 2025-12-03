@@ -5,7 +5,7 @@ import 'sidebar_model.dart';
 import 'user_menu_dropdown.dart';
 import '../../screens/student/dashboard/student_dashboard_page.dart';
 import '../../screens/student/course/course_page.dart';
-import '../../screens/forum/course_forums_list_screen.dart';
+import '../../screens/forum/student_forums_list_screen.dart';
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
 
@@ -23,9 +23,6 @@ class _MainShellState extends State<MainShell> {
   @override
   void initState() {
     super.initState();
-    // QUAN TRỌNG: Luôn đặt activeKey = 'dashboard' khi khởi tạo
-    // Không load từ SharedPreferences, không load từ bất kỳ nơi nào
-    // Dashboard là trang mặc định và ưu tiên khi đã đăng nhập
     activeKey = 'dashboard';
     _loadUserData();
   }
@@ -33,14 +30,11 @@ class _MainShellState extends State<MainShell> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Đảm bảo activeKey luôn hợp lệ (chỉ 'dashboard' hoặc 'courses')
-    // Profile KHÔNG BAO GIỜ được set làm activeKey
-    // Profile chỉ được mở qua Navigator.push từ menu dropdown
     if (activeKey != 'dashboard' && activeKey != 'courses') {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           setState(() {
-            activeKey = 'dashboard'; // Reset về dashboard nếu không hợp lệ
+            activeKey = 'dashboard'; 
           });
         }
       });
@@ -131,9 +125,7 @@ class _MainShellState extends State<MainShell> {
   }
 
   Widget _buildCurrentPage() {
-    // CHỈ hiển thị dashboard hoặc courses trong MainShell
-    // Profile KHÔNG BAO GIỜ được hiển thị ở đây
-    // Profile chỉ được mở qua Navigator.push từ menu dropdown
+
     switch (activeKey) {
       case 'dashboard':
         return const StudentDashboardPage(showSidebar: false);
@@ -142,8 +134,6 @@ class _MainShellState extends State<MainShell> {
       case 'forum':
         return const CourseForumsListScreen(showSidebar: false);      
       default:
-        // Mặc định luôn hiển thị dashboard
-        // Đảm bảo activeKey được reset về 'dashboard'
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
             setState(() {

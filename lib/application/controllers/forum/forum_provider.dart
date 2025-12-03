@@ -7,7 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:elearning_management_app/data/repositories/forum/forum_repository.dart';
 import 'package:elearning_management_app/domain/models/user_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
+import '../../../core/services/file_upload_service.dart';
 // ===========================================================================
 // STREAM PROVIDERS
 // ===========================================================================
@@ -224,4 +224,8 @@ class ForumController extends StateNotifier<ForumState> {
 final forumControllerProvider = StateNotifierProvider<ForumController, ForumState>((ref) {
   final repo = ref.watch(forumRepositoryProvider);
   return ForumController(repo);
+});
+
+final fileUploadServiceProvider = Provider<FileUploadService>((ref) {
+  return FileUploadService();
 });

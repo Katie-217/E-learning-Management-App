@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../application/controllers/student/student_controller.dart';
+import '../../../../application/controllers/course/course_instructor_controller.dart';
+import '../../../../application/controllers/group/group_controller.dart';
+import '../../../../application/controllers/course/enrollment_controller.dart';
 import '../../../../domain/models/user_model.dart';
+import '../../../../domain/models/course_model.dart';
+import '../../../../domain/models/group_model.dart';
 import '../../../../data/repositories/auth/auth_repository.dart';
+import '../../../../data/repositories/group/group_repository.dart';
 import 'instructor_student_create.dart';
 import '../csv_import/csv_import_screen.dart';
+import 'edit_students.dart';
 
 class InstructorStudentsPage extends StatefulWidget {
   // Callbacks
@@ -23,10 +30,28 @@ class InstructorStudentsPage extends StatefulWidget {
 
 class _InstructorStudentsPageState extends State<InstructorStudentsPage> {
   late StudentController _studentController;
+  StudentEditController? _editController; // Made nullable for safety
+  late CourseInstructorController _courseController;
+  late GroupController _groupController;
+  late EnrollmentController _enrollmentController;
+
   List<UserModel> students = [];
   List<UserModel> filteredStudents = [];
   bool isLoading = false;
   String searchQuery = '';
+
+  // Filter state
+  List<CourseModel> _courses = [];
+  List<GroupModel> _groups = [];
+  CourseModel? _selectedCourse;
+  GroupModel? _selectedGroup;
+  bool _isLoadingGroups = false;
+
+  // Controllers for dropdowns to show selected values
+  final TextEditingController _courseFilterController =
+      TextEditingController(text: 'All Courses');
+  final TextEditingController _groupFilterController =
+      TextEditingController(text: 'All Groups');
 
   final TextEditingController _searchController = TextEditingController();
 
@@ -72,7 +97,45 @@ class _InstructorStudentsPageState extends State<InstructorStudentsPage> {
     _studentController = StudentController(
       authRepository: AuthRepository.defaultClient(),
     );
+    _editController = StudentEditController(_studentController);
+    _courseController = CourseInstructorController(
+      authRepository: AuthRepository.defaultClient(),
+    );
+    _groupController = GroupController();
+    _enrollmentController = EnrollmentController();
+
     _loadStudents();
+    _loadCourses();
+  }
+
+  Future<void> _loadCourses() async {
+    try {
+      final courses = await _courseController.getInstructorCourses();
+      setState(() {
+        _courses = courses;
+      });
+    } catch (e) {
+      print('Error loading courses: $e');
+    }
+  }
+
+  Future<void> _loadGroupsForCourse(String courseId) async {
+    setState(() {
+      _isLoadingGroups = true;
+      _selectedGroup = null;
+      _groups = [];
+    });
+
+    try {
+      final groups = await GroupRepository.getGroupsByCourse(courseId);
+      setState(() {
+        _groups = groups;
+        _isLoadingGroups = false;
+      });
+    } catch (e) {
+      print('Error loading groups: $e');
+      setState(() => _isLoadingGroups = false);
+    }
   }
 
   Future<void> _loadStudents() async {
@@ -101,210 +164,265 @@ class _InstructorStudentsPageState extends State<InstructorStudentsPage> {
     }
   }
 
-  void _applyFilter() {
-    if (searchQuery.isEmpty) {
-      filteredStudents = students;
-    } else {
-      filteredStudents = students
+  Future<void> _applyFilter() async {
+    List<UserModel> filtered = students;
+
+    // Apply course/group filter
+    if (_selectedCourse != null) {
+      try {
+        final enrolledStudents = await _enrollmentController
+            .getEnrolledStudents(_selectedCourse!.id);
+        final enrolledEmails = enrolledStudents
+            .map((e) => e.studentEmail?.toLowerCase())
+            .whereType<String>()
+            .toSet();
+
+        if (_selectedGroup != null) {
+          // Filter by specific group
+          final groupEnrollments =
+              enrolledStudents.where((e) => e.groupId == _selectedGroup!.id);
+          final groupEmails = groupEnrollments
+              .map((e) => e.studentEmail?.toLowerCase())
+              .whereType<String>()
+              .toSet();
+          filtered = filtered
+              .where((s) => groupEmails.contains(s.email.toLowerCase()))
+              .toList();
+        } else {
+          // Filter by course only (all groups)
+          filtered = filtered
+              .where((s) => enrolledEmails.contains(s.email.toLowerCase()))
+              .toList();
+        }
+      } catch (e) {
+        print('Error filtering by course/group: $e');
+      }
+    }
+
+    // Apply search query
+    if (searchQuery.isNotEmpty) {
+      filtered = filtered
           .where((s) =>
               s.name.toLowerCase().contains(searchQuery.toLowerCase()) ||
               s.email.toLowerCase().contains(searchQuery.toLowerCase()))
           .toList();
     }
+
+    setState(() {
+      filteredStudents = filtered;
+    });
   }
 
   void _showStudentDetail(UserModel student) {
+    if (_editController == null) {
+      // Initialize if not yet initialized (safety check)
+      _editController = StudentEditController(_studentController);
+    }
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1F2937),
-        title: Text(student.name, style: const TextStyle(color: Colors.white)),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildDetailRow('Email:', student.email),
-              _buildDetailRow('Phone:', student.phoneNumber ?? 'N/A'),
-              _buildDetailRow(
-                'Status:',
-                student.isActive ? 'Active' : 'Inactive',
-                valueColor: student.isActive ? Colors.green : Colors.red,
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close', style: TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton.icon(
-            onPressed: () {
-              Navigator.pop(context);
-              _showEditStudentDialog(student);
-            },
-            icon: const Icon(Icons.edit, size: 18),
-            label: const Text('Edit'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
-              foregroundColor: Colors.white,
-            ),
-          ),
-          ElevatedButton.icon(
-            onPressed: () {
-              Navigator.pop(context);
-              _deleteStudent(student.uid);
-            },
-            icon: const Icon(Icons.delete, size: 18),
-            label: const Text('Delete'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-          ),
+      builder: (context) => StudentEditDialog(
+        student: student,
+        controller: _editController!,
+        onUpdated: _loadStudents,
+      ),
+    );
+  }
+
+  // Các hàm edit/delete đã được chuyển vào edit_students.dart
+
+  // Filter Bar with Cascading Dropdowns
+  Widget _buildFilterBar() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1F2937),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey[700]!),
+      ),
+      child: Row(
+        children: [
+          Expanded(child: _buildCourseDropdown()),
+          const SizedBox(width: 12),
+          Expanded(child: _buildGroupDropdown()),
         ],
       ),
     );
   }
 
-  void _showEditStudentDialog(UserModel student) {
-    final phoneController =
-        TextEditingController(text: student.phoneNumber ?? '');
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1F2937),
-        title: const Text('Edit Info (Phone Only)',
-            style: TextStyle(color: Colors.white)),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: phoneController,
-                style: const TextStyle(color: Colors.white),
-                keyboardType: TextInputType.phone,
-                decoration: InputDecoration(
-                  labelText: 'Phone Number',
-                  labelStyle: const TextStyle(color: Colors.grey),
-                  border: const OutlineInputBorder(),
-                  enabledBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.grey[700]!),
-                  ),
-                  focusedBorder: const OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.blue),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
-            onPressed: () =>
-                _updateStudent(student, phoneController.text.trim()),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Save'),
-          ),
-        ],
-      ),
+  Widget _buildCourseDropdown() {
+    // Add "All Courses" option
+    final allCoursesOption = CourseModel(
+      id: '',
+      code: '',
+      name: 'All Courses',
+      instructor: '',
+      semester: '',
+      sessions: 0,
     );
-  }
 
-  Future<void> _updateStudent(UserModel student, String newPhone) async {
-    try {
-      final success = await _studentController.updateStudentProfile(
-        student.uid,
-        phone: newPhone,
-      );
+    final dropdownItems = [allCoursesOption, ..._courses];
 
-      if (success) {
-        Navigator.pop(context);
-        _loadStudents();
+    return DropdownMenu<CourseModel>(
+      controller:
+          _courseFilterController, // Add controller to show selected value
+      enableFilter: true,
+      enableSearch: true,
+      menuHeight: 150, // Max 3 items visible
+      requestFocusOnTap: true,
+      width: 400, // Fixed width for proper display
+      label: const Text('Filter by Course'),
+      hintText: 'Select course',
+      leadingIcon: const Icon(Icons.school, size: 20),
+      textStyle: const TextStyle(color: Colors.white, fontSize: 14),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: Colors.grey[800],
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: Colors.grey[600]!),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: Colors.grey[600]!),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Colors.blue, width: 2),
+        ),
+        labelStyle: const TextStyle(color: Colors.white70, fontSize: 14),
+        hintStyle: const TextStyle(color: Colors.white54, fontSize: 14),
+      ),
+      onSelected: (CourseModel? course) {
+        setState(() {
+          _selectedCourse = (course?.id.isEmpty ?? true) ? null : course;
+          _selectedGroup = null; // Reset group selection
+          _groups = [];
 
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Updated successfully'),
-              backgroundColor: Colors.green,
-            ),
-          );
+          // Update controller text
+          _courseFilterController.text = course?.name ?? 'All Courses';
+          _groupFilterController.text = 'All Groups'; // Reset group to default
+        });
+        if (_selectedCourse != null) {
+          _loadGroupsForCourse(_selectedCourse!.id);
+        } else {
+          // If "All Courses" selected, apply filter immediately
+          _applyFilter();
         }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
+      },
+      dropdownMenuEntries: dropdownItems.map((course) {
+        return DropdownMenuEntry<CourseModel>(
+          value: course,
+          label: course.name,
+          leadingIcon: Icon(
+            course.id.isEmpty ? Icons.clear_all : Icons.book,
+            color: course.id.isEmpty ? Colors.grey : Colors.blue[400],
+            size: 16,
           ),
         );
-      }
-    }
+      }).toList(),
+    );
   }
 
-  Future<void> _deleteStudent(String studentUid) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1F2937),
-        title: const Text('Confirm Deletion',
-            style: TextStyle(color: Colors.white)),
-        content: const Text(
-          'Are you sure you want to delete this student?\n(Mark as inactive)',
-          style: TextStyle(color: Colors.white70),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Delete', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
+  Widget _buildGroupDropdown() {
+    final bool isEnabled = _selectedCourse != null && !_isLoadingGroups;
+
+    // Add "All Groups" option
+    final allGroupsOption = GroupModel(
+      id: '',
+      name: 'All Groups',
+      code: '',
+      courseId: '',
+      createdAt: DateTime.now(),
+      createdBy: '',
     );
 
-    if (confirmed != true) return;
+    final dropdownItems =
+        isEnabled ? [allGroupsOption, ..._groups] : [allGroupsOption];
 
-    try {
-      final success = await _studentController.deleteStudent(studentUid);
-      if (success) _loadStudents();
-    } catch (e) {
-      // Handle error if needed
-    }
-  }
+    // Use single DropdownMenu widget for both states
+    // Wrap in IgnorePointer to block clicks when disabled
+    return IgnorePointer(
+      ignoring: !isEnabled,
+      child: DropdownMenu<GroupModel>(
+        key: ValueKey(_selectedCourse?.id ??
+            'no-course'), // Force rebuild when course changes
+        controller:
+            _groupFilterController, // Add controller to show selected value
+        enableFilter: true,
+        enableSearch: true,
+        menuHeight: 150, // Max 3 items visible
+        requestFocusOnTap: true,
+        width: 400, // Fixed width for proper display
+        label: const Text('Filter by Group'),
+        hintText: isEnabled ? 'Select group' : 'Select course first',
+        textStyle: TextStyle(
+          color: isEnabled ? Colors.white : Colors.white38,
+          fontSize: 14,
+        ),
+        leadingIcon: _isLoadingGroups
+            ? const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : Icon(
+                Icons.group,
+                size: 20,
+                color: isEnabled ? Colors.white : Colors.white38,
+              ),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: isEnabled ? Colors.grey[800] : Colors.grey[850],
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(
+              color: isEnabled ? Colors.grey[600]! : Colors.grey[700]!,
+            ),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(
+              color: isEnabled ? Colors.grey[600]! : Colors.grey[700]!,
+            ),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: Colors.blue, width: 2),
+          ),
+          labelStyle: TextStyle(
+            color: isEnabled ? Colors.white70 : Colors.white38,
+            fontSize: 14,
+          ),
+          hintStyle: TextStyle(
+            color: isEnabled ? Colors.white54 : Colors.white38,
+            fontSize: 14,
+          ),
+        ),
+        onSelected: (GroupModel? group) {
+          setState(() {
+            _selectedGroup = (group?.id.isEmpty ?? true) ? null : group;
 
-  Widget _buildDetailRow(String label, String value, {Color? valueColor}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            flex: 2,
-            child: Text(label,
-                style: const TextStyle(
-                    fontWeight: FontWeight.bold, color: Colors.grey)),
-          ),
-          Expanded(
-            flex: 3,
-            child: Text(value,
-                style: TextStyle(color: valueColor ?? Colors.white70)),
-          ),
-        ],
+            // Update controller text
+            _groupFilterController.text = group?.name ?? 'All Groups';
+          });
+          _applyFilter();
+        },
+        dropdownMenuEntries: dropdownItems.map((group) {
+          return DropdownMenuEntry<GroupModel>(
+            value: group,
+            label: group.name,
+            leadingIcon: Icon(
+              group.id.isEmpty ? Icons.clear_all : Icons.group,
+              color: group.id.isEmpty ? Colors.grey : Colors.green[400],
+              size: 16,
+            ),
+          );
+        }).toList(),
       ),
     );
   }
@@ -431,6 +549,9 @@ class _InstructorStudentsPageState extends State<InstructorStudentsPage> {
           style: TextStyle(color: Colors.grey[400], fontSize: 16),
         ),
         const SizedBox(height: 24),
+
+        // Filter Bar
+        _buildFilterBar(),
 
         // Search bar
         TextField(

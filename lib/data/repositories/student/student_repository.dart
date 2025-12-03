@@ -3,7 +3,9 @@
 // MÔ TẢ: Repository sinh viên - Sử dụng UserModel & Client-side filtering
 // ========================================
 
+import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:http/http.dart' as http;
 import '../../../domain/models/user_model.dart';
 import '../../../core/config/users-role.dart';
 
@@ -60,11 +62,13 @@ class StudentRepository {
               return null;
             }
           })
-          .where((u) =>
-              u != null &&
-              u.role == UserRole.student &&
-              (u.name.toLowerCase().contains(queryLower) ||
-                  u.email.toLowerCase().contains(queryLower)))
+          .where(
+            (u) =>
+                u != null &&
+                u.role == UserRole.student &&
+                (u.name.toLowerCase().contains(queryLower) ||
+                    u.email.toLowerCase().contains(queryLower)),
+          )
           .cast<UserModel>()
           .toList();
 
@@ -97,8 +101,10 @@ class StudentRepository {
   // ========================================
   static Future<UserModel?> getStudentById(String uid) async {
     try {
-      final docSnapshot =
-          await _firestore.collection(_collection).doc(uid).get();
+      final docSnapshot = await _firestore
+          .collection(_collection)
+          .doc(uid)
+          .get();
 
       if (!docSnapshot.exists) return null;
 
@@ -129,6 +135,7 @@ class StudentRepository {
   // ========================================
   // HÀM: updateStudentProfile()
   // MÔ TẢ: Cập nhật từng trường (Name, Phone)
+  // CASCADE UPDATE: Khi đổi name → cập nhật enrollments.studentName
   // ========================================
   static Future<void> updateStudentProfile(
     String uid, {
@@ -136,6 +143,7 @@ class StudentRepository {
     String? phone,
   }) async {
     try {
+      // Update users collection
       final updates = <String, dynamic>{};
 
       if (name != null) updates['name'] = name;
@@ -145,23 +153,102 @@ class StudentRepository {
 
         await _firestore.collection(_collection).doc(uid).update(updates);
       }
+
+      // CASCADE UPDATE: If name changed, update enrollments collection
+      if (name != null) {
+        print('📝 Cascade update: Updating studentName in enrollments...');
+        final enrollmentsSnapshot = await _firestore
+            .collection('enrollments')
+            .where('userId', isEqualTo: uid)
+            .get();
+
+        if (enrollmentsSnapshot.docs.isNotEmpty) {
+          final batch = _firestore.batch();
+          for (var doc in enrollmentsSnapshot.docs) {
+            batch.update(doc.reference, {'studentName': name});
+          }
+          await batch.commit();
+          print(
+            '✅ Updated ${enrollmentsSnapshot.docs.length} enrollment records',
+          );
+        }
+      }
     } catch (e) {
       throw Exception('Lỗi cập nhật: $e');
     }
   }
 
   // ========================================
-  // HÀM: deleteStudent()
-  // MÔ TẢ: Soft delete (set isActive = false)
+  // HÀM: updateStudentEmail()
+  // MÔ TẢ: Cập nhật email qua Cloud Function
+  // Updates Authentication + Firestore
   // ========================================
-  static Future<void> deleteStudent(String uid) async {
+  static Future<Map<String, dynamic>> updateStudentEmail(
+    String uid,
+    String newEmail,
+  ) async {
     try {
-      await _firestore.collection(_collection).doc(uid).update({
-        'isActive': false,
-        'settings.status': 'inactive',
-        'updatedAt': DateTime.now().toIso8601String(),
-      });
+      print('📧 Calling updateStudentEmailV2 function...');
+      print('   UID: $uid');
+      print('   New Email: $newEmail');
+
+      // Call Gen2 HTTP Cloud Function (same as bulkCreateUsers pattern)
+      final response = await http.post(
+        Uri.parse(
+          'https://us-central1-e-learning-management-79797.cloudfunctions.net/updateStudentEmailV2',
+        ),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'uid': uid, 'newEmail': newEmail}),
+      );
+
+      print('📞 Response status: ${response.statusCode}');
+      print('📞 Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final result = json.decode(response.body);
+        print('✅ Function returned: $result');
+        return Map<String, dynamic>.from(result);
+      } else {
+        final error = json.decode(response.body);
+        throw Exception(error['error'] ?? 'Failed to update email');
+      }
     } catch (e) {
+      print('❌ Error: $e');
+      throw Exception('Lỗi cập nhật email: $e');
+    }
+  }
+
+  // ========================================
+  // HÀM: deleteStudent()
+  // MÔ TẢ: CASCADE DELETE - Xóa hoàn toàn sinh viên khỏi hệ thống
+  // Gọi Cloud Function để xóa: Authentication + Firestore + Enrollments
+  // ========================================
+  static Future<Map<String, dynamic>> deleteStudent(String uid) async {
+    try {
+      print('🗑️ Calling deleteStudentCompletely function...');
+      print('   UID: $uid');
+
+      // Call Cloud Function via HTTP
+      final response = await http.post(
+        Uri.parse(
+          'https://us-central1-e-learning-management-79797.cloudfunctions.net/deleteStudentCompletely',
+        ),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'uid': uid}),
+      );
+
+      print('📡 Response status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final result = json.decode(response.body) as Map<String, dynamic>;
+        print('✅ Student deleted completely: ${result['deletionResults']}');
+        return result;
+      } else {
+        final error = json.decode(response.body);
+        throw Exception(error['error'] ?? 'Failed to delete student');
+      }
+    } catch (e) {
+      print('❌ Delete error: $e');
       throw Exception('Lỗi xóa sinh viên: $e');
     }
   }
@@ -220,7 +307,10 @@ class StudentRepository {
     // throw UnimplementedError('Chưa hỗ trợ với UserModel mới');
   }
 
-  static Future<void> removeStudentFromCourse(String uid, String courseId) async {
+  static Future<void> removeStudentFromCourse(
+    String uid,
+    String courseId,
+  ) async {
     // TODO: Implement với collection enrollments
   }
 
@@ -242,7 +332,9 @@ class StudentRepository {
     // TODO: Implement
   }
 
-  static Future<List<UserModel>> getStudentsByIds(List<String> studentUids) async {
+  static Future<List<UserModel>> getStudentsByIds(
+    List<String> studentUids,
+  ) async {
     // Tạm thời không dùng nữa hoặc implement lại nếu cần
     return [];
   }

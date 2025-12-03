@@ -1,30 +1,30 @@
 // ========================================
-// FILE: forum_topics_screen.dart
-// MÔ TẢ: Màn hình danh sách topics trong một forum (giống Image 2)
+// FILE: instructor_forum_topics_screen.dart
+// MÔ TẢ: Màn hình danh sách topics cho giáo viên với quyền quản lý
 // ========================================
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:elearning_management_app/application/controllers/forum/forum_provider.dart';
-import 'topic_detail_screen.dart';
-import 'create_topic_dialog.dart';
+import '../../widgets/forum/Instructor/instructor_topic_detail_screen.dart';
+import '../../widgets/forum/Student/create_topic_dialog.dart';
 
-class ForumTopicsScreen extends ConsumerStatefulWidget {
+class InstructorForumTopicsScreen extends ConsumerStatefulWidget {
   final String courseId;
   final String courseName;
 
-  const ForumTopicsScreen({
+  const InstructorForumTopicsScreen({
     super.key,
     required this.courseId,
     required this.courseName,
   });
 
   @override
-  ConsumerState<ForumTopicsScreen> createState() => _ForumTopicsScreenState();
+  ConsumerState<InstructorForumTopicsScreen> createState() => _InstructorForumTopicsScreenState();
 }
 
-class _ForumTopicsScreenState extends ConsumerState<ForumTopicsScreen> {
+class _InstructorForumTopicsScreenState extends ConsumerState<InstructorForumTopicsScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
@@ -60,6 +60,66 @@ class _ForumTopicsScreenState extends ConsumerState<ForumTopicsScreen> {
     }
   }
 
+  void _confirmDeleteTopic(String topicId, String topicTitle) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1F2937),
+        title: const Text('Delete Topic?', style: TextStyle(color: Colors.white)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Are you sure you want to delete "$topicTitle"?',
+              style: const TextStyle(color: Colors.white70),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'This will permanently delete the topic and all its replies. This action cannot be undone.',
+              style: TextStyle(color: Colors.red, fontSize: 13),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              try {
+                await ref.read(forumControllerProvider.notifier).deleteTopic(
+                      widget.courseId,
+                      topicId,
+                    );
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Topic deleted successfully'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error deleting topic: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text('Delete', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final topicsAsync = _searchQuery.isEmpty
@@ -83,7 +143,7 @@ class _ForumTopicsScreenState extends ConsumerState<ForumTopicsScreen> {
               ),
             ),
             const Text(
-              'Forum',
+              'Forum Management',
               style: TextStyle(
                 color: Colors.grey,
                 fontSize: 12,
@@ -106,6 +166,29 @@ class _ForumTopicsScreenState extends ConsumerState<ForumTopicsScreen> {
             ),
             child: Column(
               children: [
+                // Info banner for instructor
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.indigo.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.indigo.withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.admin_panel_settings, color: Colors.indigo[300], size: 20),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Content Administrator: You can create, edit, and delete topics and replies',
+                          style: TextStyle(color: Colors.indigo[300], fontSize: 12),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                
                 // Search bar
                 TextField(
                   controller: _searchController,
@@ -139,6 +222,7 @@ class _ForumTopicsScreenState extends ConsumerState<ForumTopicsScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
+                
                 // Create Topic Button
                 SizedBox(
                   width: double.infinity,
@@ -186,15 +270,13 @@ class _ForumTopicsScreenState extends ConsumerState<ForumTopicsScreen> {
                         Icon(Icons.topic_outlined, size: 64, color: Colors.grey[600]),
                         const SizedBox(height: 16),
                         Text(
-                          _searchQuery.isEmpty
-                              ? 'No topics yet'
-                              : 'No topics found',
+                          _searchQuery.isEmpty ? 'No topics yet' : 'No topics found',
                           style: TextStyle(color: Colors.grey[400], fontSize: 16),
                         ),
                         const SizedBox(height: 8),
                         Text(
                           _searchQuery.isEmpty
-                              ? 'Be the first to create a topic!'
+                              ? 'Create the first topic!'
                               : 'Try a different search',
                           style: TextStyle(color: Colors.grey[500], fontSize: 14),
                         ),
@@ -212,7 +294,7 @@ class _ForumTopicsScreenState extends ConsumerState<ForumTopicsScreen> {
                     itemCount: topics.length,
                     itemBuilder: (context, index) {
                       final topic = topics[index];
-                      return _TopicCard(
+                      return _InstructorTopicCard(
                         title: topic['title'] ?? 'Untitled',
                         authorName: topic['authorName'] ?? 'Unknown',
                         replyCount: topic['replyCount'] ?? 0,
@@ -222,15 +304,15 @@ class _ForumTopicsScreenState extends ConsumerState<ForumTopicsScreen> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => TopicDetailScreen(
+                              builder: (context) => InstructorTopicDetailScreen(
                                 courseId: widget.courseId,
                                 topicId: topic['id'],
-                                topicTitle: topic['title'] ?? 'Untitled',
-                                topicContent: topic['content'] ?? '',
+                                topicData: topic,
                               ),
                             ),
                           );
                         },
+                        onDelete: () => _confirmDeleteTopic(topic['id'], topic['title'] ?? 'Untitled'),
                       );
                     },
                   ),
@@ -255,23 +337,25 @@ class _ForumTopicsScreenState extends ConsumerState<ForumTopicsScreen> {
 }
 
 // ========================================
-// WIDGET: Topic Card
+// WIDGET: Instructor Topic Card (with Delete button)
 // ========================================
-class _TopicCard extends StatelessWidget {
+class _InstructorTopicCard extends StatelessWidget {
   final String title;
   final String authorName;
   final int replyCount;
   final String createdAt;
   final bool isPinned;
   final VoidCallback onTap;
+  final VoidCallback onDelete;
 
-  const _TopicCard({
+  const _InstructorTopicCard({
     required this.title,
     required this.authorName,
     required this.replyCount,
     required this.createdAt,
     this.isPinned = false,
     required this.onTap,
+    required this.onDelete,
   });
 
   @override
@@ -282,9 +366,7 @@ class _TopicCard extends StatelessWidget {
         color: const Color(0xFF1F2937),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isPinned
-              ? Colors.amber.withOpacity(0.5)
-              : Colors.grey[800]!,
+          color: isPinned ? Colors.amber.withOpacity(0.5) : Colors.grey[800]!,
           width: isPinned ? 2 : 1,
         ),
       ),
@@ -313,7 +395,7 @@ class _TopicCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 12),
-                
+
                 // Topic Info
                 Expanded(
                   child: Column(
@@ -345,7 +427,7 @@ class _TopicCard extends StatelessWidget {
                           ],
                           Expanded(
                             child: Text(
-                              '[Topic] "$title"',
+                              title,
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 15,
@@ -367,10 +449,7 @@ class _TopicCard extends StatelessWidget {
                               fontSize: 12,
                             ),
                           ),
-                          Text(
-                            ' • ',
-                            style: TextStyle(color: Colors.grey[600]),
-                          ),
+                          Text(' • ', style: TextStyle(color: Colors.grey[600])),
                           Text(
                             '$replyCount replies',
                             style: TextStyle(
@@ -378,10 +457,7 @@ class _TopicCard extends StatelessWidget {
                               fontSize: 12,
                             ),
                           ),
-                          Text(
-                            ' • ',
-                            style: TextStyle(color: Colors.grey[600]),
-                          ),
+                          Text(' • ', style: TextStyle(color: Colors.grey[600])),
                           Text(
                             createdAt,
                             style: TextStyle(
@@ -394,8 +470,13 @@ class _TopicCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                
-                // Arrow
+
+                // Content Administrator actions
+                IconButton(
+                  icon: Icon(Icons.delete_outline, color: Colors.red[400], size: 20),
+                  onPressed: onDelete, 
+                  tooltip: 'Delete Topic',
+                ),
                 Icon(
                   Icons.arrow_forward_ios,
                   color: Colors.grey[600],

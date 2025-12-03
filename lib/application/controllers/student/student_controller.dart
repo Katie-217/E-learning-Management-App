@@ -11,16 +11,15 @@ import '../../../core/config/users-role.dart';
 class StudentController {
   final AuthRepository _authRepository;
 
-  StudentController({
-    required AuthRepository authRepository,
-  }) : _authRepository = authRepository;
+  StudentController({required AuthRepository authRepository})
+    : _authRepository = authRepository;
 
   // ========================================
   // FUNCTION: createStudent()
   // DESCRIPTION: Create a student profile (using UserModel)
   // ========================================
   Future<String> createStudent({
-    required String uid,             // UID from Firebase Auth
+    required String uid, // UID from Firebase Auth
     required String email,
     required String name,
     String? phoneNumber,
@@ -137,10 +136,32 @@ class StudentController {
   }
 
   // ========================================
-  // FUNCTION: deleteStudent()
-  // DESCRIPTION: Soft delete student (set inactive)
+  // FUNCTION: updateStudentEmail()
+  // DESCRIPTION: Update student email via Cloud Function
+  // Updates both Authentication and Firestore
   // ========================================
-  Future<bool> deleteStudent(String studentUid) async {
+  Future<Map<String, dynamic>> updateStudentEmail(
+    String studentUid,
+    String newEmail,
+  ) async {
+    try {
+      final user = await _authRepository.currentUserModel;
+      if (user == null || user.role != UserRole.instructor) {
+        throw Exception('❌ Only instructors can update email');
+      }
+
+      return await StudentRepository.updateStudentEmail(studentUid, newEmail);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // ========================================
+  // FUNCTION: deleteStudent()
+  // DESCRIPTION: CASCADE DELETE - Complete deletion from system
+  // Deletes: Authentication + Firestore + Enrollments
+  // ========================================
+  Future<Map<String, dynamic>> deleteStudent(String studentUid) async {
     try {
       final user = await _authRepository.currentUserModel;
       if (user == null || user.role != UserRole.instructor) {
@@ -152,11 +173,10 @@ class StudentController {
         throw Exception('❌ Student does not exist');
       }
 
-      // Enrollment check is now handled in Repository or skipped
-      await StudentRepository.deleteStudent(studentUid);
-      return true;
+      // Call Cloud Function to cascade delete
+      return await StudentRepository.deleteStudent(studentUid);
     } catch (e) {
-      return false;
+      rethrow;
     }
   }
 
@@ -179,10 +199,7 @@ class StudentController {
   // FUNCTION: enrollStudentToCourse()
   // DESCRIPTION: Enroll a student into a course
   // ========================================
-  Future<bool> enrollStudentToCourse(
-    String studentUid,
-    String courseId,
-  ) async {
+  Future<bool> enrollStudentToCourse(String studentUid, String courseId) async {
     try {
       final user = await _authRepository.currentUserModel;
       if (user == null || user.role != UserRole.instructor) {
@@ -245,10 +262,7 @@ class StudentController {
   // FUNCTION: addStudentToGroup()
   // DESCRIPTION: Add student to a group
   // ========================================
-  Future<bool> addStudentToGroup(
-    String studentUid,
-    String groupId,
-  ) async {
+  Future<bool> addStudentToGroup(String studentUid, String groupId) async {
     try {
       final user = await _authRepository.currentUserModel;
       if (user == null || user.role != UserRole.instructor) {
@@ -266,10 +280,7 @@ class StudentController {
   // FUNCTION: removeStudentFromGroup()
   // DESCRIPTION: Remove student from a group
   // ========================================
-  Future<bool> removeStudentFromGroup(
-    String studentUid,
-    String groupId,
-  ) async {
+  Future<bool> removeStudentFromGroup(String studentUid, String groupId) async {
     try {
       final user = await _authRepository.currentUserModel;
       if (user == null || user.role != UserRole.instructor) {
