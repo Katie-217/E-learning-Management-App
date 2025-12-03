@@ -482,3 +482,286 @@ export const healthCheck = functions.https.onRequest((req, res) => {
     timestamp: new Date().toISOString(),
   });
 });
+
+/**
+ * Cloud Function to update student email
+ * Gen 2 HTTP Function (similar to bulkCreateUsers)
+ * 
+ * CRITICAL REQUIREMENTS:
+ * - Only UPDATE existing user (NEVER delete and recreate)
+ * - Update both Authentication and Firestore
+ * - Validate email uniqueness before update
+ * - Preserve uid to maintain data relationships
+ */
+export const updateStudentEmailV2 = functionsV2.https.onRequest(
+  {
+    timeoutSeconds: 60,
+    memory: "512MiB",
+    cors: true,
+    region: "us-central1",
+    invoker: "public",
+  },
+  async (req, res) => {
+    // Set CORS headers explicitly
+    res.set("Access-Control-Allow-Origin", "*");
+    res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.set("Access-Control-Allow-Headers", "Content-Type");
+
+    // Handle preflight
+    if (req.method === "OPTIONS") {
+      res.status(204).send("");
+      return;
+    }
+
+    // Only POST
+    if (req.method !== 'POST') {
+      res.status(405).json({error: 'Method not allowed. Use POST.'});
+      return;
+    }
+
+    try {
+      const { uid, newEmail } = req.body;
+
+      // Validate input
+      if (!uid || !newEmail) {
+        res.status(400).json({ 
+          error: 'Missing required fields: uid and newEmail' 
+        });
+        return;
+      }
+
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(newEmail)) {
+        res.status(400).json({ 
+          error: 'Invalid email format' 
+        });
+        return;
+      }
+
+      console.log(`📧 Updating email for uid: ${uid} to ${newEmail}`);
+
+      const db = admin.firestore();
+      
+      // PARALLEL OPERATIONS: Get current user + check uniqueness simultaneously
+      const [currentUser, uniquenessCheck] = await Promise.all([
+        admin.auth().getUser(uid),
+        (async () => {
+          try {
+            const existingUser = await admin.auth().getUserByEmail(newEmail);
+            return existingUser && existingUser.uid !== uid ? existingUser : null;
+          } catch (error: any) {
+            if (error.code === 'auth/user-not-found') return null;
+            throw error;
+          }
+        })()
+      ]);
+
+      // Check uniqueness result
+      if (uniquenessCheck) {
+        console.log(`❌ Email ${newEmail} already in use by another user`);
+        res.status(409).json({ 
+          error: 'Email already in use by another student' 
+        });
+        return;
+      }
+
+      const oldEmail = currentUser.email;
+      console.log(`📝 Updating ${oldEmail} → ${newEmail}`);
+
+      // PARALLEL: Update Auth + Firestore + Query enrollments simultaneously
+      const [_, __, enrollmentsSnapshot] = await Promise.all([
+        admin.auth().updateUser(uid, { email: newEmail }),
+        db.collection("users").doc(uid).update({
+          email: newEmail,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        }),
+        db.collection("enrollments")
+          .where("studentEmail", "==", oldEmail)
+          .limit(100) // Limit for safety
+          .get()
+      ]);
+      
+      console.log(`✅ Auth + Firestore updated`);
+
+      // Update enrollments if any (sequential - batch write)
+      let enrollmentsUpdated = 0;
+      if (!enrollmentsSnapshot.empty) {
+        const batch = db.batch();
+        enrollmentsSnapshot.docs.forEach((doc) => {
+          batch.update(doc.ref, { studentEmail: newEmail });
+        });
+        await batch.commit();
+        enrollmentsUpdated = enrollmentsSnapshot.size;
+        console.log(`✅ ${enrollmentsUpdated} enrollments updated`);
+      }
+
+      res.status(200).json({
+        success: true,
+        message: "Email updated successfully",
+        uid: uid,
+        oldEmail: oldEmail,
+        newEmail: newEmail,
+        enrollmentsUpdated: enrollmentsUpdated,
+      });
+
+    } catch (error: any) {
+      console.error("❌ Error updating student email:", error);
+      
+      // Handle specific errors
+      if (error.code === 'auth/user-not-found') {
+        res.status(404).json({ 
+          error: 'Student not found' 
+        });
+      } else if (error.code === 'auth/email-already-exists') {
+        res.status(409).json({ 
+          error: 'Email already in use' 
+        });
+      } else {
+        res.status(500).json({
+          error: 'Failed to update email: ' + error.message,
+        });
+      }
+    }
+  }
+);
+
+/**
+ * Cloud Function to CASCADE DELETE a student
+ * Gen 2 HTTP Function
+ * 
+ * CRITICAL: Complete deletion from entire system
+ * 1. Delete Authentication account (student can't login anymore)
+ * 2. Delete Firestore profile (users/{uid})
+ * 3. Delete all enrollments (enrollments where studentId == uid)
+ * 
+ * Request body:
+ * {
+ *   "uid": "student_uid_to_delete"
+ * }
+ */
+export const deleteStudentCompletely = functionsV2.https.onRequest(
+  {
+    timeoutSeconds: 60,
+    memory: "512MiB",
+    cors: true,
+    region: "us-central1",
+    invoker: "public",
+  },
+  async (req, res) => {
+    // Set CORS headers
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.set('Access-Control-Allow-Headers', 'Content-Type');
+
+    // Handle preflight
+    if (req.method === 'OPTIONS') {
+      res.status(204).send('');
+      return;
+    }
+
+    // Only POST allowed
+    if (req.method !== 'POST') {
+      res.status(405).json({ error: 'Method not allowed. Use POST.' });
+      return;
+    }
+
+    try {
+      const { uid } = req.body;
+
+      // Validate input
+      if (!uid) {
+        res.status(400).json({ error: 'Missing required field: uid' });
+        return;
+      }
+
+      console.log(`🗑️ Starting complete deletion for student uid: ${uid}`);
+
+      const db = admin.firestore();
+      const deletionResults = {
+        authDeleted: false,
+        firestoreDeleted: false,
+        enrollmentsDeleted: 0,
+      };
+
+      console.log(`⚡ OPTIMIZED: Running parallel operations...`);
+
+      // ========================================
+      // PARALLEL PHASE: Auth + Firestore + Enrollments query simultaneously
+      // SPEED UP: Instead of sequential (10-15s), run in parallel (~3-5s)
+      // ========================================
+      const [authResult, firestoreResult, enrollmentsSnapshot] = await Promise.allSettled([
+        // STEP 1: Delete Authentication
+        admin.auth().deleteUser(uid),
+        
+        // STEP 2: Delete Firestore Profile
+        db.collection('users').doc(uid).delete(),
+        
+        // STEP 3: Query enrollments (prepare for batch delete)
+        db.collection('enrollments').where('userId', '==', uid).get()
+      ]);
+
+      // Process Auth result
+      if (authResult.status === 'fulfilled') {
+        deletionResults.authDeleted = true;
+        console.log(`✅ Auth deleted`);
+      } else {
+        const error = authResult.reason;
+        if (error?.code === 'auth/user-not-found') {
+          deletionResults.authDeleted = true;
+          console.log(`⚠️ Auth user not found (already deleted)`);
+        } else {
+          console.error(`❌ Auth deletion failed: ${error?.message}`);
+        }
+      }
+
+      // Process Firestore result
+      if (firestoreResult.status === 'fulfilled') {
+        deletionResults.firestoreDeleted = true;
+        console.log(`✅ Firestore profile deleted`);
+      } else {
+        console.error(`❌ Firestore deletion failed: ${firestoreResult.reason?.message}`);
+      }
+
+      // Process Enrollments (batch delete if query succeeded)
+      if (enrollmentsSnapshot.status === 'fulfilled') {
+        const snapshot = enrollmentsSnapshot.value;
+        console.log(`📊 Found ${snapshot.size} enrollment records`);
+        
+        if (!snapshot.empty) {
+          try {
+            const batch = db.batch();
+            snapshot.docs.forEach((doc) => batch.delete(doc.ref));
+            await batch.commit();
+            deletionResults.enrollmentsDeleted = snapshot.size;
+            console.log(`✅ Deleted ${snapshot.size} enrollments`);
+          } catch (batchError: any) {
+            console.error(`❌ Batch delete failed: ${batchError.message}`);
+          }
+        } else {
+          console.log(`ℹ️ No enrollments to delete`);
+        }
+      } else {
+        console.error(`❌ Enrollments query failed: ${enrollmentsSnapshot.reason?.message}`);
+      }
+
+      console.log(`✅ Deletion complete:`);
+      console.log(`   Auth: ${deletionResults.authDeleted}`);
+      console.log(`   Firestore: ${deletionResults.firestoreDeleted}`);
+      console.log(`   Enrollments: ${deletionResults.enrollmentsDeleted}`);
+
+      res.status(200).json({
+        success: true,
+        message: 'Student deleted completely from system',
+        uid: uid,
+        deletionResults: deletionResults,
+      });
+
+    } catch (error: any) {
+      console.error('❌ Error during student deletion:', error);
+      res.status(500).json({
+        error: 'Failed to delete student: ' + error.message,
+      });
+    }
+  }
+);

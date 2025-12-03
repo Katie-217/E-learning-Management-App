@@ -504,10 +504,12 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
     if (mounted) setState(() {}); // Refresh UI with loaded names
   }
 
-  // Helper method to get count of new students
+  // Helper method to get count of new students (including name_mismatch)
   int _getNewStudentsCount() {
     if (_parsedRecords == null) return 0;
-    return _parsedRecords!.where((r) => r.status == 'new').length;
+    return _parsedRecords!
+        .where((r) => r.status == 'new' || r.status == 'name_mismatch')
+        .length;
   }
 
   // ========================================
@@ -838,7 +840,7 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
             Expanded(
               child: _buildStatBox(
                 title: 'New to add',
-                count: newRecords.length + nameMismatchRecords.length,
+                count: newRecords.length, // Already includes name_mismatch
                 color: Colors.green,
                 icon: Icons.add_circle,
               ),
@@ -847,7 +849,8 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
             Expanded(
               child: _buildStatBox(
                 title: 'Already exists',
-                count: duplicateRecords.length,
+                count: duplicateRecords.length +
+                    nameMismatchRecords.length, // Duplicate + name mismatch
                 color: Colors.orange,
                 icon: Icons.info,
               ),
@@ -866,7 +869,7 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
         const SizedBox(height: 20),
 
         // Show NEW records to add (including name mismatch)
-        if (newRecords.isNotEmpty || nameMismatchRecords.isNotEmpty) ...[
+        if (newRecords.isNotEmpty) ...[
           const Text(
             'New students to be added:',
             style: TextStyle(
@@ -882,11 +885,10 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
             ),
             child: ListView.builder(
               shrinkWrap: true,
-              itemCount: newRecords.length + nameMismatchRecords.length,
+              itemCount: newRecords
+                  .length, // newRecords already includes name_mismatch
               itemBuilder: (context, index) {
-                final record = index < newRecords.length
-                    ? newRecords[index]
-                    : nameMismatchRecords[index - newRecords.length];
+                final record = newRecords[index];
                 final csvName = record.data['name']?.toString() ?? 'N/A';
                 final existingName = record.existingName;
                 final hasNameMismatch = record.status == 'name_mismatch';
@@ -942,8 +944,7 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
                               TextStyle(fontSize: 12, color: Colors.grey[300]),
                         ),
                       ],
-                      if (index <
-                          newRecords.length + nameMismatchRecords.length - 1)
+                      if (index < newRecords.length - 1)
                         const Divider(color: Colors.green, height: 8),
                     ],
                   ),
@@ -955,6 +956,7 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
         ],
 
         // Show duplicate records section (already enrolled - will SKIP)
+        // AND name mismatch (will enroll with existing name)
         if (duplicateRecords.isNotEmpty || nameMismatchRecords.isNotEmpty) ...[
           const Text(
             'Already exists in system:',
