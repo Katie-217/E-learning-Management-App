@@ -9,6 +9,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:elearning_management_app/application/controllers/forum/forum_provider.dart';
 import '../common/forum_file_preview_widget.dart';
 import 'create_topic_dialog.dart';
+import 'topic_detail_screen.dart';
 
 
 class ForumTopicsScreen extends ConsumerStatefulWidget {
