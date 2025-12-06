@@ -205,7 +205,6 @@ class _MainShellState extends State<MainShell> {
           ],
         ),
         actions: [
-          _ResponsiveSearchField(),
           IconButton(
             onPressed: () {},
             icon: const Icon(Icons.notifications_none),
@@ -294,56 +293,6 @@ class _AppIcon extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
       ),
       child: const Icon(Icons.menu_book, color: Colors.white),
-    );
-  }
-}
-
-// Responsive search field to prevent overflow in app bar
-class _ResponsiveSearchField extends StatelessWidget {
-  const _ResponsiveSearchField();
-
-  @override
-  Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    // Reduce width on small screens and hide on very small screens
-    final searchWidth = screenWidth > 1200
-        ? 280.0
-        : screenWidth > 900
-            ? 220.0
-            : screenWidth > 750
-                ? 180.0
-                : screenWidth > 600
-                    ? 150.0
-                    : screenWidth > 480
-                        ? 120.0
-                        : 0.0;
-
-    if (searchWidth == 0) return const SizedBox.shrink();
-
-    return Flexible(
-      child: SizedBox(
-        width: searchWidth,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8),
-          child: TextField(
-            style: const TextStyle(color: Colors.white, fontSize: 14),
-            decoration: InputDecoration(
-              hintText:
-                  screenWidth > 600 ? 'Search courses, materials...' : 'Search...',
-              hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
-              filled: true,
-              fillColor: const Color(0xFF111827),
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide.none,
-              ),
-              isDense: true,
-            ),
-          ),
-        ),
-      ),
     );
   }
 }
