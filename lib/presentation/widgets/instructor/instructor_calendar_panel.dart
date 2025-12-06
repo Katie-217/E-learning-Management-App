@@ -22,56 +22,142 @@ class InstructorCalendarPanel extends ConsumerWidget {
     final monthlyTasksAsync = ref.watch(tasksForMonthProvider(monthKey));
     final dailyTasksAsync = ref.watch(tasksProvider(selectedDate));
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const CalendarWidget(),
-        const SizedBox(height: 12),
-        Text(
-          'Selected date: ${DateFormat('EEEE, MMM d').format(selectedDate)}',
-          style: const TextStyle(color: Colors.white70, fontSize: 12),
-        ),
-        const SizedBox(height: 12),
-        // Task Summary (Assignments, Quizzes, Deadlines từ tasks)
-        monthlyTasksAsync.when(
-          data: (tasks) => InstructorTaskSummary(tasks: tasks),
-          loading: () => const Center(
-            child: SizedBox(
-              height: 26,
-              width: 26,
-              child: CircularProgressIndicator(strokeWidth: 2),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isWide = constraints.maxWidth > 700;
+
+        if (!isWide) {
+          // Giữ layout dọc cho màn hình hẹp
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const CalendarWidget(),
+              const SizedBox(height: 12),
+              Text(
+                'Selected date: ${DateFormat('EEEE, MMM d').format(selectedDate)}',
+                style: const TextStyle(color: Colors.white70, fontSize: 12),
+              ),
+              const SizedBox(height: 12),
+              monthlyTasksAsync.when(
+                data: (tasks) => InstructorTaskSummary(tasks: tasks),
+                loading: () => const Center(
+                  child: SizedBox(
+                    height: 26,
+                    width: 26,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+                error: (error, _) => Text(
+                  'Unable to load semester data: $error',
+                  style: const TextStyle(
+                    color: Colors.redAccent,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Upcoming Items',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 12),
+              dailyTasksAsync.when(
+                data: (tasks) => _buildUpcomingOverview(tasks),
+                loading: () => const Center(
+                  child: SizedBox(
+                    height: 26,
+                    width: 26,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+                error: (error, _) => Text(
+                  'Unable to load upcoming items: $error',
+                  style: const TextStyle(
+                    color: Colors.redAccent,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ],
+          );
+        }
+
+        // Layout ngang cho màn hình rộng: Calendar bên trái, Summary + Upcoming bên phải
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              flex: 3,
+              child: const CalendarWidget(),
             ),
-          ),
-          error: (error, _) => Text(
-            'Unable to load semester data: $error',
-            style: const TextStyle(color: Colors.redAccent, fontSize: 12),
-          ),
-        ),
-        const SizedBox(height: 16),
-        const Text(
-          'Upcoming Items',
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 14,
-            color: Colors.white,
-          ),
-        ),
-        const SizedBox(height: 12),
-        dailyTasksAsync.when(
-          data: (tasks) => _buildUpcomingOverview(tasks),
-          loading: () => const Center(
-            child: SizedBox(
-              height: 26,
-              width: 26,
-              child: CircularProgressIndicator(strokeWidth: 2),
+            const SizedBox(width: 16),
+            Expanded(
+              flex: 2,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Selected date: ${DateFormat('EEEE, MMM d').format(selectedDate)}',
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  monthlyTasksAsync.when(
+                    data: (tasks) => InstructorTaskSummary(tasks: tasks),
+                    loading: () => const Center(
+                      child: SizedBox(
+                        height: 26,
+                        width: 26,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ),
+                    error: (error, _) => Text(
+                      'Unable to load semester data: $error',
+                      style: const TextStyle(
+                        color: Colors.redAccent,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Upcoming Items',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  dailyTasksAsync.when(
+                    data: (tasks) => _buildUpcomingOverview(tasks),
+                    loading: () => const Center(
+                      child: SizedBox(
+                        height: 26,
+                        width: 26,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ),
+                    error: (error, _) => Text(
+                      'Unable to load upcoming items: $error',
+                      style: const TextStyle(
+                        color: Colors.redAccent,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          error: (error, _) => Text(
-            'Unable to load upcoming items: $error',
-            style: const TextStyle(color: Colors.redAccent, fontSize: 12),
-          ),
-        ),
-      ],
+          ],
+        );
+      },
     );
   }
 

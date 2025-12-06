@@ -25,47 +25,46 @@ class _CourseCardWidgetState extends State<CourseCardWidget> {
           width: 1.2,
         ),
       ),
-      child: InkWell(
+      child: ClipRRect(
         borderRadius: BorderRadius.circular(14),
-        onTap: widget.onTap,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header Gradient
-            Container(
-              height: 100,
-              decoration: BoxDecoration(
-                gradient:
-                    const LinearGradient(colors: [Colors.blue, Colors.cyan]),
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(14)),
-              ),
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _chip(c.code),
-                        // Group info will be loaded separately from GroupRepository
-                      ]),
-                  const Spacer(),
-                  Text(c.name,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                          color: Colors.white)),
-                ],
-              ),
-            ),
-            Expanded(
-              child: Padding(
+        child: InkWell(
+          onTap: widget.onTap,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header Gradient - chiếm trọn chiều rộng
+              Container(
+                height: 80,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  gradient:
+                      const LinearGradient(colors: [Colors.blue, Colors.cyan]),
+                ),
                 padding: const EdgeInsets.all(12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _chip(c.code),
+                    const Spacer(),
+                    Flexible(
+                      child: Text(c.name,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                              color: Colors.white)),
+                    ),
+                  ],
+                ),
+              ),
+              // Content section - giảm padding và spacing
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Row(children: [
                       const Icon(Icons.person_outline,
@@ -74,10 +73,11 @@ class _CourseCardWidgetState extends State<CourseCardWidget> {
                       Expanded(
                           child: Text(c.instructor,
                               overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
                               style: const TextStyle(
                                   color: Colors.grey, fontSize: 13))),
                     ]),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -91,12 +91,12 @@ class _CourseCardWidgetState extends State<CourseCardWidget> {
                                 color: Colors.grey, fontSize: 12)),
                       ],
                     ),
-                    const Spacer(),
+                    const SizedBox(height: 8),
                     const Text('Status',
                         style: TextStyle(color: Colors.grey, fontSize: 12)),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 3),
                     Container(
-                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
                         color: c.status == 'active'
                             ? Colors.green.shade100
@@ -117,8 +117,8 @@ class _CourseCardWidgetState extends State<CourseCardWidget> {
                   ],
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

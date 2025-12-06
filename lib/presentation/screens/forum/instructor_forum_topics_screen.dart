@@ -13,11 +13,15 @@ import '../../widgets/forum/Student/create_topic_dialog.dart';
 class InstructorForumTopicsScreen extends ConsumerStatefulWidget {
   final String courseId;
   final String courseName;
+  final String? groupId;
+  final String? groupName;
 
   const InstructorForumTopicsScreen({
     super.key,
     required this.courseId,
     required this.courseName,
+    this.groupId,
+    this.groupName,
   });
 
   @override
@@ -139,16 +143,26 @@ class _InstructorForumTopicsScreenState extends ConsumerState<InstructorForumTop
               style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.w600,
-                fontSize: 18,
+                fontSize: 16,
               ),
             ),
-            const Text(
-              'Forum Management',
-              style: TextStyle(
-                color: Colors.grey,
-                fontSize: 12,
+            if (widget.groupName != null) ...[
+              Text(
+                'Group ${widget.groupName} • Forums',
+                style: const TextStyle(
+                  color: Colors.grey,
+                  fontSize: 12,
+                ),
               ),
-            ),
+            ] else ...[
+              const Text(
+                'Course Forums',
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontSize: 12,
+                ),
+              ),
+            ],
           ],
         ),
         iconTheme: const IconThemeData(color: Colors.white),

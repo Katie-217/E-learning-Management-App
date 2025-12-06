@@ -95,116 +95,145 @@ class _InstructorPeopleTabState extends ConsumerState<InstructorPeopleTab> {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Teacher Section
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1F2937),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey[800]!),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final screenWidth = constraints.maxWidth;
+        final isSmallScreen = screenWidth < 600;
+        final isMediumScreen = screenWidth < 900;
+        
+        // Responsive sizing
+        final padding = isSmallScreen ? 12.0 : 16.0;
+        final teacherTitleSize = isSmallScreen ? 16.0 : 18.0;
+        final teacherIconSize = isSmallScreen ? 20.0 : 24.0;
+        final teacherAvatarSize = isSmallScreen ? 40.0 : 48.0;
+        final teacherPersonIconSize = isSmallScreen ? 20.0 : 24.0;
+        final teacherNameSize = isSmallScreen ? 14.0 : 16.0;
+        final teacherRoleSize = isSmallScreen ? 12.0 : 14.0;
+        final sectionSpacing = isSmallScreen ? 16.0 : 20.0;
+        final studentsTitleSize = isSmallScreen ? 16.0 : 18.0;
+        final toolbarHeight = isSmallScreen ? 44.0 : 48.0;
+        final listHeight = isSmallScreen ? 300.0 : 400.0;
+        
+        return SingleChildScrollView(
+          padding: EdgeInsets.all(padding),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Teacher Section
+              Container(
+                padding: EdgeInsets.all(padding),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1F2937),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey[800]!),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Teacher',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Teacher',
+                          style: TextStyle(
+                            fontSize: teacherTitleSize,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        Icon(Icons.school, color: Colors.indigo[400], size: teacherIconSize),
+                      ],
                     ),
-                    Icon(Icons.school, color: Colors.indigo[400], size: 24),
+                    SizedBox(height: padding),
+                    Row(
+                      children: [
+                        Container(
+                          width: teacherAvatarSize,
+                          height: teacherAvatarSize,
+                          decoration: const BoxDecoration(
+                            gradient: LinearGradient(
+                                colors: [Colors.indigo, Colors.purple]),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(Icons.person,
+                              color: Colors.white, size: teacherPersonIconSize),
+                        ),
+                        SizedBox(width: isSmallScreen ? 10.0 : 12.0),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                widget.course.instructor,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: teacherNameSize,
+                                  color: Colors.white,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              Text(
+                                'Course Instructor',
+                                style: TextStyle(
+                                    color: Colors.grey[400], fontSize: teacherRoleSize),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () {},
+                          icon: Icon(Icons.email_outlined, 
+                              color: Colors.grey, 
+                              size: isSmallScreen ? 20.0 : 24.0),
+                          padding: EdgeInsets.all(isSmallScreen ? 4.0 : 8.0),
+                          constraints: BoxConstraints(
+                            minWidth: isSmallScreen ? 32.0 : 48.0,
+                            minHeight: isSmallScreen ? 32.0 : 48.0,
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: const BoxDecoration(
-                        gradient: LinearGradient(
-                            colors: [Colors.indigo, Colors.purple]),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.person,
-                          color: Colors.white, size: 24),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            widget.course.instructor,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 16,
-                              color: Colors.white,
-                            ),
-                          ),
-                          Text(
-                            'Course Instructor',
-                            style: TextStyle(
-                                color: Colors.grey[400], fontSize: 14),
-                          ),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () {},
-                      icon:
-                          const Icon(Icons.email_outlined, color: Colors.grey),
-                    ),
-                  ],
+              ),
+
+              SizedBox(height: sectionSpacing),
+
+              // Khu vực 1: Group Control Bar
+              _buildGroupControlBar(),
+
+              SizedBox(height: padding),
+
+              // Students Section Title
+              Text(
+                'Students',
+                style: TextStyle(
+                  fontSize: studentsTitleSize,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
                 ),
-              ],
-            ),
+              ),
+
+              SizedBox(height: isSmallScreen ? 10.0 : 12.0),
+
+              // Khu vực 2: Student Toolbar
+              SizedBox(
+                height: toolbarHeight,
+                child: _buildStudentToolbar(),
+              ),
+
+              SizedBox(height: padding),
+
+              // Khu vực 3: Student List
+              Container(
+                height: listHeight,
+                child: _buildStudentList(),
+              ),
+            ],
           ),
-
-          const SizedBox(height: 20),
-
-          // Khu vực 1: Group Control Bar
-          _buildGroupControlBar(),
-
-          const SizedBox(height: 16),
-
-          // Students Section Title
-          const Text(
-            'Students',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-
-          const SizedBox(height: 12),
-
-          // Khu vực 2: Student Toolbar
-          SizedBox(
-            height: 48, // Fixed height to prevent overflow
-            child: _buildStudentToolbar(),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Khu vực 3: Student List
-          Container(
-            height: 400, // Fixed height to prevent overflow
-            child: _buildStudentList(),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -216,25 +245,16 @@ class _InstructorPeopleTabState extends ConsumerState<InstructorPeopleTab> {
         bool isMobile = constraints.maxWidth < 600;
 
         if (isMobile) {
-          // Mobile layout: Vertical stack
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          // Mobile layout: Horizontal row with proper spacing
+          return Row(
             children: [
-              // Group selector with MAX WIDTH constraint (no stretch)
-              ConstrainedBox(
-                constraints: const BoxConstraints(
-                  maxWidth: 280, // Giới hạn tối đa 280px
-                ),
+              // Group selector - takes available space
+              Expanded(
                 child: _buildGroupSplitButton(),
               ),
-              const SizedBox(height: 12),
-              // Import CSV button aligned right
-              Row(
-                children: [
-                  const Spacer(),
-                  _buildImportCSVButton(),
-                ],
-              ),
+              const SizedBox(width: 8),
+              // Import CSV button
+              _buildImportCSVButton(),
             ],
           );
         } else {
@@ -261,266 +281,319 @@ class _InstructorPeopleTabState extends ConsumerState<InstructorPeopleTab> {
 
   // MenuAnchor Group Split Button: Group Selector + Create Group
   Widget _buildGroupSplitButton() {
-    return Container(
-      height: 48,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey[700]!),
-      ),
-      child: Row(
-        children: [
-          // DropdownMenu với Search Filtering Logic
-          Expanded(
-            child: DropdownMenu<String>(
-              width: null, // Auto width
-              menuHeight: 150, // Giới hạn chiều cao 150px
-              enableFilter: true, // Bật tính năng filter
-              enableSearch: true, // Bật tính năng search
-              requestFocusOnTap: true,
-              inputDecorationTheme: InputDecorationTheme(
-                filled: true,
-                fillColor: Colors.transparent,
-                border: InputBorder.none,
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                hintStyle: TextStyle(color: Colors.grey[400]),
-              ),
-              textStyle: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w500,
-              ),
-              menuStyle: MenuStyle(
-                backgroundColor:
-                    MaterialStateProperty.all(const Color(0xFF1F2937)),
-                shape: MaterialStateProperty.all(
-                  RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8)),
-                ),
-              ),
-              trailingIcon:
-                  const Icon(Icons.arrow_drop_down, color: Colors.grey),
-              selectedTrailingIcon:
-                  const Icon(Icons.arrow_drop_up, color: Colors.grey),
-              leadingIcon:
-                  Icon(Icons.group, color: Colors.indigo[400], size: 20),
-              initialSelection: selectedGroup,
-              hintText: 'Search groups...',
-              // Filter function cho search logic
-              filterCallback:
-                  (List<DropdownMenuEntry<String>> entries, String filter) {
-                if (filter.isEmpty) return entries;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final screenWidth = constraints.maxWidth;
+        final isSmallScreen = screenWidth < 600;
+        
+        final buttonHeight = isSmallScreen ? 44.0 : 48.0;
+        final iconSize = isSmallScreen ? 18.0 : 20.0;
+        final addButtonWidth = isSmallScreen ? 40.0 : 48.0;
+        final horizontalPadding = isSmallScreen ? 12.0 : 16.0;
+        final verticalPadding = isSmallScreen ? 10.0 : 12.0;
+        final fontSize = isSmallScreen ? 14.0 : 16.0;
+        
+        return Container(
+          height: buttonHeight,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey[700]!),
+          ),
+          child: Row(
+            children: [
+              // DropdownMenu với Search Filtering Logic
+              Expanded(
+                child: DropdownMenu<String>(
+                  width: null, // Auto width
+                  menuHeight: 150, // Giới hạn chiều cao 150px
+                  enableFilter: true, // Bật tính năng filter
+                  enableSearch: true, // Bật tính năng search
+                  requestFocusOnTap: true,
+                  inputDecorationTheme: InputDecorationTheme(
+                    filled: true,
+                    fillColor: Colors.transparent,
+                    border: InputBorder.none,
+                    contentPadding:
+                        EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: verticalPadding),
+                    hintStyle: TextStyle(color: Colors.grey[400], fontSize: fontSize),
+                  ),
+                  textStyle: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w500,
+                    fontSize: fontSize,
+                  ),
+                  menuStyle: MenuStyle(
+                    backgroundColor:
+                        MaterialStateProperty.all(const Color(0xFF1F2937)),
+                    shape: MaterialStateProperty.all(
+                      RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8)),
+                    ),
+                  ),
+                  trailingIcon:
+                      Icon(Icons.arrow_drop_down, color: Colors.grey, size: iconSize),
+                  selectedTrailingIcon:
+                      Icon(Icons.arrow_drop_up, color: Colors.grey, size: iconSize),
+                  leadingIcon:
+                      Icon(Icons.group, color: Colors.indigo[400], size: iconSize),
+                  initialSelection: selectedGroup,
+                  hintText: 'Search groups...',
+                  // Filter function cho search logic
+                  filterCallback:
+                      (List<DropdownMenuEntry<String>> entries, String filter) {
+                    if (filter.isEmpty) return entries;
 
-                return entries.where((entry) {
-                  return entry.label
-                      .toLowerCase()
-                      .contains(filter.toLowerCase());
-                }).toList();
-              },
-              onSelected: (String? value) {
-                if (value != null) {
-                  setState(() {
-                    selectedGroup = value;
-                  });
-                }
-              },
-              dropdownMenuEntries: _buildGroupDropdownEntries(),
-            ),
-          ),
-          // Separator
-          Container(
-            width: 1,
-            height: double.infinity,
-            color: Colors.grey[700],
-          ),
-          // Create Group Button
-          InkWell(
-            onTap: _showCreateGroupDialog,
-            child: Container(
-              width: 48,
-              height: double.infinity,
-              decoration: BoxDecoration(
-                color: Colors.indigo[600],
-                borderRadius: const BorderRadius.only(
-                  topRight: Radius.circular(7),
-                  bottomRight: Radius.circular(7),
+                    return entries.where((entry) {
+                      return entry.label
+                          .toLowerCase()
+                          .contains(filter.toLowerCase());
+                    }).toList();
+                  },
+                  onSelected: (String? value) {
+                    if (value != null) {
+                      setState(() {
+                        selectedGroup = value;
+                      });
+                    }
+                  },
+                  dropdownMenuEntries: _buildGroupDropdownEntries(),
                 ),
               ),
-              child: const Icon(Icons.add, color: Colors.white),
-            ),
+              // Separator
+              Container(
+                width: 1,
+                height: double.infinity,
+                color: Colors.grey[700],
+              ),
+              // Create Group Button
+              InkWell(
+                onTap: _showCreateGroupDialog,
+                child: Container(
+                  width: addButtonWidth,
+                  height: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.indigo[600],
+                    borderRadius: const BorderRadius.only(
+                      topRight: Radius.circular(7),
+                      bottomRight: Radius.circular(7),
+                    ),
+                  ),
+                  child: Icon(Icons.add, color: Colors.white, size: iconSize),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
   // TRUE MenuAnchor Import CSV Button (Anchored Dropdown)
   Widget _buildImportCSVButton() {
-    return MenuAnchor(
-      alignmentOffset: const Offset(0, 5), // Neo sát xuống dưới
-      style: MenuStyle(
-        backgroundColor: MaterialStateProperty.all(const Color(0xFF1F2937)),
-        shape: MaterialStateProperty.all(
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        ),
-      ),
-      builder: (context, controller, child) {
-        return GestureDetector(
-          onTap: () {
-            if (controller.isOpen) {
-              controller.close();
-            } else {
-              controller.open();
-            }
-          },
-          child: Container(
-            height: 48,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.green[600],
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.upload_file, size: 20, color: Colors.white),
-                SizedBox(width: 8),
-                Text('Import CSV',
-                    style: TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.w500)),
-                SizedBox(width: 4),
-                Icon(Icons.arrow_drop_down, color: Colors.white, size: 20),
-              ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final screenWidth = constraints.maxWidth;
+        final isSmallScreen = screenWidth < 600;
+        
+        final buttonHeight = isSmallScreen ? 36.0 : 48.0;
+        final iconSize = isSmallScreen ? 16.0 : 20.0;
+        final fontSize = isSmallScreen ? 12.0 : 14.0;
+        final horizontalPadding = isSmallScreen ? 10.0 : 16.0;
+        final verticalPadding = isSmallScreen ? 8.0 : 12.0;
+        final spacing = isSmallScreen ? 4.0 : 8.0;
+        
+        return MenuAnchor(
+          alignmentOffset: const Offset(0, 5), // Neo sát xuống dưới
+          style: MenuStyle(
+            backgroundColor: MaterialStateProperty.all(const Color(0xFF1F2937)),
+            shape: MaterialStateProperty.all(
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
           ),
+          builder: (context, controller, child) {
+            return GestureDetector(
+              onTap: () {
+                if (controller.isOpen) {
+                  controller.close();
+                } else {
+                  controller.open();
+                }
+              },
+              child: Container(
+                height: buttonHeight,
+                padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: verticalPadding),
+                decoration: BoxDecoration(
+                  color: Colors.green[600],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.upload_file, size: iconSize, color: Colors.white),
+                    SizedBox(width: spacing),
+                    Text('Import CSV',
+                        style: TextStyle(
+                            color: Colors.white, 
+                            fontWeight: FontWeight.w500,
+                            fontSize: fontSize)),
+                    SizedBox(width: spacing / 2),
+                    Icon(Icons.arrow_drop_down, color: Colors.white, size: iconSize),
+                  ],
+                ),
+              ),
+            );
+          },
+          menuChildren: [
+            // Constrained Menu with fixed height 150px
+            ConstrainedBox(
+              constraints: const BoxConstraints(
+                maxHeight: 150, // Giới hạn 150px
+                minWidth: 200,
+              ),
+              child: Container(
+                decoration: const BoxDecoration(
+                  color: Color(0xFF1F2937),
+                  borderRadius: BorderRadius.all(Radius.circular(8)),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    MenuItemButton(
+                      onPressed: () => _showImportStudentsDialog(),
+                      child: SizedBox(
+                        height: isSmallScreen ? 44.0 : 48.0,
+                        child: Row(
+                          children: [
+                            Icon(Icons.person_add, color: Colors.indigo, size: iconSize),
+                            SizedBox(width: spacing),
+                            Text('Import Students',
+                                style: TextStyle(color: Colors.white, fontSize: fontSize)),
+                          ],
+                        ),
+                      ),
+                    ),
+                    MenuItemButton(
+                      onPressed: () => _showImportGroupsDialog(),
+                      child: SizedBox(
+                        height: isSmallScreen ? 44.0 : 48.0,
+                        child: Row(
+                          children: [
+                            Icon(Icons.group_add, color: Colors.green, size: iconSize),
+                            SizedBox(width: spacing),
+                            Text('Import Groups',
+                                style: TextStyle(color: Colors.white, fontSize: fontSize)),
+                          ],
+                        ),
+                      ),
+                    ),
+                    MenuItemButton(
+                      onPressed: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Download CSV Template'),
+                            backgroundColor: Colors.blue,
+                          ),
+                        );
+                      },
+                      child: SizedBox(
+                        height: isSmallScreen ? 44.0 : 48.0,
+                        child: Row(
+                          children: [
+                            Icon(Icons.download, color: Colors.blue, size: iconSize),
+                            SizedBox(width: spacing),
+                            Text('Download Template',
+                                style: TextStyle(color: Colors.white, fontSize: fontSize)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         );
       },
-      menuChildren: [
-        // Constrained Menu with fixed height 150px
-        ConstrainedBox(
-          constraints: const BoxConstraints(
-            maxHeight: 150, // Giới hạn 150px
-            minWidth: 200,
-          ),
-          child: Container(
-            decoration: const BoxDecoration(
-              color: Color(0xFF1F2937),
-              borderRadius: BorderRadius.all(Radius.circular(8)),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                MenuItemButton(
-                  onPressed: () => _showImportStudentsDialog(),
-                  child: const SizedBox(
-                    height: 48,
-                    child: Row(
-                      children: [
-                        Icon(Icons.person_add, color: Colors.indigo, size: 20),
-                        SizedBox(width: 12),
-                        Text('Import Students',
-                            style: TextStyle(color: Colors.white)),
-                      ],
-                    ),
-                  ),
-                ),
-                MenuItemButton(
-                  onPressed: () => _showImportGroupsDialog(),
-                  child: const SizedBox(
-                    height: 48,
-                    child: Row(
-                      children: [
-                        Icon(Icons.group_add, color: Colors.green, size: 20),
-                        SizedBox(width: 12),
-                        Text('Import Groups',
-                            style: TextStyle(color: Colors.white)),
-                      ],
-                    ),
-                  ),
-                ),
-                MenuItemButton(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Download CSV Template'),
-                        backgroundColor: Colors.blue,
-                      ),
-                    );
-                  },
-                  child: const SizedBox(
-                    height: 48,
-                    child: Row(
-                      children: [
-                        Icon(Icons.download, color: Colors.blue, size: 20),
-                        SizedBox(width: 12),
-                        Text('Download Template',
-                            style: TextStyle(color: Colors.white)),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
     );
   }
 
   // Khu vực 2: Student Toolbar
   Widget _buildStudentToolbar() {
-    return Row(
-      children: [
-        // Smart Search Bar with integrated Add Student button
-        Expanded(
-          child: TextField(
-            controller: _searchController,
-            style: const TextStyle(color: Colors.white),
-            onChanged: (value) {
-              setState(() {
-                searchQuery = value;
-              });
-            },
-            decoration: InputDecoration(
-              hintText: 'Search by name or email...',
-              hintStyle: TextStyle(color: Colors.grey[400]),
-              prefixIcon: const Icon(Icons.search, color: Colors.grey),
-              suffixIcon: Container(
-                margin: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: Colors.indigo[600],
-                  borderRadius: BorderRadius.circular(6),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final screenWidth = constraints.maxWidth;
+        final isSmallScreen = screenWidth < 600;
+        
+        final iconSize = isSmallScreen ? 18.0 : 20.0;
+        final fontSize = isSmallScreen ? 13.0 : 14.0;
+        final hintSize = isSmallScreen ? 12.0 : 14.0;
+        final spacing = isSmallScreen ? 6.0 : 12.0;
+        
+        return Row(
+          children: [
+            // Smart Search Bar with integrated Add Student button
+            Expanded(
+              child: TextField(
+                controller: _searchController,
+                style: TextStyle(color: Colors.white, fontSize: fontSize),
+                onChanged: (value) {
+                  setState(() {
+                    searchQuery = value;
+                  });
+                },
+                decoration: InputDecoration(
+                  hintText: isSmallScreen ? 'Search...' : 'Search by name or email...',
+                  hintStyle: TextStyle(color: Colors.grey[400], fontSize: hintSize),
+                  prefixIcon: Icon(Icons.search, color: Colors.grey, size: iconSize),
+                  suffixIcon: Container(
+                    margin: EdgeInsets.all(isSmallScreen ? 3.0 : 4.0),
+                    decoration: BoxDecoration(
+                      color: Colors.indigo[600],
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: IconButton(
+                      onPressed: _showAddSingleStudentDialog,
+                      icon: Icon(Icons.add, color: Colors.white, size: iconSize),
+                      tooltip: 'Add Single Student',
+                      padding: EdgeInsets.all(isSmallScreen ? 4.0 : 8.0),
+                      constraints: BoxConstraints(
+                        minWidth: isSmallScreen ? 32.0 : 40.0,
+                        minHeight: isSmallScreen ? 32.0 : 40.0,
+                      ),
+                    ),
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Colors.grey[700]!),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Colors.grey[700]!),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: Colors.indigo),
+                  ),
+                  filled: true,
+                  fillColor: const Color(0xFF1F2937),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: isSmallScreen ? 10.0 : 12.0,
+                    vertical: isSmallScreen ? 10.0 : 12.0,
+                  ),
+                  isDense: isSmallScreen,
                 ),
-                child: IconButton(
-                  onPressed: _showAddSingleStudentDialog,
-                  icon: const Icon(Icons.add, color: Colors.white, size: 20),
-                  tooltip: 'Add Single Student',
-                ),
               ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: Colors.grey[700]!),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: Colors.grey[700]!),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: Colors.indigo),
-              ),
-              filled: true,
-              fillColor: const Color(0xFF1F2937),
             ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        // Export List Button - Tách component
-        ExportStudentCSV(
-          selectedGroup: selectedGroup,
-          onExport:
-              () {}, // Empty callback since component handles its own logic
-        ),
-      ],
+            SizedBox(width: spacing),
+            // Export List Button - Tách component
+            ExportStudentCSV(
+              selectedGroup: selectedGroup,
+              onExport: () {}, // Empty callback since component handles its own logic
+              isSmallScreen: isSmallScreen,
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -539,62 +612,94 @@ class _InstructorPeopleTabState extends ConsumerState<InstructorPeopleTab> {
         }
 
         if (snapshot.hasError) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.error_outline, size: 64, color: Colors.red[400]),
-                const SizedBox(height: 16),
-                Text(
-                  'Error loading students',
-                  style: TextStyle(
-                    fontSize: 18,
-                    color: Colors.red[600],
-                    fontWeight: FontWeight.w500,
-                  ),
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              final screenWidth = constraints.maxWidth;
+              final isSmallScreen = screenWidth < 600;
+              
+              final iconSize = isSmallScreen ? 48.0 : 64.0;
+              final titleSize = isSmallScreen ? 16.0 : 18.0;
+              final errorSize = isSmallScreen ? 12.0 : 14.0;
+              final spacing = isSmallScreen ? 12.0 : 16.0;
+              
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.error_outline, size: iconSize, color: Colors.red[400]),
+                    SizedBox(height: spacing),
+                    Text(
+                      'Error loading students',
+                      style: TextStyle(
+                        fontSize: titleSize,
+                        color: Colors.red[600],
+                        fontWeight: FontWeight.w500,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: isSmallScreen ? 6.0 : 8.0),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 16.0 : 24.0),
+                      child: Text(
+                        '${snapshot.error}',
+                        style: TextStyle(
+                          fontSize: errorSize,
+                          color: Colors.grey[600],
+                        ),
+                        textAlign: TextAlign.center,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  '${snapshot.error}',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
+              );
+            },
           );
         }
 
         final filteredStudents = snapshot.data ?? [];
 
         if (filteredStudents.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.people_outline, size: 64, color: Colors.grey[600]),
-                const SizedBox(height: 16),
-                Text(
-                  selectedGroup == 'All Groups'
-                      ? 'No students found'
-                      : 'No students in $selectedGroup',
-                  style: TextStyle(
-                    color: Colors.grey[400],
-                    fontSize: 16,
-                  ),
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              final screenWidth = constraints.maxWidth;
+              final isSmallScreen = screenWidth < 600;
+              
+              final iconSize = isSmallScreen ? 48.0 : 64.0;
+              final titleSize = isSmallScreen ? 14.0 : 16.0;
+              final subtitleSize = isSmallScreen ? 12.0 : 14.0;
+              final spacing = isSmallScreen ? 12.0 : 16.0;
+              
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.people_outline, size: iconSize, color: Colors.grey[600]),
+                    SizedBox(height: spacing),
+                    Text(
+                      selectedGroup == 'All Groups'
+                          ? 'No students found'
+                          : 'No students in $selectedGroup',
+                      style: TextStyle(
+                        color: Colors.grey[400],
+                        fontSize: titleSize,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: isSmallScreen ? 6.0 : 8.0),
+                    Text(
+                      'Try adding students to this group',
+                      style: TextStyle(
+                        color: Colors.grey[500],
+                        fontSize: subtitleSize,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  'Try adding students to this group',
-                  style: TextStyle(
-                    color: Colors.grey[500],
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-            ),
+              );
+            },
           );
         }
 
@@ -620,87 +725,109 @@ class _InstructorPeopleTabState extends ConsumerState<InstructorPeopleTab> {
             final color =
                 Colors.primaries[name.hashCode % Colors.primaries.length];
 
-            return Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1F2937),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey[800]!),
-              ),
-              child: Row(
-                children: [
-                  // Avatar
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: color,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Center(
-                      child: Text(
-                        initials,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
+            return LayoutBuilder(
+              builder: (context, constraints) {
+                final screenWidth = constraints.maxWidth;
+                final isSmallScreen = screenWidth < 600;
+                
+                final avatarSize = isSmallScreen ? 36.0 : 40.0;
+                final nameSize = isSmallScreen ? 14.0 : 16.0;
+                final emailSize = isSmallScreen ? 11.0 : 12.0;
+                final idSize = isSmallScreen ? 10.0 : 11.0;
+                final initialsSize = isSmallScreen ? 12.0 : 14.0;
+                final padding = isSmallScreen ? 10.0 : 12.0;
+                final spacing = isSmallScreen ? 10.0 : 12.0;
+                
+                return Container(
+                  margin: EdgeInsets.only(bottom: isSmallScreen ? 6.0 : 8.0),
+                  padding: EdgeInsets.all(padding),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1F2937),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey[800]!),
+                  ),
+                  child: Row(
+                    children: [
+                      // Avatar
+                      Container(
+                        width: avatarSize,
+                        height: avatarSize,
+                        decoration: BoxDecoration(
+                          color: color,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: Text(
+                            initials,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: initialsSize,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  // Student Info (Name, Email, MSSV)
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          name,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
+                      SizedBox(width: spacing),
+                      // Student Info (Name, Email, MSSV)
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              name,
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                                fontSize: nameSize,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            SizedBox(height: isSmallScreen ? 1.0 : 2.0),
+                            Text(
+                              (student['email'] as String?) ?? 'No email',
+                              style: TextStyle(
+                                color: Colors.grey[400],
+                                fontSize: emailSize,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            SizedBox(height: isSmallScreen ? 1.0 : 2.0),
+                            Text(
+                              (student['studentId'] as String?) ?? 'No ID',
+                              style: TextStyle(
+                                color: Colors.grey[500],
+                                fontSize: idSize,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          (student['email'] as String?) ?? 'No email',
-                          style: TextStyle(
-                            color: Colors.grey[400],
-                            fontSize: 12,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          (student['studentId'] as String?) ?? 'No ID',
-                          style: TextStyle(
-                            color: Colors.grey[500],
-                            fontSize: 11,
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                      // Actions Menu - Tách component
+                      EditStudentGroup(
+                        student: student,
+                        availableGroups: _getAvailableGroupNames(),
+                        currentGroup: selectedGroup,
+                        onMoveStudent: (student) {
+                          // Handle move student logic
+                          setState(() {
+                            // Refresh the student list
+                          });
+                        },
+                        onRemoveStudent: (student) {
+                          // Handle remove student logic
+                          setState(() {
+                            // Refresh the student list
+                          });
+                        },
+                      ),
+                    ],
                   ),
-                  // Actions Menu - Tách component
-                  EditStudentGroup(
-                    student: student,
-                    availableGroups: _getAvailableGroupNames(),
-                    currentGroup: selectedGroup,
-                    onMoveStudent: (student) {
-                      // Handle move student logic
-                      setState(() {
-                        // Refresh the student list
-                      });
-                    },
-                    onRemoveStudent: (student) {
-                      // Handle remove student logic
-                      setState(() {
-                        // Refresh the student list
-                      });
-                    },
-                  ),
-                ],
-              ),
+                );
+              },
             );
           },
         );

@@ -284,11 +284,14 @@ class _UserMenuDropdownState extends State<UserMenuDropdown> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final showName = screenWidth > 700;
+
     return InkWell(
       onTap: () => _showMenu(context),
       borderRadius: BorderRadius.circular(20),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
@@ -300,16 +303,22 @@ class _UserMenuDropdownState extends State<UserMenuDropdown> {
           mainAxisSize: MainAxisSize.min,
           children: [
             _buildAvatar(),
-            const SizedBox(width: 8),
-            Text(
-              widget.userName,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
+            if (showName) ...[
+              const SizedBox(width: 6),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 150),
+                child: Text(
+                  widget.userName,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
               ),
-            ),
-            const SizedBox(width: 4),
+              const SizedBox(width: 4),
+            ],
             const Icon(
               Icons.arrow_drop_down,
               color: Colors.white70,

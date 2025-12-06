@@ -57,12 +57,24 @@ class _InstructorCoursesPageState extends ConsumerState<InstructorCoursesPage> {
     });
   }
 
-  Widget _buildImportMenu() {
+  Widget _buildImportMenu({
+    double? buttonWidth,
+    double? buttonHeight,
+    bool isSmallScreen = false,
+  }) {
+    final width = buttonWidth ?? kImportButtonWidth;
+    final height = buttonHeight ?? kActionButtonHeight;
+    final iconSize = isSmallScreen ? 14.0 : 16.0;
+    final fontSize = isSmallScreen ? 12.0 : 14.0;
+    final horizontalPadding = isSmallScreen ? 8.0 : 12.0;
+    final verticalPadding = isSmallScreen ? 6.0 : 8.0;
+    final spacing = isSmallScreen ? 4.0 : 6.0;
+    
     return MenuAnchor(
       builder:
           (BuildContext context, MenuController controller, Widget? child) {
         return SizedBox(
-          width: kImportButtonWidth, // Compact width for Import button
+          width: width,
           child: ElevatedButton(
             onPressed: () {
               if (controller.isOpen) {
@@ -74,21 +86,28 @@ class _InstructorCoursesPageState extends ConsumerState<InstructorCoursesPage> {
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.green.shade700,
               foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              fixedSize: const Size(double.infinity,
-                  kActionButtonHeight), // Fixed height for alignment
+              padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: verticalPadding),
+              fixedSize: Size(double.infinity, height),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
             ),
-            child: const Row(
+            child: Row(
               mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.file_upload, size: 16), // Added upload icon
-                SizedBox(width: 6),
-                Text('Import CSV'),
-                SizedBox(width: 6),
-                Icon(Icons.keyboard_arrow_down, size: 16),
+                Icon(Icons.file_upload, size: iconSize),
+                SizedBox(width: spacing),
+                Flexible(
+                  child: Text(
+                    'Import CSV',
+                    style: TextStyle(fontSize: fontSize),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                SizedBox(width: spacing),
+                Icon(Icons.keyboard_arrow_down, size: iconSize),
               ],
             ),
           ),
@@ -174,44 +193,54 @@ class _InstructorCoursesPageState extends ConsumerState<InstructorCoursesPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       key: const ValueKey('instructor-course-list'),
       children: [
-        // Header Section - Block-based responsive layout
+        // Header Section - Responsive layout: buttons move to next line on small screens
         LayoutBuilder(
           builder: (context, constraints) {
-            // Calculate available space for action buttons
-            final availableWidth = constraints.maxWidth;
-            final titleBlockWidth = 350; // Approximate width of title + icon
-            final actionBlockWidth = kImportButtonWidth +
-                kSemesterDropdownWidth +
-                12; // 12 = spacing
-            final needsWrapping = availableWidth <
-                (titleBlockWidth + actionBlockWidth + 24); // 24 = margin
-
-            if (needsWrapping) {
-              // Mobile Layout - Stack vertically with blocks
+            final screenWidth = constraints.maxWidth;
+            final isSmallScreen = screenWidth < 600;
+            
+            // Responsive sizing
+            final titleSize = isSmallScreen ? 20.0 : 28.0;
+            final iconSize = isSmallScreen ? 22.0 : 28.0;
+            final buttonSpacing = isSmallScreen ? 8.0 : 12.0;
+            final importButtonWidth = isSmallScreen ? 140.0 : kImportButtonWidth;
+            final semesterDropdownWidth = isSmallScreen ? 200.0 : kSemesterDropdownWidth;
+            final buttonHeight = isSmallScreen ? 44.0 : kActionButtonHeight;
+            
+            if (isSmallScreen) {
+              // Small screen: Title on first line, buttons on second line
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Left Block: Title + Add Icon (stays together)
+                  // First line: Title + Add Icon
                   Row(
-                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text(
-                        'My Teaching Courses',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                      Flexible(
+                        child: Text(
+                          'My Teaching Courses',
+                          style: TextStyle(
+                            fontSize: titleSize,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      SizedBox(width: 6.0),
                       IconButton(
                         onPressed: () => _navigateToCreateCourse(),
-                        icon: const Icon(
+                        icon: Icon(
                           Icons.add_circle,
-                          size: 26,
+                          size: iconSize,
                           color: Colors.indigo,
                         ),
                         tooltip: 'Create Course',
+                        padding: EdgeInsets.all(4.0),
+                        constraints: BoxConstraints(
+                          minWidth: 36.0,
+                          minHeight: 36.0,
+                        ),
                         style: IconButton.styleFrom(
                           backgroundColor: Colors.indigo.withValues(alpha: 0.1),
                           shape: RoundedRectangleBorder(
@@ -221,20 +250,96 @@ class _InstructorCoursesPageState extends ConsumerState<InstructorCoursesPage> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  // Right Block: Action buttons (move together, wrap when needed)
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: Wrap(
-                      spacing: 12,
-                      runSpacing: 8,
-                      alignment: WrapAlignment.end, // Right-align when wrapping
+                  SizedBox(height: 12),
+                  // Second line: Action buttons
+                  Row(
+                    children: [
+                      _buildImportMenu(
+                        buttonWidth: importButtonWidth,
+                        buttonHeight: buttonHeight,
+                        isSmallScreen: isSmallScreen,
+                      ),
+                      SizedBox(width: buttonSpacing),
+                      Expanded(
+                        child: SizedBox(
+                          height: buttonHeight,
+                          child: SemesterFilterInstructor(
+                            selectedSemesterId: _selectedSemesterId,
+                            onSemesterChanged: (String semesterId) {
+                              setState(() {
+                                _selectedSemesterId = semesterId;
+                              });
+                              ref
+                                  .read(courseInstructorProvider.notifier)
+                                  .filterCoursesBySemester(semesterId);
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              );
+            } else {
+              // Large screen: Everything on one line
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Left Block: Title + Add Icon
+                  Flexible(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        _buildImportMenu(),
+                        Flexible(
+                          child: Text(
+                            'My Teaching Courses',
+                            style: TextStyle(
+                              fontSize: titleSize,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        SizedBox(width: 8.0),
+                        IconButton(
+                          onPressed: () => _navigateToCreateCourse(),
+                          icon: Icon(
+                            Icons.add_circle,
+                            size: iconSize,
+                            color: Colors.indigo,
+                          ),
+                          tooltip: 'Create Course',
+                          padding: EdgeInsets.all(8.0),
+                          constraints: BoxConstraints(
+                            minWidth: 48.0,
+                            minHeight: 48.0,
+                          ),
+                          style: IconButton.styleFrom(
+                            backgroundColor: Colors.indigo.withValues(alpha: 0.1),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Right Block: Action buttons
+                  Flexible(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildImportMenu(
+                          buttonWidth: importButtonWidth,
+                          buttonHeight: buttonHeight,
+                          isSmallScreen: isSmallScreen,
+                        ),
+                        SizedBox(width: buttonSpacing),
                         SizedBox(
-                          width: kSemesterDropdownWidth,
-                          height:
-                              kActionButtonHeight, // Fixed height for alignment
+                          width: semesterDropdownWidth,
+                          height: buttonHeight,
                           child: SemesterFilterInstructor(
                             selectedSemesterId: _selectedSemesterId,
                             onSemesterChanged: (String semesterId) {
@@ -249,67 +354,6 @@ class _InstructorCoursesPageState extends ConsumerState<InstructorCoursesPage> {
                         ),
                       ],
                     ),
-                  ),
-                ],
-              );
-            } else {
-              // Desktop Layout - Two blocks horizontally
-              return Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Left Block: Title + Add Icon
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text(
-                        'My Teaching Courses',
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        onPressed: () => _navigateToCreateCourse(),
-                        icon: const Icon(
-                          Icons.add_circle,
-                          size: 28,
-                          color: Colors.indigo,
-                        ),
-                        tooltip: 'Create Course',
-                        style: IconButton.styleFrom(
-                          backgroundColor: Colors.indigo.withValues(alpha: 0.1),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  // Right Block: Action buttons
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _buildImportMenu(),
-                      const SizedBox(width: 12),
-                      SizedBox(
-                        width: kSemesterDropdownWidth,
-                        height:
-                            kActionButtonHeight, // Fixed height for alignment
-                        child: SemesterFilterInstructor(
-                          selectedSemesterId: _selectedSemesterId,
-                          onSemesterChanged: (String semesterId) {
-                            setState(() {
-                              _selectedSemesterId = semesterId;
-                            });
-                            ref
-                                .read(courseInstructorProvider.notifier)
-                                .filterCoursesBySemester(semesterId);
-                          },
-                        ),
-                      ),
-                    ],
                   ),
                 ],
               );

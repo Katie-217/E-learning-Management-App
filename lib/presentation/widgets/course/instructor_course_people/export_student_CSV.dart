@@ -5,19 +5,29 @@ import 'package:flutter/material.dart';
 class ExportStudentCSV extends StatelessWidget {
   final String selectedGroup;
   final VoidCallback onExport;
+  final bool isSmallScreen;
 
   const ExportStudentCSV({
     super.key,
     required this.selectedGroup,
     required this.onExport,
+    this.isSmallScreen = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final iconSize = isSmallScreen ? 18.0 : 24.0;
+    final buttonSize = isSmallScreen ? 36.0 : 48.0;
+    
     return IconButton(
-      icon: const Icon(Icons.download, color: Colors.blue),
+      icon: Icon(Icons.download, color: Colors.blue, size: iconSize),
       tooltip: 'Export student list',
       onPressed: () => _showExportDialog(context),
+      padding: EdgeInsets.all(isSmallScreen ? 6.0 : 8.0),
+      constraints: BoxConstraints(
+        minWidth: buttonSize,
+        minHeight: buttonSize,
+      ),
     );
   }
 

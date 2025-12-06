@@ -124,16 +124,20 @@ class AssignmentCard extends StatelessWidget {
                         color: Colors.grey[500],
                       ),
                       const SizedBox(width: 6),
-                      Text(
-                        'Due ${_formatDate(assignment.deadline)} at ${_formatTime(assignment.deadline)}',
-                        style: TextStyle(
-                          color: status == 'overdue' 
-                              ? Colors.red[400] 
-                              : Colors.grey[400],
-                          fontSize: 13,
-                          fontWeight: status == 'overdue' 
-                              ? FontWeight.w600 
-                              : FontWeight.normal,
+                      Flexible(
+                        child: Text(
+                          'Due ${_formatDate(assignment.deadline)} at ${_formatTime(assignment.deadline)}',
+                          style: TextStyle(
+                            color: status == 'overdue' 
+                                ? Colors.red[400] 
+                                : Colors.grey[400],
+                            fontSize: 13,
+                            fontWeight: status == 'overdue' 
+                                ? FontWeight.w600 
+                                : FontWeight.normal,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
@@ -143,19 +147,26 @@ class AssignmentCard extends StatelessWidget {
             ),
             const SizedBox(width: 12),
             // Status badge
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: statusBg,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Text(
-                status.toUpperCase(),
-                style: TextStyle(
-                  color: statusColor,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.5,
+            Flexible(
+              child: Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: statusBg,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Text(
+                  status.toUpperCase(),
+                  style: TextStyle(
+                    color: statusColor,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.5,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ),

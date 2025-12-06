@@ -23,11 +23,81 @@ class ForumRepository {
         .collection('topics')
         .orderBy('lastReplyAt', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) {
-              final data = doc.data();
-              data['id'] = doc.id;
-              return data;
-            }).toList());
+        .map((snapshot) {
+          print('📊 Topics snapshot for course $courseId: ${snapshot.docs.length} documents');
+          return snapshot.docs.map((doc) {
+            final data = doc.data();
+            data['id'] = doc.id;
+            return data;
+          }).toList();
+        })
+        .handleError((error, stackTrace) {
+          print('❌ Error in getTopicsStream for course $courseId: $error');
+          print('Stack trace: $stackTrace');
+          // Trả về empty list khi có lỗi
+          return <Map<String, dynamic>>[];
+        });
+  }
+
+  /// Get single topic by ID
+  Future<Map<String, dynamic>?> getTopicById({
+    required String courseId,
+    required String topicId,
+  }) async {
+    try {
+      final doc = await _firestore
+          .collection('forums')
+          .doc(courseId)
+          .collection('topics')
+          .doc(topicId)
+          .get();
+      
+      if (!doc.exists) {
+        return null;
+      }
+      
+      final data = doc.data();
+      if (data == null) {
+        return null;
+      }
+      
+      data['id'] = doc.id;
+      return data;
+    } catch (e) {
+      print('❌ Error getting topic by ID: $e');
+      return null;
+    }
+  }
+
+  /// Get single topic stream by ID
+  Stream<Map<String, dynamic>?> getTopicStream({
+    required String courseId,
+    required String topicId,
+  }) {
+    return _firestore
+        .collection('forums')
+        .doc(courseId)
+        .collection('topics')
+        .doc(topicId)
+        .snapshots()
+        .map((snapshot) {
+          if (!snapshot.exists) {
+            return null;
+          }
+          
+          final data = snapshot.data();
+          if (data == null) {
+            return null;
+          }
+          
+          data['id'] = snapshot.id;
+          return data;
+        })
+        .handleError((error, stackTrace) {
+          print('❌ Error in getTopicStream: $error');
+          print('Stack trace: $stackTrace');
+          return null;
+        });
   }
 
   /// Create new topic with validation
@@ -151,11 +221,20 @@ class ForumRepository {
         .collection('replies')
         .orderBy('createdAt', descending: false)
         .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) {
-              final data = doc.data();
-              data['id'] = doc.id;
-              return data;
-            }).toList());
+        .map((snapshot) {
+          print('📊 Replies snapshot for topic $topicId: ${snapshot.docs.length} documents');
+          return snapshot.docs.map((doc) {
+            final data = doc.data();
+            data['id'] = doc.id;
+            return data;
+          }).toList();
+        })
+        .handleError((error, stackTrace) {
+          print('❌ Error in getRepliesStream for topic $topicId: $error');
+          print('Stack trace: $stackTrace');
+          // Re-throw error để UI có thể hiển thị
+          throw error;
+        });
   }
 
   /// Add reply to topic with validation
@@ -177,25 +256,38 @@ class ForumRepository {
     try {
       final batch = _firestore.batch();
 
-      // Create reply
-      final replyRef = _firestore
+      // Create reply document chính trong collection replies của topic
+      final repliesCollection = _firestore
           .collection('forums')
           .doc(courseId)
           .collection('topics')
           .doc(topicId)
-          .collection('replies')
-          .doc();
+          .collection('replies');
 
-      batch.set(replyRef, {
+      final replyRef = repliesCollection.doc();
+
+      final replyData = <String, dynamic>{
         'topicId': topicId,
         'content': content.trim(),
         'authorId': authorId,
         'authorName': authorName,
-        'replyToId': replyToId,                    // ← LƯU VÀO ĐÂY
-        'authorReplyTo': authorReplyTo,            // ← (tùy chọn, để hiển thị tên)
+        'replyToId': replyToId, // id comment cha (nếu có)
+        'authorReplyTo': authorReplyTo, // tên người được reply (nếu có)
         'createdAt': FieldValue.serverTimestamp(),
         'attachments': attachments,
-      });
+      };
+
+      // Lưu reply chính
+      batch.set(replyRef, replyData);
+
+      // Nếu đây là reply cho một comment khác, lưu thêm vào subcollection replies_to
+      if (replyToId != null && replyToId.isNotEmpty) {
+        final parentReplyRef = repliesCollection.doc(replyToId);
+        final nestedReplyRef =
+            parentReplyRef.collection('replies_to').doc(replyRef.id);
+
+        batch.set(nestedReplyRef, replyData);
+      }
 
       // Update topic's reply count and last activity
       final topicRef = _firestore
