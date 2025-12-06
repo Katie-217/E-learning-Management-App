@@ -35,6 +35,8 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
         return 2;
       case 'forum':
         return 3;
+      case 'chat':
+        return 4;
       default:
         return 0;
     }
@@ -101,6 +103,13 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
                         child: ListTile(
                           leading: Icon(Icons.forum_outlined, color: Colors.white70),
                           title: Text('Forum', style: TextStyle(color: Colors.white)),
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: 'chat',
+                        child: ListTile(
+                          leading: Icon(Icons.chat_outlined, color: Colors.white70),
+                          title: Text('Chat', style: TextStyle(color: Colors.white)),
                         ),
                       ),
                     ],
@@ -231,6 +240,9 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
                     case 3:
                       _activeTab = 'forum';
                       break;
+                      case 4:
+                      _activeTab = 'chat';
+                      break;
                   }
                 });
               },
@@ -251,6 +263,10 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
                 BottomNavigationBarItem(
                   icon: Icon(Icons.forum),
                   label: 'Forum',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.chat),
+                  label: 'Chat',
                 ),
               ],
             )
@@ -309,6 +325,11 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
             return Padding(
               padding: EdgeInsets.all(padding),
               child: const InstructorForumScreen(),
+            );
+            case 'chat':
+            return Padding(
+              padding: EdgeInsets.all(padding),
+              child: const InstructorChatScreen(),
             );
           default: // dashboard
             final semesterName = _selectedSemester?.name ?? 'Fall 2024';
