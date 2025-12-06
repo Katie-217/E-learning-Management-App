@@ -34,50 +34,6 @@ class StudentDashboardAppBar extends StatelessWidget implements PreferredSizeWid
         ],
       ),
       actions: [
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final screenWidth = MediaQuery.of(context).size.width;
-            // Giảm width để tránh overflow
-            final searchWidth = screenWidth > 1200
-                ? 280.0
-                : screenWidth > 800
-                    ? 200.0
-                    : screenWidth > 600
-                        ? 150.0
-                        : screenWidth > 400
-                            ? 120.0
-                            : 0.0; // Ẩn search bar trên màn hình rất nhỏ
-            
-            if (searchWidth == 0) {
-              return const SizedBox.shrink();
-            }
-            
-            return Flexible(
-              child: SizedBox(
-                width: searchWidth,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8),
-                  child: TextField(
-                    style: const TextStyle(color: Colors.white, fontSize: 14),
-                    decoration: InputDecoration(
-                      hintText: screenWidth > 600 ? 'Search courses, materials...' : 'Search...',
-                      hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
-                      filled: true,
-                      fillColor: const Color(0xFF111827),
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 8),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide.none,
-                      ),
-                      isDense: true,
-                    ),
-                  ),
-                ),
-              ),
-            );
-          },
-        ),
         IconButton(
             onPressed: () {},
             icon: const Icon(Icons.notifications_none)),

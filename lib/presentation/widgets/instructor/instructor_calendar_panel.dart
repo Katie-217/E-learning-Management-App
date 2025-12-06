@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import 'package:elearning_management_app/application/controllers/instructor/task_provider.dart';
+import 'package:elearning_management_app/application/controllers/instructor/instructor_kpi_provider.dart';
 import 'package:elearning_management_app/domain/models/task_model.dart';
 import 'package:elearning_management_app/presentation/widgets/instructor/calendar_widget.dart';
+import 'package:elearning_management_app/presentation/widgets/instructor/instructor_compact_calendar_widget.dart';
 import 'package:elearning_management_app/presentation/widgets/instructor/semester_switcher.dart';
 
 class InstructorCalendarPanel extends ConsumerWidget {
@@ -19,66 +21,102 @@ class InstructorCalendarPanel extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedDate = ref.watch(selectedDateProvider);
     final monthKey = DateTime(selectedDate.year, selectedDate.month);
-    final monthlyTasksAsync = ref.watch(tasksForMonthProvider(monthKey));
-    final dailyTasksAsync = ref.watch(tasksProvider(selectedDate));
+    final semesterName = selectedSemester?.name ?? 'All';
+    
+    // Sử dụng providers từ instructor_kpi_provider (dữ liệu thật từ assignments)
+    // Truyền semester vào để filter đúng với KPI stats
+    final monthlyTasksAsync = ref.watch(instructorTasksForMonthProvider(
+      InstructorTaskMonthKey(monthKey, semesterName)
+    ));
+    final dailyTasksAsync = ref.watch(instructorTasksForDateProvider(
+      InstructorTaskKey(selectedDate, semesterName)
+    ));
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final isWide = constraints.maxWidth > 700;
+        final isSmall = constraints.maxWidth < 400;
 
         if (!isWide) {
-          // Giữ layout dọc cho màn hình hẹp
+          // Layout dọc cho màn hình hẹp
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
               const CalendarWidget(),
-              const SizedBox(height: 12),
+              SizedBox(height: isSmall ? 8 : 10),
               Text(
                 'Selected date: ${DateFormat('EEEE, MMM d').format(selectedDate)}',
-                style: const TextStyle(color: Colors.white70, fontSize: 12),
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: isSmall ? 11 : 12,
+                ),
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: isSmall ? 8 : 10),
               monthlyTasksAsync.when(
-                data: (tasks) => InstructorTaskSummary(tasks: tasks),
-                loading: () => const Center(
+                data: (tasks) {
+                  // Lấy KPI stats để hiển thị tổng số assignments/quizzes trong semester
+                  final semesterName = selectedSemester?.name ?? 'All';
+                  final kpiStatsAsync = ref.watch(instructorKPIStatsProvider(semesterName));
+                  return kpiStatsAsync.when(
+                    data: (stats) => InstructorTaskSummary(
+                      tasks: tasks,
+                      totalAssignments: stats.assignmentsCount,
+                      totalQuizzes: stats.quizzesCount,
+                    ),
+                    loading: () => Center(
+                      child: SizedBox(
+                        height: isSmall ? 20 : 26,
+                        width: isSmall ? 20 : 26,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ),
+                    error: (_, __) => InstructorTaskSummary(
+                      tasks: tasks,
+                      totalAssignments: 0,
+                      totalQuizzes: 0,
+                    ),
+                  );
+                },
+                loading: () => Center(
                   child: SizedBox(
-                    height: 26,
-                    width: 26,
+                    height: isSmall ? 20 : 26,
+                    width: isSmall ? 20 : 26,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   ),
                 ),
                 error: (error, _) => Text(
                   'Unable to load semester data: $error',
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: Colors.redAccent,
-                    fontSize: 12,
+                    fontSize: isSmall ? 11 : 12,
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
-              const Text(
+              SizedBox(height: isSmall ? 12 : 14),
+              Text(
                 'Upcoming Items',
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
-                  fontSize: 14,
+                  fontSize: isSmall ? 13 : 14,
                   color: Colors.white,
                 ),
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: isSmall ? 8 : 10),
               dailyTasksAsync.when(
-                data: (tasks) => _buildUpcomingOverview(tasks),
-                loading: () => const Center(
+                data: (tasks) => _buildUpcomingOverview(tasks, isSmall),
+                loading: () => Center(
                   child: SizedBox(
-                    height: 26,
-                    width: 26,
+                    height: isSmall ? 20 : 26,
+                    width: isSmall ? 20 : 26,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   ),
                 ),
                 error: (error, _) => Text(
                   'Unable to load upcoming items: $error',
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: Colors.redAccent,
-                    fontSize: 12,
+                    fontSize: isSmall ? 11 : 12,
                   ),
                 ),
               ),
@@ -90,8 +128,8 @@ class InstructorCalendarPanel extends ConsumerWidget {
         return Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              flex: 3,
+            Flexible(
+              flex: 1,
               child: const CalendarWidget(),
             ),
             const SizedBox(width: 16),
@@ -99,17 +137,41 @@ class InstructorCalendarPanel extends ConsumerWidget {
               flex: 2,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     'Selected date: ${DateFormat('EEEE, MMM d').format(selectedDate)}',
                     style: const TextStyle(
                       color: Colors.white70,
-                      fontSize: 12,
+                      fontSize: 11,
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
                   monthlyTasksAsync.when(
-                    data: (tasks) => InstructorTaskSummary(tasks: tasks),
+                    data: (tasks) {
+                      // Lấy KPI stats để hiển thị tổng số assignments/quizzes trong semester
+                      final semesterName = selectedSemester?.name ?? 'All';
+                      final kpiStatsAsync = ref.watch(instructorKPIStatsProvider(semesterName));
+                      return kpiStatsAsync.when(
+                        data: (stats) => InstructorTaskSummary(
+                          tasks: tasks,
+                          totalAssignments: stats.assignmentsCount,
+                          totalQuizzes: stats.quizzesCount,
+                        ),
+                        loading: () => const Center(
+                          child: SizedBox(
+                            height: 26,
+                            width: 26,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        ),
+                        error: (_, __) => InstructorTaskSummary(
+                          tasks: tasks,
+                          totalAssignments: 0,
+                          totalQuizzes: 0,
+                        ),
+                      );
+                    },
                     loading: () => const Center(
                       child: SizedBox(
                         height: 26,
@@ -125,18 +187,18 @@ class InstructorCalendarPanel extends ConsumerWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
                   const Text(
                     'Upcoming Items',
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
-                      fontSize: 14,
+                      fontSize: 13,
                       color: Colors.white,
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
                   dailyTasksAsync.when(
-                    data: (tasks) => _buildUpcomingOverview(tasks),
+                    data: (tasks) => _buildUpcomingOverview(tasks, false),
                     loading: () => const Center(
                       child: SizedBox(
                         height: 26,
@@ -161,11 +223,11 @@ class InstructorCalendarPanel extends ConsumerWidget {
     );
   }
 
-  Widget _buildUpcomingOverview(List<TaskModel> tasks) {
+  Widget _buildUpcomingOverview(List<TaskModel> tasks, bool isSmall) {
     if (tasks.isEmpty) {
-      return const Text(
+      return Text(
         'No instructor actions for this date.',
-        style: TextStyle(color: Colors.white70, fontSize: 12),
+        style: TextStyle(color: Colors.white70, fontSize: isSmall ? 11 : 12),
       );
     }
 
@@ -176,8 +238,8 @@ class InstructorCalendarPanel extends ConsumerWidget {
       children: sortedTasks
           .map(
             (task) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: _InstructorTaskTile(task: task),
+              padding: EdgeInsets.only(bottom: isSmall ? 6 : 8),
+              child: _InstructorTaskTile(task: task, isSmall: isSmall),
             ),
           )
           .toList(),
@@ -188,14 +250,21 @@ class InstructorCalendarPanel extends ConsumerWidget {
 // Task Summary Widget - Hiển thị tasks từ calendar
 class InstructorTaskSummary extends StatelessWidget {
   final List<TaskModel> tasks;
-  const InstructorTaskSummary({super.key, required this.tasks});
+  final int totalAssignments; // Tổng số assignments trong semester
+  final int totalQuizzes; // Tổng số quizzes trong semester
+  
+  const InstructorTaskSummary({
+    super.key, 
+    required this.tasks,
+    required this.totalAssignments,
+    required this.totalQuizzes,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final assignments =
-        tasks.where((task) => task.type == TaskType.assignment).length;
-    final quizzes =
-        tasks.where((task) => task.type == TaskType.quiz).length;
+    // Sử dụng tổng số từ KPI stats thay vì đếm từ tasks trong tháng
+    final assignments = totalAssignments;
+    final quizzes = totalQuizzes;
     final deadlines =
         tasks.where((task) => task.type == TaskType.deadline).length;
 
@@ -255,32 +324,34 @@ class _SummaryCard extends StatelessWidget {
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.max,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               label,
               style: TextStyle(
                 color: color,
-                fontSize: 12,
+                fontSize: 11, // Giảm từ 12 xuống 11
                 fontWeight: FontWeight.w600,
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 4), // Giảm từ 6 xuống 4
             Text(
               value,
               style: const TextStyle(
                 color: Colors.white,
-                fontSize: 22,
+                fontSize: 18, // Giảm từ 22 xuống 18
                 fontWeight: FontWeight.w700,
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 2), // Giảm từ 4 xuống 2
             Text(
               description,
               style: const TextStyle(
                 color: Colors.white54,
-                fontSize: 11,
+                fontSize: 10, // Giảm từ 11 xuống 10
               ),
+              maxLines: 2, // Cho phép 2 dòng nếu cần
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -291,8 +362,9 @@ class _SummaryCard extends StatelessWidget {
 
 class _InstructorTaskTile extends StatelessWidget {
   final TaskModel task;
+  final bool isSmall;
 
-  const _InstructorTaskTile({required this.task});
+  const _InstructorTaskTile({required this.task, this.isSmall = false});
 
   @override
   Widget build(BuildContext context) {
@@ -303,60 +375,67 @@ class _InstructorTaskTile extends StatelessWidget {
         task.totalCount > 0 ? task.totalCount - task.submittedCount : 0;
 
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: EdgeInsets.all(isSmall ? 8 : 10),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.04),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(isSmall ? 8 : 10),
         border: Border.all(
           color: task.isPriority
               ? const Color(0xFFFF6B6B).withOpacity(0.8)
               : Colors.white.withOpacity(0.12),
+          width: task.isPriority ? 1.5 : 1,
         ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 40,
-            height: 40,
+            width: isSmall ? 32 : 36,
+            height: isSmall ? 32 : 36,
             decoration: BoxDecoration(
               color: Colors.blueGrey.withOpacity(0.3),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
               _iconForTask(task.type),
               color: Colors.white,
+              size: isSmall ? 18 : 20,
             ),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: isSmall ? 8 : 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   task.title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.w600,
-                    fontSize: 13,
+                    fontSize: isSmall ? 12 : 13,
                   ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: isSmall ? 2 : 4),
                 Text(
                   task.courseName ?? 'General',
-                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                  style: TextStyle(color: Colors.white70, fontSize: isSmall ? 11 : 12),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 6),
+                SizedBox(height: isSmall ? 4 : 6),
                 Text(
                   dateLabel,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: Colors.white60,
-                    fontSize: 12,
+                    fontSize: isSmall ? 11 : 12,
                   ),
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: isSmall ? 6 : 8),
                 Wrap(
                   spacing: 8,
                   runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     _InfoPill(
                       icon: Icons.groups_outlined,

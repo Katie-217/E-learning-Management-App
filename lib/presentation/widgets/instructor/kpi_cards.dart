@@ -73,22 +73,21 @@ class InstructorKPICards extends StatelessWidget {
           );
         }
 
-        // Trên màn hình lớn, dùng GridView
-        final crossCount = constraints.maxWidth > 1200
-            ? 5
-            : constraints.maxWidth > 900
-                ? 3
-                : 2;
-        final childAspectRatio = 1.2;
-
-        return GridView.count(
-          crossAxisCount: crossCount,
-          crossAxisSpacing: spacing,
-          mainAxisSpacing: spacing,
-          childAspectRatio: childAspectRatio,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          children: cards,
+        // Trên màn hình lớn, dùng Row với Expanded giống bên học sinh
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: cards.asMap().entries.map((entry) {
+            final index = entry.key;
+            final card = entry.value;
+            return Expanded(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  right: index < cards.length - 1 ? spacing : 0,
+                ),
+                child: card,
+              ),
+            );
+          }).toList(),
         );
       },
     );
@@ -120,41 +119,42 @@ class _InstructorKPICard extends StatelessWidget {
     
     // Responsive sizing - giống bên học sinh
     final cardHeight = isXSmall
-        ? 80.0
+        ? 150.0
         : isSmall
-            ? 90.0
-            : 120.0;
+            ? 160.0
+            : 170.0;
     final iconBox = isXSmall ? 32.0 : isSmall ? 36.0 : 40.0;
-    final titleSize = isXSmall ? 14.0 : isSmall ? 16.0 : 20.0;
-    final valueSize = isXSmall ? 24.0 : isSmall ? 28.0 : 32.0;
-    final padding = isXSmall ? 12.0 : isSmall ? 14.0 : 16.0;
+    final titleSize = isXSmall ? 16.0 : isSmall ? 18.0 : 22.0;
+    final valueSize = isXSmall ? 26.0 : isSmall ? 28.0 : 30.0;
+    final padding = isXSmall ? 12.0 : isSmall ? 16.0 : 20.0;
     final iconSpacing = isXSmall ? 8.0 : isSmall ? 10.0 : 12.0;
     
-    final borderColor = bgStart.withValues(alpha: 0.3);
+    final borderColor = bgStart.withOpacity(0.3);
     return SizedBox(
       height: cardHeight,
       child: Container(
         padding: EdgeInsets.all(padding),
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [bgStart.withValues(alpha: 0.18), bgEnd.withValues(alpha: 0.18)],
+            colors: [bgStart.withOpacity(0.18), bgEnd.withOpacity(0.18)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: borderColor),
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
                   width: iconBox,
                   height: iconBox,
                   decoration: BoxDecoration(
-                    color: bgStart.withValues(alpha: 0.3),
+                    color: bgStart.withOpacity(0.3),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
@@ -164,14 +164,18 @@ class _InstructorKPICard extends StatelessWidget {
                   ),
                 ),
                 SizedBox(width: iconSpacing),
-                Text(
-                  title,
-                  style: TextStyle(
-                    color: Colors.grey[300],
-                    fontSize: titleSize,
+                Expanded(
+                  child: Text(
+                    title,
+                    maxLines: 2,
+                    softWrap: true,
+                    overflow: TextOverflow.visible,
+                    style: TextStyle(
+                      color: Colors.grey[300],
+                      fontSize: titleSize,
+                      height: 1.2,
+                    ),
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),

@@ -70,62 +70,88 @@ class _InstructorCourseDetailContentState
     final String currentUserId = currentUser?.uid ?? '';
     final String currentUserName = currentUser?.displayName ?? 'Instructor';
 
-    return courseAsyncValue.when(
-      loading: () => const Center(
-        child: CircularProgressIndicator(color: Colors.indigo),
-      ),
-      error: (error, stack) => Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, color: Colors.red, size: 48),
-            const SizedBox(height: 16),
-            Text(
-              'Error loading course',
-              style: TextStyle(color: Colors.red[300], fontSize: 18),
-            ),
-            const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32.0),
-              child: Text(
-                error.toString().replaceAll('Exception:', '').trim(),
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.grey),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final screenWidth = MediaQuery.of(context).size.width;
+        final isSmall = screenWidth < 600;
+        
+        return courseAsyncValue.when(
+          loading: () => Center(
+            child: CircularProgressIndicator(color: Colors.indigo),
+          ),
+          error: (error, stack) => Center(
+            child: Padding(
+              padding: EdgeInsets.all(isSmall ? 16 : 32),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.error_outline, 
+                    color: Colors.red, 
+                    size: isSmall ? 40 : 48,
+                  ),
+                  SizedBox(height: isSmall ? 12 : 16),
+                  Text(
+                    'Error loading course',
+                    style: TextStyle(
+                      color: Colors.red[300], 
+                      fontSize: isSmall ? 16 : 18,
+                    ),
+                  ),
+                  SizedBox(height: isSmall ? 6 : 8),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: isSmall ? 16.0 : 32.0),
+                    child: Text(
+                      error.toString().replaceAll('Exception:', '').trim(),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.grey,
+                        fontSize: isSmall ? 12 : 14,
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: isSmall ? 16 : 24),
+                  ElevatedButton(
+                    onPressed: () {
+                      ref.refresh(courseDetailProvider(widget.courseId));
+                    },
+                    child: Text(
+                      'Retry',
+                      style: TextStyle(fontSize: isSmall ? 14 : 16),
+                    ),
+                  )
+                ],
               ),
             ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: () {
-                ref.refresh(courseDetailProvider(widget.courseId));
-              },
-              child: const Text('Retry'),
-            )
-          ],
-        ),
-      ),
-      data: (course) {
-        if (course == null) {
-          return const Center(
-            child: Text(
-              'Course not found',
-              style: TextStyle(color: Colors.white),
-            ),
-          );
-        }
+          ),
+          data: (course) {
+            if (course == null) {
+              return Center(
+                child: Text(
+                  'Course not found',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: isSmall ? 16 : 18,
+                  ),
+                ),
+              );
+            }
 
-        return Column(
-          children: [
-            CourseDetailHeader(
-              course: course,
-              onBack: widget.onBack,
-            ),
-            Expanded(
-              child: InstructorCourseTabsWidget(
-                tabController: _tabController,
-                course: course,
-              ),
-            ),
-          ],
+            return Column(
+              children: [
+                CourseDetailHeader(
+                  course: course,
+                  onBack: widget.onBack,
+                ),
+                Expanded(
+                  child: InstructorCourseTabsWidget(
+                    tabController: _tabController,
+                    course: course,
+                  ),
+                ),
+              ],
+            );
+          },
         );
       },
     );

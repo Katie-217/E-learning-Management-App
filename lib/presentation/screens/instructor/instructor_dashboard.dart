@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:elearning_management_app/presentation/screens/instructor/manage_student/instructor_students_page.dart';
 import 'package:elearning_management_app/application/controllers/instructor/instructor_profile_provider.dart';
 import 'package:elearning_management_app/presentation/screens/instructor/instructor_courses/instructor_courses_page.dart';
@@ -11,6 +13,8 @@ import 'package:elearning_management_app/application/controllers/instructor/inst
 import 'package:elearning_management_app/presentation/widgets/instructor/kpi_cards.dart';
 import 'package:elearning_management_app/presentation/widgets/common/user_menu_dropdown.dart';
 import 'package:elearning_management_app/presentation/screens/admin/admin_cleanup_screen.dart';
+import 'package:elearning_management_app/data/repositories/semester/semester_repository.dart';
+import 'package:elearning_management_app/application/controllers/course/course_instructor_provider.dart';
 import '../forum/instructor_forum_screen.dart';
 class InstructorDashboard extends ConsumerStatefulWidget {
   const InstructorDashboard({super.key});
@@ -23,6 +27,10 @@ class InstructorDashboard extends ConsumerStatefulWidget {
 class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
   String _activeTab = 'dashboard';
   InstructorSemester? _selectedSemester;
+  List<InstructorSemester> _semesters = [];
+  bool _isSemestersLoading = true;
+  String _userName = 'User';
+  String _userEmail = '';
   
   int _getBottomNavIndex() {
     switch (_activeTab) {
@@ -37,6 +45,162 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
       default:
         return 0;
     }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // Load user info
+    _loadUserInfo();
+    // Không cần preload ở đây vì đã được preload trong RoleBasedDashboard
+    // Chỉ cần load semesters để hiển thị dropdown
+    _loadSemesters();
+  }
+
+  Future<void> _loadUserInfo() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+
+        if (doc.exists && mounted) {
+          final data = doc.data()!;
+          setState(() {
+            _userName = data['name'] ?? 
+                       data['displayName'] ?? 
+                       user.displayName ?? 
+                       'User';
+            _userEmail = data['email'] ?? user.email ?? '';
+          });
+        } else if (mounted) {
+          // Fallback to Firebase Auth data
+          setState(() {
+            _userName = user.displayName ?? 'User';
+            _userEmail = user.email ?? '';
+          });
+        }
+      }
+    } catch (e) {
+      print('Error loading user info: $e');
+      // Continue with default values
+    }
+  }
+
+  Future<void> _loadSemesters() async {
+    try {
+      setState(() => _isSemestersLoading = true);
+      // Gọi trực tiếp repository để lấy semesters thật
+      final semesterRepo = SemesterRepository();
+      final semesters = await semesterRepo.getAllSemesters();
+      
+      if (mounted) {
+        setState(() {
+          _semesters = semesters.map((semester) {
+            return InstructorSemester(
+              id: semester.id,
+              code: semester.code ?? semester.name,
+              name: semester.name,
+              startDate: semester.startDate,
+            );
+          }).toList();
+          
+          // Sắp xếp: mới nhất trước
+          _semesters.sort((a, b) => b.startDate.compareTo(a.startDate));
+          
+          _isSemestersLoading = false;
+          
+          // Chọn học kì hiện tại nếu chưa có semester được chọn
+          if (_selectedSemester == null && _semesters.isNotEmpty) {
+            // Tìm học kì hiện tại (dựa vào startDate và endDate)
+            InstructorSemester? currentSemester;
+            
+            // Tìm semester có isCurrentSemester = true
+            for (final semester in semesters) {
+              if (semester.isCurrentSemester) {
+                // Tìm InstructorSemester tương ứng
+                currentSemester = _semesters.firstWhere(
+                  (s) => s.id == semester.id,
+                  orElse: () => _semesters.first,
+                );
+                print('DEBUG: ✅ Found current semester: ${currentSemester.name}');
+                break;
+              }
+            }
+            
+            // Nếu không tìm thấy học kì hiện tại, dùng semester đầu tiên (mới nhất)
+            _selectedSemester = currentSemester ?? _semesters.first;
+            
+            if (currentSemester == null) {
+              print('DEBUG: ⚠️ No current semester found, using first semester: ${_selectedSemester?.name}');
+            }
+            
+            // Không cần preload vì data đã được preload cho tất cả semesters trong RoleBasedDashboard
+            // Chỉ cần trigger rebuild để UI cập nhật
+          }
+        });
+      }
+    } catch (e) {
+      print('DEBUG: ❌ Error loading semesters: $e');
+      if (mounted) {
+        setState(() {
+          _isSemestersLoading = false;
+          _semesters = [];
+        });
+        // Không cần preload vì data đã được preload trong RoleBasedDashboard
+      }
+    }
+  }
+
+
+  // Preload tất cả dữ liệu cần thiết cho dashboard
+  // Preload với semester cụ thể (có thể gọi trước khi _selectedSemester được set)
+  Future<void> _preloadDashboardDataWithSemester(String semesterName) async {
+    if (!mounted) return;
+    
+    final now = DateTime.now();
+    final monthKey = DateTime(now.year, now.month);
+    
+    print('DEBUG: 🔄 Preloading dashboard data for semester: $semesterName');
+    
+    // Preload tất cả dữ liệu song song, không await để không block UI
+    // Riverpod sẽ cache data, nên khi UI watch providers, data đã có sẵn
+    Future.wait([
+      // Preload KPI stats (quan trọng nhất, load trước)
+      ref.read(instructorKPIStatsProvider(semesterName).future),
+      
+      // Preload assignment submission stats
+      ref.read(instructorAssignmentSubmissionStatsProvider(semesterName).future),
+      
+      // Preload quiz completion stats
+      ref.read(instructorQuizCompletionStatsProvider(semesterName).future),
+      
+      // Preload tasks for current month (với semester)
+      ref.read(instructorTasksForMonthProvider(
+        InstructorTaskMonthKey(monthKey, semesterName)
+      ).future),
+      
+      // Preload tasks for today (với semester)
+      ref.read(instructorTasksForDateProvider(
+        InstructorTaskKey(now, semesterName)
+      ).future),
+    ]).then((_) {
+      if (mounted) {
+        print('DEBUG: ✅ Preloading dashboard data completed for semester: $semesterName');
+        // Trigger rebuild để UI cập nhật
+        setState(() {});
+      }
+    }).catchError((e) {
+      print('DEBUG: ⚠️ Error preloading dashboard data: $e');
+      // Không throw error, để UI vẫn có thể hiển thị với loading state
+    });
+  }
+  
+  Future<void> _preloadDashboardData() async {
+    final semesterName = _selectedSemester?.name ?? 'All';
+    await _preloadDashboardDataWithSemester(semesterName);
   }
   
   @override
@@ -310,7 +474,7 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
               child: const InstructorForumScreen(),
             );
           default: // dashboard
-            final semesterName = _selectedSemester?.name ?? 'Fall 2024';
+            final semesterName = _selectedSemester?.name ?? 'All';
             final kpiStatsAsync =
                 ref.watch(instructorKPIStatsProvider(semesterName));
             return SingleChildScrollView(
@@ -321,6 +485,7 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
                   // Welcome and Semester Switcher in same row
                   LayoutBuilder(
                     builder: (context, headerConstraints) {
+                      final screenWidth = MediaQuery.of(context).size.width;
                       final isNarrow = headerConstraints.maxWidth < 600;
                       return isNarrow
                           ? Column(
@@ -331,7 +496,7 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      'Welcome back, Dr. Johnson',
+                                      'Welcome back, $_userName',
                                       style: TextStyle(
                                         fontSize: screenWidth > 600 ? 28 : 24,
                                         fontWeight: FontWeight.bold,
@@ -340,7 +505,9 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
                                     ),
                                     SizedBox(height: screenWidth > 600 ? 4 : 3),
                                     Text(
-                                      "Ready to inspire your students today?",
+                                      _userEmail.isNotEmpty 
+                                          ? _userEmail
+                                          : "Ready to inspire your students today?",
                                       style: TextStyle(
                                         color: Colors.grey[400],
                                         fontSize: screenWidth > 600 ? 16 : 14,
@@ -350,14 +517,27 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
                                 ),
                                 SizedBox(height: screenWidth > 600 ? 16 : 12),
                                 // Semester Switcher
-                                InstructorSemesterSwitcher(
-                                  initialSemester: _selectedSemester,
-                                  onSemesterChanged: (semester) {
-                                    setState(() {
-                                      _selectedSemester = semester;
-                                    });
-                                  },
-                                ),
+                                _isSemestersLoading
+                                    ? const Center(
+                                        child: Padding(
+                                          padding: EdgeInsets.all(16.0),
+                                          child: CircularProgressIndicator(),
+                                        ),
+                                      )
+                                    : Align(
+                                        alignment: Alignment.centerLeft,
+                                        child: InstructorSemesterSwitcher(
+                                          semesters: _semesters,
+                                          initialSemester: _selectedSemester,
+                                          onSemesterChanged: (semester) {
+                                            setState(() {
+                                              _selectedSemester = semester;
+                                            });
+                                            // Không cần preload lại vì data đã được preload cho tất cả semesters
+                                            // Chỉ cần trigger rebuild để UI cập nhật với data từ cache
+                                          },
+                                        ),
+                                      ),
                               ],
                             )
                           : Row(
@@ -370,7 +550,7 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        'Welcome back, Dr. Johnson',
+                                        'Welcome back, $_userName',
                                         style: TextStyle(
                                           fontSize: screenWidth > 800 ? 28 : 24,
                                           fontWeight: FontWeight.bold,
@@ -379,7 +559,9 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
                                       ),
                                       SizedBox(height: screenWidth > 600 ? 4 : 3),
                                       Text(
-                                        "Ready to inspire your students today?",
+                                        _userEmail.isNotEmpty 
+                                            ? _userEmail
+                                            : "Ready to inspire your students today?",
                                         style: TextStyle(
                                           color: Colors.grey[400],
                                           fontSize: screenWidth > 600 ? 16 : 14,
@@ -390,14 +572,26 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
                                 ),
                                 SizedBox(width: screenWidth > 800 ? 16 : 12),
                                 // Right: Semester Switcher
-                                InstructorSemesterSwitcher(
-                                  initialSemester: _selectedSemester,
-                                  onSemesterChanged: (semester) {
-                                    setState(() {
-                                      _selectedSemester = semester;
-                                    });
-                                  },
-                                ),
+                                _isSemestersLoading
+                                    ? const Center(
+                                        child: Padding(
+                                          padding: EdgeInsets.all(16.0),
+                                          child: CircularProgressIndicator(),
+                                        ),
+                                      )
+                                    : Flexible(
+                                        child: InstructorSemesterSwitcher(
+                                          semesters: _semesters,
+                                          initialSemester: _selectedSemester,
+                                          onSemesterChanged: (semester) {
+                                            setState(() {
+                                              _selectedSemester = semester;
+                                            });
+                                            // Không cần preload lại vì data đã được preload cho tất cả semesters
+                                            // Chỉ cần trigger rebuild để UI cập nhật với data từ cache
+                                          },
+                                        ),
+                                      ),
                               ],
                             );
                     },
@@ -427,74 +621,52 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
                 ),
               ),
               SizedBox(height: screenWidth > 600 ? 20 : 16),
-              // Two Column Layout
+              // Charts and Calendar Layout
               LayoutBuilder(builder: (context, constraints) {
-                final isWideScreen = constraints.maxWidth > 900;
                 final spacing = screenWidth > 600 ? 12.0 : 8.0;
-                return isWideScreen
-                    ? Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Left Column: Charts + Assignment Tracking Table
-                          Expanded(
-                            flex: 2,
-                            child: Column(
-                              children: [
-                                // 2 Charts in a row
-                                Row(
-                                  children: [
-                                    const Expanded(
-                                      child: AssignmentSubmissionChart(),
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // 2 Charts in a row
+                    LayoutBuilder(
+                      builder: (context, chartConstraints) {
+                        final canFitTwoCharts =
+                            chartConstraints.maxWidth > 600;
+                        return canFitTwoCharts
+                            ? Row(
+                                children: [
+                                  Expanded(
+                                    child: AssignmentSubmissionChart(
+                                      selectedSemester: _selectedSemester,
                                     ),
-                                    SizedBox(width: spacing),
-                                    const Expanded(
-                                      child: QuizCompletionChart(),
+                                  ),
+                                  SizedBox(width: spacing),
+                                  Expanded(
+                                    child: QuizCompletionChart(
+                                      selectedSemester: _selectedSemester,
                                     ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                          SizedBox(width: spacing),
-                          // Right Column: Calendar Panel
-                          Expanded(
-                            flex: 1,
-                            child: _buildCalendarTasksPanel(),
-                          ),
-                        ],
-                      )
-                    : Column(
-                        children: [
-                          // Charts in a row on mobile if space allows
-                          LayoutBuilder(
-                            builder: (context, chartConstraints) {
-                              final canFitTwoCharts =
-                                  chartConstraints.maxWidth > 600;
-                              return canFitTwoCharts
-                                  ? Row(
-                                      children: [
-                                        const Expanded(
-                                          child: AssignmentSubmissionChart(),
-                                        ),
-                                        SizedBox(width: spacing),
-                                        const Expanded(
-                                          child: QuizCompletionChart(),
-                                        ),
-                                      ],
-                                    )
-                                  : Column(
-                                      children: [
-                                        const AssignmentSubmissionChart(),
-                                        SizedBox(height: spacing),
-                                        const QuizCompletionChart(),
-                                      ],
-                                    );
-                            },
-                          ),
-                          SizedBox(height: spacing),
-                          _buildCalendarTasksPanel(),
-                        ],
-                      );
+                                  ),
+                                ],
+                              )
+                            : Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  AssignmentSubmissionChart(
+                                    selectedSemester: _selectedSemester,
+                                  ),
+                                  SizedBox(height: spacing),
+                                  QuizCompletionChart(
+                                    selectedSemester: _selectedSemester,
+                                  ),
+                                ],
+                              );
+                      },
+                    ),
+                    SizedBox(height: spacing),
+                    // Calendar Panel below charts
+                    _buildCalendarTasksPanel(),
+                  ],
+                );
               }),
             ],
           ),

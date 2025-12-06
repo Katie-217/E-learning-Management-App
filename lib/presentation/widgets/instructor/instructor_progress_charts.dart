@@ -1,30 +1,67 @@
 // ========================================
 // FILE: instructor_progress_charts.dart
-// MÔ TẢ: Progress charts cho instructor dashboard - CHỈ MOCK DATA
+// MÔ TẢ: Progress charts cho instructor dashboard - Load dữ liệu thật từ repositories
 // ========================================
 
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:elearning_management_app/presentation/widgets/student/dashboard/progress_overview/pie_chart_widget.dart';
+import 'package:elearning_management_app/application/controllers/instructor/instructor_kpi_provider.dart';
+import 'package:elearning_management_app/presentation/widgets/instructor/semester_switcher.dart';
 import 'dart:math' as math;
 import 'dart:async';
 
 // Assignment Submission Progress Chart
-class AssignmentSubmissionChart extends StatelessWidget {
-  const AssignmentSubmissionChart({super.key});
-
-  // Mock data - không động vào repository
-  Map<String, int> get _mockData => const {
-        'notSubmitted': 45,
-        'submitted': 120,
-        'late': 15,
-        'graded': 100,
-      };
+class AssignmentSubmissionChart extends ConsumerWidget {
+  final InstructorSemester? selectedSemester;
+  
+  const AssignmentSubmissionChart({
+    super.key,
+    this.selectedSemester,
+  });
 
   @override
-  Widget build(BuildContext context) {
-    final data = _mockData;
-    final total = data.values.reduce((a, b) => a + b);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final semesterName = selectedSemester?.name ?? 'All';
+    final statsAsync = ref.watch(instructorAssignmentSubmissionStatsProvider(semesterName));
+    
+    return statsAsync.when(
+      data: (data) {
+        final total = data.values.reduce((a, b) => a + b);
+        return _buildChart(data, total);
+      },
+      loading: () => Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: const Color(0xFF111827),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[800]!),
+        ),
+        child: const Center(
+          child: SizedBox(
+            height: 26,
+            width: 26,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      ),
+      error: (error, _) => Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: const Color(0xFF111827),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[800]!),
+        ),
+        child: Text(
+          'Unable to load data: $error',
+          style: const TextStyle(color: Colors.redAccent, fontSize: 12),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChart(Map<String, int> data, int total) {
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -134,21 +171,55 @@ class AssignmentSubmissionChart extends StatelessWidget {
 }
 
 // Quiz Completion Progress Chart
-class QuizCompletionChart extends StatelessWidget {
-  const QuizCompletionChart({super.key});
-
-  // Mock data - không động vào repository
-  Map<String, int> get _mockData => const {
-        'notStarted': 30,
-        'completed': 80,
-        'passed': 65,
-        'failed': 15,
-      };
+class QuizCompletionChart extends ConsumerWidget {
+  final InstructorSemester? selectedSemester;
+  
+  const QuizCompletionChart({
+    super.key,
+    this.selectedSemester,
+  });
 
   @override
-  Widget build(BuildContext context) {
-    final data = _mockData;
-    final total = data.values.reduce((a, b) => a + b);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final semesterName = selectedSemester?.name ?? 'All';
+    final statsAsync = ref.watch(instructorQuizCompletionStatsProvider(semesterName));
+    
+    return statsAsync.when(
+      data: (data) {
+        final total = data.values.reduce((a, b) => a + b);
+        return _buildChart(data, total);
+      },
+      loading: () => Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: const Color(0xFF111827),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[800]!),
+        ),
+        child: const Center(
+          child: SizedBox(
+            height: 26,
+            width: 26,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      ),
+      error: (error, _) => Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: const Color(0xFF111827),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[800]!),
+        ),
+        child: Text(
+          'Unable to load data: $error',
+          style: const TextStyle(color: Colors.redAccent, fontSize: 12),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChart(Map<String, int> data, int total) {
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -217,7 +288,6 @@ class QuizCompletionChart extends StatelessWidget {
     return SizedBox(
       height: 220,
       child: _QuizPieChartPainter(
-        notStarted: data['notStarted']!.toDouble(),
         completed: data['completed']!.toDouble(),
         passed: data['passed']!.toDouble(),
         failed: data['failed']!.toDouble(),
@@ -229,12 +299,6 @@ class QuizCompletionChart extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _LegendItem(
-          color: const Color(0xFF9CA3AF), // Gray
-          label: 'Not Started',
-          value: data['notStarted']!,
-        ),
-        const SizedBox(height: 12),
         _LegendItem(
           color: const Color(0xFF0EA5E9), // Blue
           label: 'Completed',
@@ -761,13 +825,11 @@ class _AssignmentPieChartCustomPainter extends CustomPainter {
 }
 
 class _QuizPieChartPainter extends StatefulWidget {
-  final double notStarted;
   final double completed;
   final double passed;
   final double failed;
 
   const _QuizPieChartPainter({
-    required this.notStarted,
     required this.completed,
     required this.passed,
     required this.failed,
@@ -805,11 +867,10 @@ class _QuizPieChartPainterState extends State<_QuizPieChartPainter> {
     angle = (angle + math.pi / 2 + 2 * math.pi) % (2 * math.pi);
 
     final total =
-        widget.notStarted + widget.completed + widget.passed + widget.failed;
+        widget.completed + widget.passed + widget.failed;
     if (total <= 0) return null;
 
     final segments = [
-      ('notStarted', widget.notStarted),
       ('completed', widget.completed),
       ('passed', widget.passed),
       ('failed', widget.failed),
@@ -832,15 +893,10 @@ class _QuizPieChartPainterState extends State<_QuizPieChartPainter> {
     }
 
     final total =
-        widget.notStarted + widget.completed + widget.passed + widget.failed;
+        widget.completed + widget.passed + widget.failed;
     if (total <= 0) return const SizedBox.shrink();
 
     final Map<String, Map<String, dynamic>> segmentData = {
-      'notStarted': {
-        'value': widget.notStarted,
-        'label': 'Not Started',
-        'color': const Color(0xFF9CA3AF),
-      },
       'completed': {
         'value': widget.completed,
         'label': 'Completed',
@@ -1002,7 +1058,6 @@ class _QuizPieChartPainterState extends State<_QuizPieChartPainter> {
               key: _key,
               size: const Size(220, 220),
               painter: _QuizPieChartCustomPainter(
-                notStarted: widget.notStarted,
                 completed: widget.completed,
                 passed: widget.passed,
                 failed: widget.failed,
@@ -1019,14 +1074,12 @@ class _QuizPieChartPainterState extends State<_QuizPieChartPainter> {
 }
 
 class _QuizPieChartCustomPainter extends CustomPainter {
-  final double notStarted;
   final double completed;
   final double passed;
   final double failed;
   final String? hoveredSegment;
 
   _QuizPieChartCustomPainter({
-    required this.notStarted,
     required this.completed,
     required this.passed,
     required this.failed,
@@ -1038,19 +1091,17 @@ class _QuizPieChartCustomPainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final baseRadius = math.min(size.width, size.height) / 2 - 15;
     final innerRadius = baseRadius * 0.6; // Donut hole
-    final total = notStarted + completed + passed + failed;
+    final total = completed + passed + failed;
 
     if (total <= 0) return;
 
     final colors = [
-      const Color(0xFF9CA3AF), // Not Started - Gray
       const Color(0xFF0EA5E9), // Completed - Blue
       const Color(0xFF34D399), // Passed - Green
       const Color(0xFFFF6B6B), // Failed - Red
     ];
 
     final segments = [
-      ('notStarted', notStarted),
       ('completed', completed),
       ('passed', passed),
       ('failed', failed),
@@ -1172,8 +1223,7 @@ class _QuizPieChartCustomPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _QuizPieChartCustomPainter oldDelegate) {
-    return oldDelegate.notStarted != notStarted ||
-        oldDelegate.completed != completed ||
+    return oldDelegate.completed != completed ||
         oldDelegate.passed != passed ||
         oldDelegate.failed != failed ||
         oldDelegate.hoveredSegment != hoveredSegment;

@@ -805,16 +805,25 @@ class _InstructorGradeTabState extends ConsumerState<InstructorGradeTab> {
     final bool _shouldShowGradebook =
         _selectedType != null && _selectedItemId != null;
 
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildHeader(),
-            const SizedBox(height: 16),
-            
-            GradeFilterBar(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final screenWidth = MediaQuery.of(context).size.width;
+        final isSmall = screenWidth < 600;
+        final padding = isSmall 
+            ? const EdgeInsets.all(12)
+            : const EdgeInsets.all(16);
+        final spacing = isSmall ? 12.0 : 16.0;
+        
+        return Padding(
+          padding: padding,
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildHeader(isSmall),
+                SizedBox(height: spacing),
+                
+                GradeFilterBar(
               searchQuery: _searchQuery,
               selectedGroup: _selectedGroup,
               selectedType: _selectedType,
@@ -873,33 +882,33 @@ class _InstructorGradeTabState extends ConsumerState<InstructorGradeTab> {
                 });
               },
             ),
-          const SizedBox(height: 16),
-          
-            if (!_shouldShowGradebook) ...[
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: const Center(
-                  child: Text(
-                    'Select Type and Item above to load the gradebook for a specific assignment or quiz.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 14,
+                SizedBox(height: spacing),
+                
+                if (!_shouldShowGradebook) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.all(isSmall ? 12 : 16),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Center(
+                      child: Text(
+                        'Select Type and Item above to load the gradebook for a specific assignment or quiz.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: isSmall ? 12 : 14,
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ),
-            ],
+                ],
 
-            if (_shouldShowGradebook) ...[
-            _buildStatisticsBar(),
-            const SizedBox(height: 16),
+                if (_shouldShowGradebook) ...[
+                  _buildStatisticsBar(isSmall),
+                  SizedBox(height: spacing),
             
             GradebookTable(
               gradeData: _filteredGradeData,
@@ -985,33 +994,61 @@ class _InstructorGradeTabState extends ConsumerState<InstructorGradeTab> {
                 // Ví dụ: await SubmissionRepository.publishGrade(studentId, assignmentId);
               },
             ),
-            ],
-          ],
-        ),
-      ),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(bool isSmall) {
+    final iconSize = isSmall ? 20.0 : 24.0;
+    final buttonSpacing = isSmall ? 6.0 : 8.0;
+    final fontSize = isSmall ? 13.0 : 14.0;
+    
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         const SizedBox.shrink(),
         Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-        IconButton(
-          onPressed: _exportToCSV,
-              icon:
-                  const Icon(Icons.download, color: AppColors.textSecondary),
-          tooltip: 'Export to CSV',
+            IconButton(
+              onPressed: _exportToCSV,
+              icon: Icon(
+                Icons.download, 
+                color: AppColors.textSecondary,
+                size: iconSize,
+              ),
+              tooltip: 'Export to CSV',
+              padding: EdgeInsets.all(isSmall ? 4 : 8),
+              constraints: BoxConstraints(
+                minWidth: isSmall ? 32 : 48,
+                minHeight: isSmall ? 32 : 48,
+              ),
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: buttonSpacing),
             TextButton.icon(
               onPressed: _returnGradesToStudents,
-              icon: const Icon(Icons.send, size: 18, color: AppColors.primary),
-              label: const Text(
+              icon: Icon(
+                Icons.send, 
+                size: isSmall ? 16 : 18, 
+                color: AppColors.primary,
+              ),
+              label: Text(
                 'Return',
-                style: TextStyle(color: AppColors.primary),
+                style: TextStyle(
+                  color: AppColors.primary,
+                  fontSize: fontSize,
+                ),
+              ),
+              style: TextButton.styleFrom(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isSmall ? 8 : 12,
+                  vertical: isSmall ? 6 : 8,
+                ),
               ),
             ),
           ],
@@ -1240,7 +1277,7 @@ class _InstructorGradeTabState extends ConsumerState<InstructorGradeTab> {
     return data;
   }
 
-  Widget _buildStatisticsBar() {
+  Widget _buildStatisticsBar(bool isSmall) {
     final dataForStats = _getDataForStatistics();
     int totalStudents = dataForStats.length;
     
@@ -1275,63 +1312,94 @@ class _InstructorGradeTabState extends ConsumerState<InstructorGradeTab> {
       }
     }
 
+    final padding = isSmall 
+        ? const EdgeInsets.all(12)
+        : const EdgeInsets.all(16);
+    final spacing = isSmall ? 8.0 : 12.0;
+
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: padding,
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.border),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          Expanded(
-            child: _buildStatItem('Students', totalStudents.toString(), Icons.people),
-          ),
-          Expanded(
-            child: _buildStatItem('Assignments', totalAssignments.toString(), Icons.assignment),
-          ),
-          Expanded(
-            child: _buildStatItem('Submitted', '$submittedCount', Icons.check_circle, Colors.green),
-          ),
-          Expanded(
-            child: _buildStatItem('Late', '$lateCount', Icons.warning, Colors.orange),
-          ),
-          Expanded(
-            child: _buildStatItem('Not Submitted', '$notSubmittedCount', Icons.cancel, Colors.red),
-          ),
-        ],
-      ),
+      child: isSmall
+          ?           Column(
+              children: [
+                _buildStatItem('Students', totalStudents.toString(), Icons.people, isSmall),
+                SizedBox(height: spacing),
+                _buildStatItem('Assignments', totalAssignments.toString(), Icons.assignment, isSmall),
+                SizedBox(height: spacing),
+                _buildStatItem('Submitted', '$submittedCount', Icons.check_circle, isSmall, Colors.green),
+                SizedBox(height: spacing),
+                _buildStatItem('Late', '$lateCount', Icons.warning, isSmall, Colors.orange),
+                SizedBox(height: spacing),
+                _buildStatItem('Not Submitted', '$notSubmittedCount', Icons.cancel, isSmall, Colors.red),
+              ],
+            )
+          : Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                Expanded(
+                  child: _buildStatItem('Students', totalStudents.toString(), Icons.people, isSmall),
+                ),
+                Expanded(
+                  child: _buildStatItem('Assignments', totalAssignments.toString(), Icons.assignment, isSmall),
+                ),
+                Expanded(
+                  child: _buildStatItem('Submitted', '$submittedCount', Icons.check_circle, isSmall, Colors.green),
+                ),
+                Expanded(
+                  child: _buildStatItem('Late', '$lateCount', Icons.warning, isSmall, Colors.orange),
+                ),
+                Expanded(
+                  child: _buildStatItem('Not Submitted', '$notSubmittedCount', Icons.cancel, isSmall, Colors.red),
+                ),
+              ],
+            ),
     );
   }
 
-  Widget _buildStatItem(String label, String value, IconData icon, [Color? iconColor]) {
+  Widget _buildStatItem(String label, String value, IconData icon, bool isSmall, [Color? iconColor]) {
+    final iconSize = isSmall ? 16.0 : 20.0;
+    final valueSize = isSmall ? 16.0 : 18.0;
+    final labelSize = isSmall ? 11.0 : 12.0;
+    final spacing = isSmall ? 6.0 : 8.0;
+    
     return Center(
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 20, color: iconColor ?? AppColors.primary),
-          const SizedBox(width: 8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
+          Icon(icon, size: iconSize, color: iconColor ?? AppColors.primary),
+          SizedBox(width: spacing),
+          Flexible(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: valueSize,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
                 ),
-              ),
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: AppColors.textSecondary,
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: labelSize,
+                    color: AppColors.textSecondary,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),

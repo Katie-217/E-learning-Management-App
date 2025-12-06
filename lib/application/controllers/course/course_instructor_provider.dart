@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:elearning_management_app/domain/models/course_model.dart';
 import 'package:elearning_management_app/domain/models/validation_result.dart';
 import 'package:elearning_management_app/data/repositories/auth/auth_repository.dart';
+import 'package:elearning_management_app/data/repositories/semester/semester_repository.dart';
 import 'course_instructor_controller.dart';
 
 // ========================================
@@ -87,8 +88,13 @@ class CourseInstructorNotifier extends StateNotifier<InstructorCourseState> {
         print('DEBUG: ⚠️ No courses found for current instructor');
       }
 
-      // Áp dụng bộ lọc hiện tại
-      final filteredCourses = _applyFilters(courses);
+      // Áp dụng bộ lọc hiện tại (sử dụng async version nếu có semester filter)
+      List<CourseModel> filteredCourses;
+      if (state.selectedSemester != 'All') {
+        filteredCourses = await _applyFiltersAsync(courses);
+      } else {
+        filteredCourses = _applyFilters(courses);
+      }
       state = state.copyWith(
           courses: courses, filteredCourses: filteredCourses, isLoading: false);
 
@@ -136,7 +142,16 @@ class CourseInstructorNotifier extends StateNotifier<InstructorCourseState> {
   // Lọc khóa học theo học kì
   void filterCoursesBySemester(String semester) {
     state = state.copyWith(selectedSemester: semester);
+    // Sử dụng controller method để lấy courses theo semester nếu có thể
+    // Nếu không, fallback về filter thủ công
     final filteredCourses = _applyFilters(state.courses);
+    state = state.copyWith(filteredCourses: filteredCourses);
+  }
+  
+  // Lọc khóa học theo học kì với controller method (async)
+  Future<void> filterCoursesBySemesterAsync(String semester) async {
+    state = state.copyWith(selectedSemester: semester);
+    final filteredCourses = await _applyFiltersAsync(state.courses);
     state = state.copyWith(filteredCourses: filteredCourses);
   }
 
@@ -148,23 +163,118 @@ class CourseInstructorNotifier extends StateNotifier<InstructorCourseState> {
   }
 
   // Áp dụng tất cả bộ lọc
-  List<CourseModel> _applyFilters(List<CourseModel> courses) {
+  Future<List<CourseModel>> _applyFiltersAsync(List<CourseModel> courses) async {
     List<CourseModel> filtered = courses;
 
-    // Lọc theo học kì (So sánh với semester name thay vì ID)
+    // Lọc theo học kì (So sánh với semester name, ID, và code)
     if (state.selectedSemester != 'All') {
-      // Debug: In ra để kiểm tra giá trị
       print('DEBUG: 🔍 Filtering by semester: ${state.selectedSemester}');
-      print('DEBUG: 📚 Available courses:');
-      for (var course in filtered) {
-        print('  - ${course.name}: semester="${course.semester}"');
+      print('DEBUG: 📚 Available courses: ${filtered.length}');
+      
+      // Tìm semester từ repository để lấy ID và code
+      String? semesterId;
+      String? semesterCode;
+      String? actualSemesterName;
+      
+      try {
+        final semesterRepo = SemesterRepository();
+        final allSemesters = await semesterRepo.getAllSemesters();
+        final matchedSemester = allSemesters.firstWhere(
+          (s) => s.name.toLowerCase().trim() == state.selectedSemester.toLowerCase().trim() ||
+                 s.code.toLowerCase().trim() == state.selectedSemester.toLowerCase().trim() ||
+                 s.id.toLowerCase().trim() == state.selectedSemester.toLowerCase().trim(),
+          orElse: () {
+            try {
+              return allSemesters.firstWhere(
+                (s) => s.name.toLowerCase().contains(state.selectedSemester.toLowerCase()) ||
+                       state.selectedSemester.toLowerCase().contains(s.name.toLowerCase()) ||
+                       s.code.toLowerCase().contains(state.selectedSemester.toLowerCase()) ||
+                       state.selectedSemester.toLowerCase().contains(s.code.toLowerCase()),
+              );
+            } catch (e) {
+              return allSemesters.isNotEmpty ? allSemesters.first : throw Exception('No semesters found');
+            }
+          },
+        );
+        semesterId = matchedSemester.id;
+        semesterCode = matchedSemester.code;
+        actualSemesterName = matchedSemester.name;
+        print('DEBUG: 🔍 Found semester: ID="$semesterId", Code="$semesterCode", Name="$actualSemesterName"');
+      } catch (e) {
+        print('DEBUG: ⚠️ Could not find semester from repository: $e');
+        actualSemesterName = state.selectedSemester;
       }
 
       filtered = filtered.where((course) {
-        // So sánh trực tiếp với semester name
-        bool matches = course.semester == state.selectedSemester;
-        print(
-            'DEBUG: Course ${course.name} matches: $matches (semester: "${course.semester}")');
+        // Normalize semester comparison
+        final courseSemester = course.semester.toLowerCase().trim().replaceAll(RegExp(r'\s+'), ' ');
+        final filterSemester = state.selectedSemester.toLowerCase().trim().replaceAll(RegExp(r'\s+'), ' ');
+        final actualName = actualSemesterName?.toLowerCase().trim().replaceAll(RegExp(r'\s+'), ' ') ?? filterSemester;
+        
+        // Kiểm tra nhiều cách match:
+        // 1. So sánh trực tiếp với semester name
+        bool matches = courseSemester == filterSemester || 
+                       courseSemester == actualName ||
+                       courseSemester.contains(filterSemester) || 
+                       filterSemester.contains(courseSemester);
+        
+        // 2. So sánh với semester ID nếu có
+        if (!matches && semesterId != null) {
+          matches = courseSemester.contains(semesterId.toLowerCase()) ||
+                   courseSemester == semesterId.toLowerCase();
+        }
+        
+        // 3. So sánh với semester code nếu có (normalize để bỏ qua ký tự đặc biệt)
+        if (!matches && semesterCode != null) {
+          final normalizedCode = semesterCode.toLowerCase().trim().replaceAll(RegExp(r'[_\s-]'), '');
+          final normalizedCourseSemester = courseSemester.replaceAll(RegExp(r'[_\s-]'), '');
+          matches = normalizedCourseSemester.contains(normalizedCode) ||
+                   normalizedCode.contains(normalizedCourseSemester);
+        }
+        
+        if (!matches) {
+          print('DEBUG: ❌ Course "${course.name}" does NOT match semester filter');
+          print('DEBUG:   - Course semester: "${course.semester}"');
+          print('DEBUG:   - Filter semester: "${state.selectedSemester}"');
+        } else {
+          print('DEBUG: ✅ Course "${course.name}" matches semester filter (${course.semester})');
+        }
+        return matches;
+      }).toList();
+
+      print('DEBUG: ✅ Filtered courses count: ${filtered.length}');
+    }
+
+    // Lọc theo trạng thái
+    if (state.selectedStatus != 'All') {
+      filtered = filtered
+          .where((course) => course.status == state.selectedStatus)
+          .toList();
+    }
+
+    return filtered;
+  }
+  
+  // Áp dụng tất cả bộ lọc (synchronous version for backward compatibility)
+  List<CourseModel> _applyFilters(List<CourseModel> courses) {
+    List<CourseModel> filtered = courses;
+
+    // Lọc theo học kì (So sánh với semester name)
+    if (state.selectedSemester != 'All') {
+      print('DEBUG: 🔍 Filtering by semester: ${state.selectedSemester}');
+      
+      filtered = filtered.where((course) {
+        // Normalize và so sánh
+        final courseSemester = course.semester.toLowerCase().trim().replaceAll(RegExp(r'\s+'), ' ');
+        final filterSemester = state.selectedSemester.toLowerCase().trim().replaceAll(RegExp(r'\s+'), ' ');
+        
+        bool matches = courseSemester == filterSemester ||
+                       courseSemester.contains(filterSemester) || 
+                       filterSemester.contains(courseSemester);
+        
+        if (!matches) {
+          print('DEBUG: ❌ Course "${course.name}" does NOT match (semester: "${course.semester}")');
+        }
         return matches;
       }).toList();
 

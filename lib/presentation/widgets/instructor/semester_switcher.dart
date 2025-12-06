@@ -78,35 +78,50 @@ class _InstructorSemesterSwitcherState
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmall = screenWidth < 600;
+    final padding = isSmall
+        ? const EdgeInsets.symmetric(horizontal: 8, vertical: 8)
+        : const EdgeInsets.symmetric(horizontal: 10, vertical: 10);
+    final iconSize = isSmall ? 16.0 : 18.0;
+    final spacing = isSmall ? 6.0 : 8.0;
+    
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: padding,
       decoration: BoxDecoration(
         color: const Color(0xFF1F2937),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: Colors.grey[700]!.withOpacity(0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.school, size: 20, color: Colors.white),
-          const SizedBox(width: 10),
-          _buildDropdown(),
+          Icon(Icons.school, size: iconSize, color: Colors.white),
+          SizedBox(width: spacing),
+          Flexible(
+            child: _buildDropdown(isSmall),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildDropdown() {
+  Widget _buildDropdown(bool isSmall) {
+    final fontSize = isSmall ? 11.0 : 13.0;
+    final iconSize = isSmall ? 16.0 : 18.0;
+    
     return DropdownButtonHideUnderline(
       child: DropdownButton<InstructorSemester>(
         dropdownColor: const Color(0xFF1F2937),
         value: _selectedSemester,
-        style: const TextStyle(
+        isExpanded: true, // Allow dropdown to expand to fill available space
+        style: TextStyle(
           color: Colors.white,
-          fontSize: 14,
+          fontSize: fontSize,
           fontWeight: FontWeight.w500,
         ),
-        icon: const Icon(Icons.expand_more, color: Colors.white70, size: 20),
+        icon: Icon(Icons.expand_more, color: Colors.white70, size: iconSize),
+        iconSize: iconSize + 2,
         onChanged: (value) {
           if (value != null) {
             _onSelect(value);
@@ -118,25 +133,30 @@ class _InstructorSemesterSwitcherState
                 value: semester,
                 child: Text(
                   '${semester.code} • ${semester.name}',
-                  style: const TextStyle(color: Colors.white),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: fontSize,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
                 ),
               ),
             )
             .toList(),
         selectedItemBuilder: (context) {
           return _semesters.map((semester) {
-            return Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  '${semester.code} • ${semester.name}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
+            return Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                '${semester.code} • ${semester.name}',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: fontSize,
+                  fontWeight: FontWeight.w500,
                 ),
-              ],
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
             );
           }).toList();
         },
