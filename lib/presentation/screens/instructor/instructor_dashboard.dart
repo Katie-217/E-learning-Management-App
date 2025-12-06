@@ -13,6 +13,7 @@ import 'package:elearning_management_app/presentation/widgets/instructor/kpi_car
 import 'package:elearning_management_app/presentation/widgets/common/user_menu_dropdown.dart';
 import 'package:elearning_management_app/presentation/screens/admin/admin_cleanup_screen.dart';
 import '../forum/instructor_forum_screen.dart';
+import '../chat/instructor_chat_screen.dart';
 class InstructorDashboard extends ConsumerStatefulWidget {
   const InstructorDashboard({super.key});
 
@@ -150,6 +151,11 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
         return const Padding(
           padding: EdgeInsets.all(18),
           child: InstructorForumScreen(),
+        );
+        case 'chat':
+        return const Padding(
+          padding: EdgeInsets.all(18),
+          child: SelectStudentScreen(),
         );
       default: // dashboard
         final semesterName = _selectedSemester?.name ?? 'Fall 2024';
@@ -338,9 +344,14 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
         ),
         _buildSidebarItem(
           'Forum',
-          Icons.book,
+          Icons.forum,
           'forum',        
         ),
+        _buildSidebarItem(
+          'Chat',
+          Icons.chat,
+          'chat',        
+        ),        
       ],
     );
   }
