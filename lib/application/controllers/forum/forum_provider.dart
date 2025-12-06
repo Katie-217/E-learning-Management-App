@@ -30,6 +30,12 @@ final repliesProvider = StreamProvider.family<List<Map<String, dynamic>>, ({Stri
   return repo.getRepliesStream(courseId: params.courseId, topicId: params.topicId);
 });
 
+/// Provider for single topic stream
+final topicProvider = StreamProvider.family<Map<String, dynamic>?, ({String courseId, String topicId})>((ref, params) {
+  final repo = ref.watch(forumRepositoryProvider);
+  return repo.getTopicStream(courseId: params.courseId, topicId: params.topicId);
+});
+
 /// Provider for course forums list (lấy danh sách các khóa học có forum)
 final courseForumsProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
   try {
@@ -62,6 +68,7 @@ final courseForumsProvider = FutureProvider<List<Map<String, dynamic>>>((ref) as
         'id': courseDoc.id,
         'name': courseData['name'] ?? 'Unknown Course',
         'code': courseData['code'] ?? '',
+        'semester': courseData['semester'] ?? 'N/A',
         'topicCount': topicsSnapshot.docs.length,
         'replyCount': totalReplies,
       });
@@ -177,12 +184,16 @@ class ForumController extends StateNotifier<ForumState> {
   }) async {
     state = state.copyWith(isLoading: true, error: null);
     try {
+      // Ưu tiên displayName, fallback sang name để luôn có tên hiển thị/avatar
+      final authorName =
+          (currentUser.displayName.isNotEmpty ? currentUser.displayName : currentUser.name).trim();
+
       await _repo.addReply(
         courseId: courseId,
         topicId: topicId,
         content: content,
         authorId: currentUser.uid,
-        authorName: currentUser.name,
+        authorName: authorName,
         replyToId: replyToId,                // ← THÊM DÒNG NÀY
         authorReplyTo: replyToAuthor,        // ← (tùy chọn, để hiển thị "Replying to...")
         attachments: attachments,

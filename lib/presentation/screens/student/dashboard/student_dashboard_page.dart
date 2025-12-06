@@ -297,33 +297,47 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
             if (widget.showSidebar && MediaQuery.of(context).size.width > 800)
               const SidebarWidget(),
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(18),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    StudentDashboardHeader(
-                      userName: _userName,
-                      semesters: _semesters,
-                      selectedSemesterId: _selectedSemesterId,
-                      isReadonlySemester: isReadonlySemester,
-                      onSemesterChanged: (value) {
-                        if (value == null) return;
-                        setState(() {
-                          _selectedSemesterId = value;
-                        });
-                        _loadMetricsForCurrentSemester();
-                      },
-                    ),
-                    const SizedBox(height: 24),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final screenWidth = MediaQuery.of(context).size.width;
+                  final padding = screenWidth > 800
+                      ? 18.0
+                      : screenWidth > 600
+                          ? 16.0
+                          : 12.0;
+                  return SingleChildScrollView(
+                    padding: EdgeInsets.all(padding),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        StudentDashboardHeader(
+                          userName: _userName,
+                          semesters: _semesters,
+                          selectedSemesterId: _selectedSemesterId,
+                          isReadonlySemester: isReadonlySemester,
+                          onSemesterChanged: (value) {
+                            if (value == null) return;
+                            setState(() {
+                              _selectedSemesterId = value;
+                            });
+                            _loadMetricsForCurrentSemester();
+                          },
+                        ),
+                        LayoutBuilder(builder: (context, headerCons) {
+                          final headerScreenWidth = MediaQuery.of(context).size.width;
+                          return SizedBox(height: headerScreenWidth > 600 ? 24 : 16);
+                        }),
                     LayoutBuilder(builder: (context, cons) {
                       final isNarrow = cons.maxWidth < 600;
+                      final currentScreenWidth = MediaQuery.of(context).size.width;
+                      final spacing = currentScreenWidth > 600 ? 12.0 : 8.0;
+                      // Đảm bảo bố cục chính không bị phá vỡ - chỉ thay đổi direction của cards
                       return isNarrow
                           ? Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch, // Đảm bảo cards chiếm full width
                               children: summaryMetrics
                                   .map((metric) => Padding(
-                                        padding:
-                                            const EdgeInsets.only(bottom: 12),
+                                        padding: EdgeInsets.only(bottom: spacing),
                                         child: StatsCard(
                                           icon: metric.icon,
                                           title: metric.title,
@@ -336,15 +350,17 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
                                   .toList(),
                             )
                           : Row(
+                              crossAxisAlignment: CrossAxisAlignment.start, // Giữ alignment
                               children:
                                   summaryMetrics.asMap().entries.map((entry) {
                                 final index = entry.key;
                                 final metric = entry.value;
                                 return Expanded(
+                                  // Dùng Expanded để chia đều không gian, đảm bảo không overflow
                                   child: Padding(
                                     padding: EdgeInsets.only(
                                       right: index < summaryMetrics.length - 1
-                                          ? 12
+                                          ? spacing
                                           : 0,
                                     ),
                                     child: StatsCard(
@@ -380,21 +396,129 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
                           ),
                         ),
                       ),
-                    const SizedBox(height: 18),
+                    LayoutBuilder(builder: (context, spacingCons) {
+                      final spacingScreenWidth = MediaQuery.of(context).size.width;
+                      return SizedBox(height: spacingScreenWidth > 600 ? 18 : 12);
+                    }),
                     LayoutBuilder(builder: (context, constraints) {
                       final isWide = constraints.maxWidth > 960;
+                      final mainScreenWidth = MediaQuery.of(context).size.width;
                       return Flex(
                         direction: isWide ? Axis.horizontal : Axis.vertical,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(
-                            flex: isWide ? 2 : 0,
-                            child: Column(
+                          // Main content column - luôn chiếm đủ không gian
+                          if (isWide)
+                            Expanded(
+                              flex: 2,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  RecentSubmissionsCard(
+                                    submissions: _recentSubmissions,
+                                  ),
+                                  SizedBox(height: mainScreenWidth > 600 ? 12 : 8),
+                                  StudentDashboardCard(
+                                    title: 'Progress Overview & Completion Rate',
+                                    child: LayoutBuilder(
+                                      builder: (context, constraints) {
+                                        final isNarrow =
+                                            constraints.maxWidth < 600;
+                                        return isNarrow
+                                            ? Column(
+                                                children: [
+                                                  PieChartWidget(
+                                                    completed:
+                                                        assignmentsCompleted,
+                                                    pending: assignmentsPending,
+                                                    title: 'Assignments',
+                                                    completedColor:
+                                                        const Color(0xFF22C55E),
+                                                    pendingColor:
+                                                        const Color(0xFFFF6B6B),
+                                                    trendPercent: 5.0,
+                                                    trendLabel: 'vs last month',
+                                                  ),
+                                                  Container(
+                                                    width: double.infinity,
+                                                    height: 1,
+                                                    margin: const EdgeInsets
+                                                        .symmetric(vertical: 16),
+                                                    color: Colors.grey[800],
+                                                  ),
+                                                  PieChartWidget(
+                                                    completed: quizzesCompleted,
+                                                    pending: quizzesPending,
+                                                    title: 'Quizzes',
+                                                    completedColor:
+                                                        const Color(0xFF0EA5E9),
+                                                    pendingColor:
+                                                        const Color(0xFFFFB347),
+                                                    trendPercent: -12.0,
+                                                    trendLabel:
+                                                        'vs previous semester',
+                                                  ),
+                                                ],
+                                              )
+                                            : Row(
+                                                children: [
+                                                  Expanded(
+                                                    child: PieChartWidget(
+                                                      completed:
+                                                          assignmentsCompleted,
+                                                      pending: assignmentsPending,
+                                                      title: 'Assignments',
+                                                      completedColor:
+                                                          const Color(0xFF22C55E),
+                                                      pendingColor:
+                                                          const Color(0xFFFF6B6B),
+                                                    ),
+                                                  ),
+                                                  Container(
+                                                    width: 2,
+                                                    height: 200,
+                                                    margin: const EdgeInsets
+                                                        .symmetric(horizontal: 8),
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.grey[700],
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              1),
+                                                    ),
+                                                  ),
+                                                  Expanded(
+                                                    child: PieChartWidget(
+                                                      completed: quizzesCompleted,
+                                                      pending: quizzesPending,
+                                                      title: 'Quizzes',
+                                                      completedColor:
+                                                          const Color(0xFF0EA5E9),
+                                                      pendingColor:
+                                                          const Color(0xFFFFB347),
+                                                    ),
+                                                  ),
+                                                ],
+                                              );
+                                      },
+                                    ),
+                                  ),
+                                  SizedBox(height: mainScreenWidth > 600 ? 12 : 8),
+                                  CompletedQuizzesCard(
+                                    quizzes: _completedQuizzes,
+                                  ),
+                                  SizedBox(height: mainScreenWidth > 600 ? 12 : 8),
+                                ],
+                              ),
+                            )
+                          else
+                            // Khi màn hình nhỏ, không dùng Expanded để tránh overflow
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
                                 RecentSubmissionsCard(
                                   submissions: _recentSubmissions,
                                 ),
-                                const SizedBox(height: 12),
+                                SizedBox(height: mainScreenWidth > 600 ? 12 : 8),
                                 StudentDashboardCard(
                                   title: 'Progress Overview & Completion Rate',
                                   child: LayoutBuilder(
@@ -479,19 +603,34 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
                                     },
                                   ),
                                 ),
-                                const SizedBox(height: 12),
+                                SizedBox(height: mainScreenWidth > 600 ? 12 : 8),
                                 CompletedQuizzesCard(
                                   quizzes: _completedQuizzes,
                                 ),
-                                const SizedBox(height: 12),
+                                SizedBox(height: mainScreenWidth > 600 ? 12 : 8),
                               ],
                             ),
-                          ),
                           SizedBox(
-                              width: isWide ? 12 : 0, height: isWide ? 0 : 12),
-                          Expanded(
-                            flex: 1,
-                            child: Column(
+                              width: isWide ? (mainScreenWidth > 800 ? 12 : 8) : 0,
+                              height: isWide ? 0 : (mainScreenWidth > 600 ? 12 : 8)),
+                          // Calendar sidebar - luôn chiếm đủ không gian khi wide
+                          if (isWide)
+                            Expanded(
+                              flex: 1,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  StudentDashboardCard(
+                                    title: 'Calendar',
+                                    child: const StudentCalendarPanel(),
+                                  ),
+                                ],
+                              ),
+                            )
+                          else
+                            // Khi màn hình nhỏ, calendar ở dưới
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
                                 StudentDashboardCard(
                                   title: 'Calendar',
@@ -499,12 +638,13 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
                                 ),
                               ],
                             ),
-                          ),
                         ],
                       );
                     }),
-                  ],
-                ),
+                      ],
+                    ),
+                  );
+                },
               ),
             ),
           ],

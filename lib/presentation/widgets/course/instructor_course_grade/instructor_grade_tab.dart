@@ -663,7 +663,7 @@ class _InstructorGradeTabState extends ConsumerState<InstructorGradeTab> {
           if (studentId.contains(q)) {
             return true;
           }
-
+          
           if (groupName.contains(q)) {
             return true;
           }
@@ -999,11 +999,11 @@ class _InstructorGradeTabState extends ConsumerState<InstructorGradeTab> {
         const SizedBox.shrink(),
         Row(
           children: [
-            IconButton(
-              onPressed: _exportToCSV,
+        IconButton(
+          onPressed: _exportToCSV,
               icon:
                   const Icon(Icons.download, color: AppColors.textSecondary),
-              tooltip: 'Export to CSV',
+          tooltip: 'Export to CSV',
             ),
             const SizedBox(width: 8),
             TextButton.icon(

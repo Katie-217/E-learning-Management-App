@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:elearning_management_app/presentation/screens/instructor/manage_student/instructor_students_page.dart';
 import 'package:elearning_management_app/application/controllers/instructor/instructor_profile_provider.dart';
@@ -6,8 +7,6 @@ import 'package:elearning_management_app/presentation/screens/instructor/instruc
 import 'package:elearning_management_app/presentation/widgets/instructor/semester_switcher.dart';
 import 'package:elearning_management_app/presentation/widgets/instructor/instructor_calendar_panel.dart';
 import 'package:elearning_management_app/presentation/widgets/instructor/instructor_progress_charts.dart';
-import 'package:elearning_management_app/presentation/widgets/instructor/assignment_tracking_table.dart';
-import 'package:elearning_management_app/presentation/widgets/instructor/quiz_results_table.dart';
 import 'package:elearning_management_app/application/controllers/instructor/instructor_kpi_provider.dart';
 import 'package:elearning_management_app/presentation/widgets/instructor/kpi_cards.dart';
 import 'package:elearning_management_app/presentation/widgets/common/user_menu_dropdown.dart';
@@ -24,89 +23,180 @@ class InstructorDashboard extends ConsumerStatefulWidget {
 class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
   String _activeTab = 'dashboard';
   InstructorSemester? _selectedSemester;
+  
+  int _getBottomNavIndex() {
+    switch (_activeTab) {
+      case 'dashboard':
+        return 0;
+      case 'courses':
+        return 1;
+      case 'students':
+        return 2;
+      case 'forum':
+        return 3;
+      default:
+        return 0;
+    }
+  }
+  
   @override
   Widget build(BuildContext context) {
-    final isMobile = MediaQuery.of(context).size.width < 800;
+    final isWide = MediaQuery.of(context).size.width > 800;
+    final showBottomNav = !kIsWeb && !isWide; // chỉ dùng bottom nav cho mobile/app, tránh cho web
     return Scaffold(
       backgroundColor: const Color(0xFF0F1720),
       appBar: AppBar(
         backgroundColor: const Color(0xFF1F2937),
-        title: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: Colors.indigo[600],
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(Icons.school, color: Colors.white),
-            ),
-            const SizedBox(width: 12),
-            const Text('Teacher Dashboard',
-                style: TextStyle(fontWeight: FontWeight.w600)),
-          ],
-        ),
-        actions: [
-          if (!isMobile)
-            SizedBox(
-              width: 250,
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12),
-                child: TextField(
-                  style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(
-                    hintText: 'Search courses...',
-                    hintStyle: TextStyle(color: Colors.grey[400]),
-                    filled: true,
-                    fillColor: const Color(0xFF111827),
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 10),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide.none,
+        title: LayoutBuilder(
+          builder: (context, constraints) {
+            final screenWidth = MediaQuery.of(context).size.width;
+            final isVerySmall = screenWidth < 400;
+            final iconSize = isVerySmall ? 28.0 : 32.0; // Giảm từ 32/40 xuống 28/32
+            final titleSize = isVerySmall ? 13.0 : 15.0; // Giảm từ 14/16 xuống 13/15
+            final spacing = isVerySmall ? 4.0 : 6.0;
+            
+            return Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (!isWide)
+                  PopupMenuButton<String>(
+                    offset: const Offset(0, kToolbarHeight),
+                    icon: Icon(Icons.menu, color: Colors.white, size: isVerySmall ? 20.0 : 24.0),
+                    padding: EdgeInsets.all(isVerySmall ? 4.0 : 8.0),
+                    constraints: BoxConstraints(
+                      minWidth: isVerySmall ? 32.0 : 48.0,
+                      minHeight: isVerySmall ? 32.0 : 48.0,
                     ),
-                    prefixIcon: Icon(Icons.search, color: Colors.grey[400]),
+                    color: const Color(0xFF1F2937),
+                    onSelected: (value) {
+                      setState(() {
+                        _activeTab = value;
+                      });
+                    },
+                    itemBuilder: (context) => const [
+                      PopupMenuItem(
+                        value: 'dashboard',
+                        child: ListTile(
+                          leading: Icon(Icons.dashboard_outlined, color: Colors.white70),
+                          title: Text('Dashboard', style: TextStyle(color: Colors.white)),
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: 'courses',
+                        child: ListTile(
+                          leading: Icon(Icons.book_outlined, color: Colors.white70),
+                          title: Text('Teaching', style: TextStyle(color: Colors.white)),
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: 'students',
+                        child: ListTile(
+                          leading: Icon(Icons.people_outlined, color: Colors.white70),
+                          title: Text('Students', style: TextStyle(color: Colors.white)),
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: 'forum',
+                        child: ListTile(
+                          leading: Icon(Icons.forum_outlined, color: Colors.white70),
+                          title: Text('Forum', style: TextStyle(color: Colors.white)),
+                        ),
+                      ),
+                    ],
+                  ),
+                SizedBox(width: spacing),
+                Container(
+                  width: iconSize,
+                  height: iconSize,
+                  decoration: BoxDecoration(
+                    color: Colors.indigo[600],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(Icons.school, color: Colors.white, size: iconSize * 0.6),
+                ),
+                SizedBox(width: spacing + 2),
+                Flexible(
+                  child: Text(
+                    isVerySmall ? 'Teacher' : 'Teacher Dashboard',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                      fontSize: titleSize,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-              ),
-            ),
-          IconButton(
-              onPressed: () {}, icon: const Icon(Icons.notifications_none)),
+              ],
+            );
+          },
+        ),
+        actions: [
+          // Đã bỏ _InstructorResponsiveSearchField()
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final screenWidth = MediaQuery.of(context).size.width;
+              final isVerySmall = screenWidth < 400;
+              
+              return IconButton(
+                onPressed: () {},
+                icon: Icon(
+                  Icons.notifications_none,
+                  size: isVerySmall ? 20.0 : 24.0,
+                ),
+                padding: EdgeInsets.all(isVerySmall ? 4.0 : 8.0),
+                constraints: BoxConstraints(
+                  minWidth: isVerySmall ? 32.0 : 48.0,
+                  minHeight: isVerySmall ? 32.0 : 48.0,
+                ),
+              );
+            },
+          ),
           Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: Consumer(
-              builder: (context, ref, child) {
-                final profileAsync = ref.watch(instructorProfileProvider);
-                return profileAsync.when(
-                  data: (profile) => UserMenuDropdown(
-                    userName: profile?['name'] ??
-                        profile?['displayName'] ??
-                        'Dr. Johnson',
-                    userEmail: profile?['email'] ?? 'dr.johnson@university.edu',
-                    userPhotoUrl: profile?['photoUrl'],
+            padding: const EdgeInsets.only(right: 8),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final screenWidth = MediaQuery.of(context).size.width;
+                final isVerySmall = screenWidth < 400;
+                
+                return ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: isVerySmall ? 120.0 : 180.0,
                   ),
-                  loading: () => const UserMenuDropdown(
-                    userName: 'Dr. Johnson',
-                    userEmail: 'dr.johnson@university.edu',
-                    userPhotoUrl: null,
-                  ),
-                  error: (_, __) => const UserMenuDropdown(
-                    userName: 'Dr. Johnson',
-                    userEmail: 'dr.johnson@university.edu',
-                    userPhotoUrl: null,
+                  child: Consumer(
+                    builder: (context, ref, child) {
+                      final profileAsync = ref.watch(instructorProfileProvider);
+                      return profileAsync.when(
+                        data: (profile) => UserMenuDropdown(
+                          userName: profile?['name'] ??
+                              profile?['displayName'] ??
+                              'Dr. Johnson',
+                          userEmail: profile?['email'] ?? 'dr.johnson@university.edu',
+                          userPhotoUrl: profile?['photoUrl'],
+                        ),
+                        loading: () => const UserMenuDropdown(
+                          userName: 'Dr. Johnson',
+                          userEmail: 'dr.johnson@university.edu',
+                          userPhotoUrl: null,
+                        ),
+                        error: (_, __) => const UserMenuDropdown(
+                          userName: 'Dr. Johnson',
+                          userEmail: 'dr.johnson@university.edu',
+                          userPhotoUrl: null,
+                        ),
+                      );
+                    },
                   ),
                 );
               },
             ),
-          )
+          ),
         ],
       ),
       body: Row(
         children: [
           // Sidebar Navigation
-          if (!isMobile)
+          if (isWide)
             Container(
               width: 220,
               color: const Color(0xFF111827),
@@ -118,83 +208,201 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => const AdminCleanupScreen(),
+      // Khi màn hình hẹp, hiển thị bottom navigation để đổi tab
+      bottomNavigationBar: showBottomNav
+          ? BottomNavigationBar(
+              backgroundColor: const Color(0xFF1F2937),
+              selectedItemColor: Colors.indigo[400],
+              unselectedItemColor: Colors.grey[400],
+              currentIndex: _getBottomNavIndex(),
+              onTap: (index) {
+                setState(() {
+                  switch (index) {
+                    case 0:
+                      _activeTab = 'dashboard';
+                      break;
+                    case 1:
+                      _activeTab = 'courses';
+                      break;
+                    case 2:
+                      _activeTab = 'students';
+                      break;
+                    case 3:
+                      _activeTab = 'forum';
+                      break;
+                  }
+                });
+              },
+              type: BottomNavigationBarType.fixed,
+              items: const [
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.dashboard),
+                  label: 'Dashboard',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.book),
+                  label: 'Teaching',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.people),
+                  label: 'Students',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.forum),
+                  label: 'Forum',
+                ),
+              ],
+            )
+          : null,
+      floatingActionButton: isWide
+          ? FloatingActionButton.extended(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const AdminCleanupScreen(),
+                  ),
+                );
+              },
+              backgroundColor: Colors.red[700],
+              icon: const Icon(Icons.cleaning_services, color: Colors.white),
+              label: const Text('🧹 Cleanup', style: TextStyle(color: Colors.white)),
+              tooltip: 'Admin: Clean up test users',
+            )
+          : FloatingActionButton(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const AdminCleanupScreen(),
+                  ),
+                );
+              },
+              backgroundColor: Colors.red[700],
+              child: const Icon(Icons.cleaning_services, color: Colors.white),
+              tooltip: 'Admin: Clean up test users',
             ),
-          );
-        },
-        backgroundColor: Colors.red[700],
-        icon: const Icon(Icons.cleaning_services, color: Colors.white),
-        label: const Text('🧹 Cleanup', style: TextStyle(color: Colors.white)),
-        tooltip: 'Admin: Clean up test users',
-      ),
     );
   }
 
   Widget _buildMainContent() {
-    switch (_activeTab) {
-      case 'courses':
-        return const Padding(
-          padding: EdgeInsets.all(18),
-          child: InstructorCoursesPage(),
-        );
-      case 'students':
-        return const Padding(
-          padding: EdgeInsets.all(18),
-          child: InstructorStudentsPage(),
-        );
-      case 'forum':
-        return const Padding(
-          padding: EdgeInsets.all(18),
-          child: InstructorForumScreen(),
-        );
-      default: // dashboard
-        final semesterName = _selectedSemester?.name ?? 'Fall 2024';
-        final kpiStatsAsync =
-            ref.watch(instructorKPIStatsProvider(semesterName));
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(18),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Welcome and Semester Switcher in same row
-              Row(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final screenWidth = MediaQuery.of(context).size.width;
+        final padding = screenWidth > 800
+            ? 18.0
+            : screenWidth > 600
+                ? 16.0
+                : 12.0;
+        
+        switch (_activeTab) {
+          case 'courses':
+            return Padding(
+              padding: EdgeInsets.all(padding),
+              child: const InstructorCoursesPage(),
+            );
+          case 'students':
+            return Padding(
+              padding: EdgeInsets.all(padding),
+              child: const InstructorStudentsPage(),
+            );
+          case 'forum':
+            return Padding(
+              padding: EdgeInsets.all(padding),
+              child: const InstructorForumScreen(),
+            );
+          default: // dashboard
+            final semesterName = _selectedSemester?.name ?? 'Fall 2024';
+            final kpiStatsAsync =
+                ref.watch(instructorKPIStatsProvider(semesterName));
+            return SingleChildScrollView(
+              padding: EdgeInsets.all(padding),
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Left: Welcome message
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Welcome back, Dr. Johnson',
-                            style: TextStyle(
-                                fontSize: 28,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white)),
-                        const SizedBox(height: 4),
-                        Text("Ready to inspire your students today?",
-                            style: TextStyle(
-                                color: Colors.grey[400], fontSize: 16)),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  // Right: Semester Switcher
-                  InstructorSemesterSwitcher(
-                    initialSemester: _selectedSemester,
-                    onSemesterChanged: (semester) {
-                      setState(() {
-                        _selectedSemester = semester;
-                      });
+                  // Welcome and Semester Switcher in same row
+                  LayoutBuilder(
+                    builder: (context, headerConstraints) {
+                      final isNarrow = headerConstraints.maxWidth < 600;
+                      return isNarrow
+                          ? Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Welcome message
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Welcome back, Dr. Johnson',
+                                      style: TextStyle(
+                                        fontSize: screenWidth > 600 ? 28 : 24,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    SizedBox(height: screenWidth > 600 ? 4 : 3),
+                                    Text(
+                                      "Ready to inspire your students today?",
+                                      style: TextStyle(
+                                        color: Colors.grey[400],
+                                        fontSize: screenWidth > 600 ? 16 : 14,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                SizedBox(height: screenWidth > 600 ? 16 : 12),
+                                // Semester Switcher
+                                InstructorSemesterSwitcher(
+                                  initialSemester: _selectedSemester,
+                                  onSemesterChanged: (semester) {
+                                    setState(() {
+                                      _selectedSemester = semester;
+                                    });
+                                  },
+                                ),
+                              ],
+                            )
+                          : Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                // Left: Welcome message
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Welcome back, Dr. Johnson',
+                                        style: TextStyle(
+                                          fontSize: screenWidth > 800 ? 28 : 24,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                      SizedBox(height: screenWidth > 600 ? 4 : 3),
+                                      Text(
+                                        "Ready to inspire your students today?",
+                                        style: TextStyle(
+                                          color: Colors.grey[400],
+                                          fontSize: screenWidth > 600 ? 16 : 14,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                SizedBox(width: screenWidth > 800 ? 16 : 12),
+                                // Right: Semester Switcher
+                                InstructorSemesterSwitcher(
+                                  initialSemester: _selectedSemester,
+                                  onSemesterChanged: (semester) {
+                                    setState(() {
+                                      _selectedSemester = semester;
+                                    });
+                                  },
+                                ),
+                              ],
+                            );
                     },
                   ),
-                ],
-              ),
-              const SizedBox(height: 20),
+                  SizedBox(height: screenWidth > 600 ? 20 : 16),
               // KPI Cards - 5 cards bắt buộc
               kpiStatsAsync.when(
                 data: (stats) => InstructorKPICards(stats: stats),
@@ -218,10 +426,11 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
                   ),
                 ),
               ),
-              const SizedBox(height: 20),
+              SizedBox(height: screenWidth > 600 ? 20 : 16),
               // Two Column Layout
               LayoutBuilder(builder: (context, constraints) {
                 final isWideScreen = constraints.maxWidth > 900;
+                final spacing = screenWidth > 600 ? 12.0 : 8.0;
                 return isWideScreen
                     ? Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -237,28 +446,16 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
                                     const Expanded(
                                       child: AssignmentSubmissionChart(),
                                     ),
-                                    const SizedBox(width: 12),
+                                    SizedBox(width: spacing),
                                     const Expanded(
                                       child: QuizCompletionChart(),
                                     ),
                                   ],
                                 ),
-                                const SizedBox(height: 12),
-                                // Assignment Tracking Table
-                                const SizedBox(
-                                  height: 400,
-                                  child: AssignmentTrackingTable(),
-                                ),
-                                const SizedBox(height: 12),
-                                // Quiz Results Table
-                                const SizedBox(
-                                  height: 400,
-                                  child: QuizResultsTable(),
-                                ),
                               ],
                             ),
                           ),
-                          const SizedBox(width: 12),
+                          SizedBox(width: spacing),
                           // Right Column: Calendar Panel
                           Expanded(
                             flex: 1,
@@ -270,16 +467,16 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
                         children: [
                           // Charts in a row on mobile if space allows
                           LayoutBuilder(
-                            builder: (context, constraints) {
+                            builder: (context, chartConstraints) {
                               final canFitTwoCharts =
-                                  constraints.maxWidth > 600;
+                                  chartConstraints.maxWidth > 600;
                               return canFitTwoCharts
                                   ? Row(
                                       children: [
                                         const Expanded(
                                           child: AssignmentSubmissionChart(),
                                         ),
-                                        const SizedBox(width: 12),
+                                        SizedBox(width: spacing),
                                         const Expanded(
                                           child: QuizCompletionChart(),
                                         ),
@@ -288,33 +485,23 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
                                   : Column(
                                       children: [
                                         const AssignmentSubmissionChart(),
-                                        const SizedBox(height: 12),
+                                        SizedBox(height: spacing),
                                         const QuizCompletionChart(),
                                       ],
                                     );
                             },
                           ),
-                          const SizedBox(height: 12),
+                          SizedBox(height: spacing),
                           _buildCalendarTasksPanel(),
-                          const SizedBox(height: 12),
-                          // Assignment Tracking Table
-                          const SizedBox(
-                            height: 400,
-                            child: AssignmentTrackingTable(),
-                          ),
-                          const SizedBox(height: 12),
-                          // Quiz Results Table
-                          const SizedBox(
-                            height: 400,
-                            child: QuizResultsTable(),
-                          ),
                         ],
                       );
               }),
             ],
           ),
         );
-    }
+        }
+      },
+    );
   }
 
   Widget _buildSidebar() {
@@ -437,6 +624,65 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
         border: Border.all(color: Colors.grey[800]!),
       ),
       child: InstructorCalendarPanel(selectedSemester: _selectedSemester),
+    );
+  }
+}
+
+// Responsive search field to prevent overflow in app bar
+class _InstructorResponsiveSearchField extends StatelessWidget {
+  const _InstructorResponsiveSearchField();
+
+  @override
+  Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    // Reduce width on small screens and hide on very small screens
+    final searchWidth = screenWidth > 1200
+        ? 280.0
+        : screenWidth > 900
+            ? 220.0
+            : screenWidth > 750
+                ? 180.0
+                : screenWidth > 600
+                    ? 150.0
+                    : screenWidth > 480
+                        ? 120.0
+                        : screenWidth > 400
+                            ? 100.0
+                            : 0.0; // Ẩn hoàn toàn khi màn hình < 400px
+
+    if (searchWidth == 0) return const SizedBox.shrink();
+
+    final isSmall = screenWidth < 600;
+    final fontSize = isSmall ? 12.0 : 14.0;
+    final hintSize = isSmall ? 11.0 : 14.0;
+    final horizontalPadding = isSmall ? 6.0 : 8.0;
+    final verticalPadding = isSmall ? 6.0 : 8.0;
+
+    return Flexible(
+      child: SizedBox(
+        width: searchWidth,
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: verticalPadding, horizontal: horizontalPadding),
+          child: TextField(
+            style: TextStyle(color: Colors.white, fontSize: fontSize),
+            decoration: InputDecoration(
+              hintText: screenWidth > 600 ? 'Search courses...' : 'Search...',
+              hintStyle: TextStyle(color: Colors.grey[400], fontSize: hintSize),
+              filled: true,
+              fillColor: const Color(0xFF111827),
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: isSmall ? 8.0 : 10.0,
+                vertical: isSmall ? 6.0 : 8.0,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide.none,
+              ),
+              isDense: true,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

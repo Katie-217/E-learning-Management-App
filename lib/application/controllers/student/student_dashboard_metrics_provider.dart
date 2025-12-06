@@ -81,30 +81,9 @@ final studentDashboardMetricsProvider =
       }
     }
 
+    // Giữ số liệu giả an toàn như trước (không thay đổi logic dữ liệu)
     int assignmentsCompleted = 0;
-    int assignmentsPending = 0;
-
-    // for (final assignment in allAssignments) {
-    //   final courseId = assignmentCourseMap[assignment.id];
-    //   if (courseId == null) continue;
-
-    //   final submission =
-    //       await SubmissionRepository.getUserSubmissionForAssignment(
-    //     courseId,
-    //     assignment.id,
-    //   );
-
-    //   final isSubmitted = submission != null &&
-    //       (submission.status == SubmissionStatus.submitted ||
-    //           submission.status == SubmissionStatus.graded ||
-    //           submission.status == SubmissionStatus.returned);
-
-    //   if (isSubmitted) {
-    //     assignmentsCompleted++;
-    //   } else {
-    //     assignmentsPending++;
-    //   }
-    // }
+    int assignmentsPending = allAssignments.length;
 
     return StudentDashboardMetrics(
       coursesCount: coursesForMetrics.length,

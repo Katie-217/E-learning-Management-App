@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:elearning_management_app/application/controllers/forum/forum_provider.dart';
-import 'topic_detail_screen.dart';
+import '../common/forum_file_preview_widget.dart';
 import 'create_topic_dialog.dart';
 
 

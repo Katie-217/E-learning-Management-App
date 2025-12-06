@@ -77,9 +77,13 @@ class RecentSubmissionTile extends StatelessWidget {
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    Text(
-                      item.timeLabel,
-                      style: const TextStyle(color: Colors.white70, fontSize: 12),
+                    Flexible(
+                      child: Text(
+                        item.timeLabel,
+                        style: const TextStyle(color: Colors.white70, fontSize: 12),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                     const SizedBox(width: 8),
                     Text(
@@ -87,12 +91,16 @@ class RecentSubmissionTile extends StatelessWidget {
                       style: TextStyle(color: Colors.white30, fontSize: 12),
                     ),
                     const SizedBox(width: 8),
-                    Text(
-                      _statusLabel,
-                      style: TextStyle(
-                        color: _statusColor,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
+                    Flexible(
+                      child: Text(
+                        _statusLabel,
+                        style: TextStyle(
+                          color: _statusColor,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],

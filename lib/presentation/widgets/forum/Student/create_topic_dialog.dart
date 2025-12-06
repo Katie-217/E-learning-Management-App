@@ -6,6 +6,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
+import 'dart:ui' as ui;
 import 'package:elearning_management_app/application/controllers/forum/forum_provider.dart';
 import 'package:elearning_management_app/data/repositories/auth/auth_repository.dart';
 import '../../../../core/services/file_upload_service.dart';
@@ -52,11 +53,15 @@ class _CreateTopicDialogState extends ConsumerState<CreateTopicDialog> {
     super.dispose();
   }
 
-  // 2. Hàm chọn file
+  // 2. Hàm chọn file - chỉ cho phép PDF, Word, PNG
   Future<void> _pickFiles() async {
     final uploadService = ref.read(fileUploadServiceProvider);
     try {
-      final files = await uploadService.pickFiles(allowMultiple: true);
+      final files = await uploadService.pickFiles(
+        allowMultiple: true,
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'doc', 'docx', 'png'],
+      );
       if (files != null) {
         setState(() {
           _selectedFiles.addAll(files);
@@ -73,6 +78,34 @@ class _CreateTopicDialogState extends ConsumerState<CreateTopicDialog> {
       _selectedFiles.removeAt(index);
     });
   }
+
+  // 4. Hàm xử lý file được kéo thả vào
+  bool _isValidFileType(String fileName) {
+    final lowerName = fileName.toLowerCase();
+    return lowerName.endsWith('.pdf') ||
+        lowerName.endsWith('.doc') ||
+        lowerName.endsWith('.docx') ||
+        lowerName.endsWith('.png');
+  }
+
+  // 5. Hàm xử lý file được kéo thả vào (từ DragTarget hoặc HTML5 drag and drop)
+  Future<void> _handleDroppedFiles(List<PlatformFile> files) async {
+    final validFiles = files.where((file) => _isValidFileType(file.name)).toList();
+    
+    if (validFiles.isEmpty) {
+      _showError('Chỉ chấp nhận file PDF, DOC, DOCX, PNG');
+      return;
+    }
+
+    if (files.length != validFiles.length) {
+      _showError('Một số file không được hỗ trợ. Đã thêm ${validFiles.length}/${files.length} file hợp lệ.');
+    }
+
+    setState(() {
+      _selectedFiles.addAll(validFiles);
+    });
+  }
+
 
   Future<void> _handleSubmit() async {
     if (!_formKey.currentState!.validate() || _isSubmitting) return;
@@ -259,61 +292,184 @@ class _CreateTopicDialogState extends ConsumerState<CreateTopicDialog> {
                             : null,
                   ),
                   
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 24),
 
-                  // 5. UI HIỂN THỊ FILE ĐÃ CHỌN
-                  if (_selectedFiles.isNotEmpty)
-                    Container(
-                      height: 100, // Chiều cao cố định cho list file
-                      margin: const EdgeInsets.only(bottom: 16),
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: _selectedFiles.length,
-                        separatorBuilder: (_, __) => const SizedBox(width: 8),
-                        itemBuilder: (ctx, index) {
-                          final file = _selectedFiles[index];
-                          final isImage = ['.jpg','.png','.jpeg'].any((e) => file.name.toLowerCase().endsWith(e));
-                          return Stack(
+                  // File Attachment Section
+                  if (_selectedFiles.isEmpty)
+                    // Old design: Simple button when no files
+                    OutlinedButton.icon(
+                      onPressed: _isSubmitting ? null : _pickFiles,
+                      icon: const Icon(Icons.attach_file, size: 18),
+                      label: const Text('Add File'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.indigo[400],
+                        side: BorderSide(color: Colors.grey[700]!),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      ),
+                    )
+                  else
+                    // New design: File cards with dashed border button when files exist
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // File count label
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: Text(
+                            '${_selectedFiles.length} file${_selectedFiles.length > 1 ? 's' : ''}',
+                            style: TextStyle(
+                              color: Colors.grey[400],
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        
+                        // Files and Add button row
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
                             children: [
-                              Container(
-                                width: 100,
-                                decoration: BoxDecoration(
-                                  color: Colors.black26,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: Colors.grey[700]!),
-                                  image: (isImage && file.bytes != null)
-                                      ? DecorationImage(image: MemoryImage(file.bytes!), fit: BoxFit.cover)
-                                      : null,
-                                ),
-                                alignment: Alignment.center,
-                                child: !isImage 
-                                    ? const Icon(Icons.insert_drive_file, color: Colors.white54) 
-                                    : null,
-                              ),
-                              Positioned(
-                                right: 0, top: 0,
-                                child: InkWell(
-                                  onTap: () => _removeFile(index),
-                                  child: const CircleAvatar(
-                                    radius: 10, 
-                                    backgroundColor: Colors.red, 
-                                    child: Icon(Icons.close, size: 12, color: Colors.white)
+                              // Display selected files
+                              ...List.generate(_selectedFiles.length, (index) {
+                                final file = _selectedFiles[index];
+                                final fileName = file.name.toLowerCase();
+                                final isPng = fileName.endsWith('.png');
+                                final isPdf = fileName.endsWith('.pdf');
+                                final isWord = fileName.endsWith('.doc') || fileName.endsWith('.docx');
+                                
+                                // Determine icon and color by file type
+                                IconData fileIcon;
+                                Color iconColor;
+                                String fileTypeLabel;
+                                if (isPng) {
+                                  fileIcon = Icons.image;
+                                  iconColor = Colors.green;
+                                  fileTypeLabel = 'PNG';
+                                } else if (isPdf) {
+                                  fileIcon = Icons.picture_as_pdf;
+                                  iconColor = Colors.red;
+                                  fileTypeLabel = 'PDF';
+                                } else if (isWord) {
+                                  fileIcon = Icons.description;
+                                  iconColor = Colors.blue;
+                                  fileTypeLabel = 'DOC';
+                                } else {
+                                  fileIcon = Icons.insert_drive_file;
+                                  iconColor = Colors.grey;
+                                  fileTypeLabel = 'FILE';
+                                }
+                                
+                                return Padding(
+                                  padding: EdgeInsets.only(right: index < _selectedFiles.length - 1 ? 12 : 12),
+                                  child: Stack(
+                                    children: [
+                                      Container(
+                                        width: 100,
+                                        height: 100,
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF374151),
+                                          borderRadius: BorderRadius.circular(8),
+                                          image: (isPng && file.bytes != null)
+                                              ? DecorationImage(
+                                                  image: MemoryImage(file.bytes!),
+                                                  fit: BoxFit.cover,
+                                                )
+                                              : null,
+                                        ),
+                                        child: isPng && file.bytes != null
+                                            ? null
+                                            : Column(
+                                                mainAxisAlignment: MainAxisAlignment.center,
+                                                children: [
+                                                  Container(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                                    decoration: BoxDecoration(
+                                                      color: iconColor,
+                                                      borderRadius: BorderRadius.circular(4),
+                                                    ),
+                                                    child: Text(
+                                                      fileTypeLabel,
+                                                      style: const TextStyle(
+                                                        color: Colors.white,
+                                                        fontSize: 12,
+                                                        fontWeight: FontWeight.bold,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 8),
+                                                  Padding(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                                                    child: Text(
+                                                      file.name.length > 12
+                                                          ? '${file.name.substring(0, 12)}...'
+                                                          : file.name,
+                                                      style: const TextStyle(
+                                                        color: Colors.white70,
+                                                        fontSize: 11,
+                                                      ),
+                                                      textAlign: TextAlign.center,
+                                                      maxLines: 2,
+                                                      overflow: TextOverflow.ellipsis,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                      ),
+                                      // Remove button
+                                      Positioned(
+                                        right: 4,
+                                        top: 4,
+                                        child: InkWell(
+                                          onTap: () => _removeFile(index),
+                                          child: Container(
+                                            padding: const EdgeInsets.all(4),
+                                            decoration: const BoxDecoration(
+                                              color: Colors.red,
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: const Icon(
+                                              Icons.close,
+                                              size: 14,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }),
+                              
+                              // Add file button with dashed border
+                              InkWell(
+                                onTap: _isSubmitting ? null : _pickFiles,
+                                child: _DashedBorder(
+                                  width: 100,
+                                  height: 100,
+                                  color: Colors.grey[600]!,
+                                  strokeWidth: 2,
+                                  dashPattern: [5, 5],
+                                  child: Container(
+                                    width: 100,
+                                    height: 100,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF374151),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Icon(
+                                      Icons.add,
+                                      size: 32,
+                                      color: Colors.grey[400],
+                                    ),
                                   ),
                                 ),
                               ),
                             ],
-                          );
-                        },
-                      ),
+                          ),
+                        ),
+                      ],
                     ),
-
-                  // 6. NÚT CHỌN FILE
-                  OutlinedButton.icon(
-                    onPressed: _isSubmitting ? null : _pickFiles,
-                    icon: const Icon(Icons.attach_file),
-                    label: Text('Attach Files (${_selectedFiles.length})'),
-                    style: OutlinedButton.styleFrom(foregroundColor: Colors.indigoAccent),
-                  ),
 
                   const SizedBox(height: 24),
 
@@ -382,4 +538,84 @@ class _CreateTopicDialogState extends ConsumerState<CreateTopicDialog> {
       ),
     );
   }
+}
+
+// Custom widget for dashed border
+class _DashedBorder extends StatelessWidget {
+  final Widget child;
+  final double width;
+  final double height;
+  final Color color;
+  final double strokeWidth;
+  final List<int> dashPattern;
+
+  const _DashedBorder({
+    required this.child,
+    required this.width,
+    required this.height,
+    required this.color,
+    required this.strokeWidth,
+    required this.dashPattern,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      painter: _DashedBorderPainter(
+        color: color,
+        strokeWidth: strokeWidth,
+        dashPattern: dashPattern,
+      ),
+      child: SizedBox(
+        width: width,
+        height: height,
+        child: child,
+      ),
+    );
+  }
+}
+
+class _DashedBorderPainter extends CustomPainter {
+  final Color color;
+  final double strokeWidth;
+  final List<int> dashPattern;
+
+  _DashedBorderPainter({
+    required this.color,
+    required this.strokeWidth,
+    required this.dashPattern,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke;
+
+    final path = Path()
+      ..addRRect(RRect.fromRectAndRadius(
+        Rect.fromLTWH(0, 0, size.width, size.height),
+        const Radius.circular(8),
+      ));
+
+    final dashLength = dashPattern[0].toDouble();
+    final dashSpace = dashPattern[1].toDouble();
+    final pathMetrics = path.computeMetrics();
+
+    for (final pathMetric in pathMetrics) {
+      double distance = 0;
+      while (distance < pathMetric.length) {
+        final extractPath = pathMetric.extractPath(
+          distance,
+          distance + dashLength,
+        );
+        canvas.drawPath(extractPath, paint);
+        distance += dashLength + dashSpace;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

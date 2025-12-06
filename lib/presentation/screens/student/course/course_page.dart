@@ -239,18 +239,35 @@ class CourseListView extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.all(16),
-      child: GridView.builder(
-        itemCount: courses.length,
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 3,
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
-          childAspectRatio: 1.25,
-        ),
-        itemBuilder: (context, i) => CourseCardWidget(
-          course: courses[i],
-          onTap: () => onCourseSelect(courses[i]),
-        ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final crossAxisCount = constraints.maxWidth > 1200
+              ? 3
+              : constraints.maxWidth > 800
+                  ? 2
+                  : 1;
+          
+          // Điều chỉnh childAspectRatio dựa trên số cột để thu nhỏ chiều cao
+          final childAspectRatio = crossAxisCount == 1
+              ? 1.6
+              : crossAxisCount == 2
+                  ? 1.5
+                  : 1.4;
+          
+          return GridView.builder(
+            itemCount: courses.length,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: crossAxisCount,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+              childAspectRatio: childAspectRatio,
+            ),
+            itemBuilder: (context, i) => CourseCardWidget(
+              course: courses[i],
+              onTap: () => onCourseSelect(courses[i]),
+            ),
+          );
+        },
       ),
     );
   }

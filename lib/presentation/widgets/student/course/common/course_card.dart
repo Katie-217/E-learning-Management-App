@@ -121,59 +121,72 @@ class CourseCard extends StatelessWidget {
               maxLines: 2,
               overflow: TextOverflow.ellipsis),
           SizedBox(height: 8),
-          Row(
-            children: [
-              Icon(Icons.person,
-                  size: 14,
-                  color:
-                      Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
-              SizedBox(width: 4),
-              Expanded(
-                child: Text(
-                  course.instructor,
-                  style: TextStyle(
-                      fontSize: 12,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withOpacity(0.6)),
-                  overflow: TextOverflow.ellipsis,
-                ),
+        Row(
+          children: [
+            Icon(Icons.person,
+                size: 14,
+                color:
+                    Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
+            const SizedBox(width: 4),
+            Expanded(
+              child: Text(
+                course.instructor,
+                style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withOpacity(0.6)),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
               ),
-            ],
-          ),
-          SizedBox(height: 4),
-          Row(
-            children: [
-              Icon(Icons.group,
-                  size: 14,
-                  color:
-                      Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
-              SizedBox(width: 4),
-              // TODO: Replace with async enrollment count
-              // Use EnrollmentRepository.countStudentsInCourse(course.id)
-              Text('Loading students...',
-                  style: TextStyle(
-                      fontSize: 12,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withOpacity(0.6))),
-              Spacer(),
-              Icon(Icons.schedule,
-                  size: 14,
-                  color:
-                      Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
-              SizedBox(width: 4),
-              Text('${course.sessions} sessions',
-                  style: TextStyle(
-                      fontSize: 12,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withOpacity(0.6))),
-            ],
-          ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Icon(Icons.group,
+                size: 14,
+                color:
+                    Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
+            const SizedBox(width: 4),
+            Expanded(
+              child: Text(
+                'Loading students...',
+                style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withOpacity(0.6)),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(Icons.schedule,
+                size: 14,
+                color:
+                    Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
+            const SizedBox(width: 4),
+            Flexible(
+              child: Text(
+                '${course.sessions} sessions',
+                style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withOpacity(0.6)),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+                textAlign: TextAlign.right,
+              ),
+            ),
+          ],
+        ),
           Spacer(),
           if (course.status == 'active') ...[
             SizedBox(height: 8),

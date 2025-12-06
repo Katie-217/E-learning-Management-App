@@ -123,10 +123,6 @@ class _InstructorCourseDetailContentState
               child: InstructorCourseTabsWidget(
                 tabController: _tabController,
                 course: course,
-                instructorId: currentUserId,
-                instructorName: course.instructor.isNotEmpty 
-                    ? course.instructor 
-                    : currentUserName,
               ),
             ),
           ],

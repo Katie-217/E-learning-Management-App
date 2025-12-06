@@ -10,8 +10,8 @@ import 'package:elearning_management_app/application/controllers/forum/forum_pro
 import 'package:elearning_management_app/data/repositories/auth/auth_repository.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../../../core/services/file_upload_service.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:flutter/services.dart';
+import '../common/forum_file_preview_widget.dart';
+import '../common/forum_file_upload_widget.dart';
 
 class TopicDetailScreen extends ConsumerStatefulWidget {
   final String courseId;
@@ -84,8 +84,10 @@ class _TopicDetailScreenState extends ConsumerState<TopicDetailScreen> {
   }
 
   Future<void> _pickReplyFiles() async {
-    final uploadService = ref.read(fileUploadServiceProvider);
-    final files = await uploadService.pickFiles(allowMultiple: true);
+    final files = await ForumFileUploadHelper.pickFiles(
+      ref: ref,
+      allowMultiple: true,
+    );
     if (files != null) {
       setState(() => _replyFiles.addAll(files));
     }
@@ -103,8 +105,8 @@ class _TopicDetailScreenState extends ConsumerState<TopicDetailScreen> {
 
       List<String> attachmentUrls = [];
       if (_replyFiles.isNotEmpty) {
-        final uploadService = ref.read(fileUploadServiceProvider);
-        attachmentUrls = await uploadService.uploadMultipleFiles(
+        attachmentUrls = await ForumFileUploadHelper.uploadFiles(
+          ref: ref,
           files: _replyFiles,
           folder: 'forum_replies/${widget.courseId}',
         );
@@ -155,194 +157,192 @@ class _TopicDetailScreenState extends ConsumerState<TopicDetailScreen> {
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Column(
+        mainAxisSize: MainAxisSize.max,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Topic Header
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1F2937),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey[800]!),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(Icons.topic, color: Colors.indigo[400], size: 24),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                widget.topicTitle,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                ),
+          // Original Post (Fixed at top)
+          Container(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Topic Header
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1F2937),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey[800]!),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.topic, color: Colors.indigo[400], size: 24),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              widget.topicTitle,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    widget.topicContent,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 15,
-                      height: 1.5,
-                    ),
-                  ),
-                  AttachmentDisplayWidget(attachments: widget.topicAttachments),
-
-                  const SizedBox(height: 24),
-                  const Divider(color: Colors.grey),
-                  const SizedBox(height: 20),
-
-                  const Row(
-                    children: [
-                      Icon(Icons.comment_outlined, color: Colors.white, size: 22),
-                      SizedBox(width: 8),
-                      Text(
-                        'Comments',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-
-                  const SizedBox(height: 16),
-
-                  repliesAsync.when(
-                    loading: () => const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(20.0),
-                        child: CircularProgressIndicator(),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  widget.topicContent,
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 15,
+                    height: 1.5,
+                  ),
+                ),
+                AttachmentDisplayWidget(attachments: widget.topicAttachments),
+                const SizedBox(height: 24),
+                const Divider(color: Colors.grey),
+                const SizedBox(height: 20),
+                const Row(
+                  children: [
+                    Icon(Icons.comment_outlined, color: Colors.white, size: 22),
+                    SizedBox(width: 8),
+                    Text(
+                      'Comments',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                    error: (err, stack) => Text(
-                      'Error loading replies: $err',
-                      style: const TextStyle(color: Colors.red),
-                    ),
-                    data: (replies) {
-                      if (replies.isEmpty) {
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 32),
-                          child: Center(
-                            child: Column(
-                              children: [
-                                Icon(
-                                  Icons.chat_bubble_outline,
-                                  size: 48,
-                                  color: Colors.grey[600],
-                                ),
-                                const SizedBox(height: 12),
-                                Text(
-                                  'No replies yet',
-                                  style: TextStyle(
-                                    color: Colors.grey[400],
-                                    fontSize: 15,
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  'Be the first to reply!',
-                                  style: TextStyle(
-                                    color: Colors.grey[500],
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ],
-                            ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+              ],
+            ),
+          ),
+
+          // Comments Section - Chiếm hết chiều cao còn lại
+          Expanded(
+            child: repliesAsync.when(
+              loading: () => const Center(
+                child: CircularProgressIndicator(),
+              ),
+              error: (err, stack) => Center(
+                child: Text(
+                  'Error loading replies: $err',
+                  style: const TextStyle(color: Colors.red),
+                ),
+              ),
+              data: (replies) {
+                if (replies.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.chat_bubble_outline,
+                          size: 48,
+                          color: Colors.grey[600],
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'No replies yet',
+                          style: TextStyle(
+                            color: Colors.grey[400],
+                            fontSize: 15,
                           ),
-                        );
-                      }
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Be the first to reply!',
+                          style: TextStyle(
+                            color: Colors.grey[500],
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
 
-                      List<Map<String, dynamic>> getDescendants(
-                            String parentId, 
-                            String parentName, 
-                            List<Map<String, dynamic>> allReplies
-                        ) {
-                          List<Map<String, dynamic>> result = [];
-                          
-                          var children = allReplies.where((r) => 
-                              r['replyToId'] == parentId
-                          ).toList();
-
-                          children.sort((a, b) {
-                            final t1 = a['createdAt'] is Timestamp ? (a['createdAt'] as Timestamp).toDate() : DateTime.now();
-                            final t2 = b['createdAt'] is Timestamp ? (b['createdAt'] as Timestamp).toDate() : DateTime.now();
-                            return t1.compareTo(t2);
-                          });
-
-                          for (var child in children) {
-                            result.add({
-                              ...child,
-                              'isChild': true,
-                              'replyToUserName': parentName,
-                            });
-                            
-                            result.addAll(getDescendants(child['id'], child['authorName'] ?? 'Unknown', allReplies));
-                          }
-                          
-                          return result;
-                        }
-
-                        final rootReplies = replies.where((r) => 
-                            r['replyToId'] == null || r['replyToId'].toString().isEmpty
-                        ).toList();
-                        
-                        rootReplies.sort((a, b) {
-                          final t1 = a['createdAt'] is Timestamp ? (a['createdAt'] as Timestamp).toDate() : DateTime.now();
-                          final t2 = b['createdAt'] is Timestamp ? (b['createdAt'] as Timestamp).toDate() : DateTime.now();
-                          return t1.compareTo(t2);
-                        });
-
-                        List<Map<String, dynamic>> displayList = [];
-
-                        for (var root in rootReplies) {
-                          displayList.add({...root, 'isChild': false});
-                          displayList.addAll(getDescendants(root['id'], root['authorName'] ?? 'Unknown', replies));
-                        }
-
-                        return ListView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: displayList.length,
-                          itemBuilder: (context, index) {
-                            final reply = displayList[index];
-
-                            return _ReplyItem(
-                              authorName: reply['authorName'] ?? 'Unknown',
-                              content: reply['content'] ?? '',
-                              timeAgo: _formatTimeAgo(_parseDateTime(reply['createdAt'])),
-                              isChild: reply['isChild'] ?? false,
-                              replyToUserName: reply['replyToUserName'],
-                              attachments: reply['attachments'] ?? [],
-                              onReply: () {
-                                setState(() {
-                                  _replyingToId = reply['id'];
-                                  _replyingToAuthor = reply['authorName'];
-                                });
-                              },
-                            );
-                          },
-                        );
-                      },
+                List<Map<String, dynamic>> getDescendants(
+                      String parentId, 
+                      String parentName, 
+                      List<Map<String, dynamic>> allReplies
+                  ) {
+                    List<Map<String, dynamic>> result = [];
                     
-                  ),
-                ],
+                    var children = allReplies.where((r) => 
+                        r['replyToId'] == parentId
+                    ).toList();
+
+                    children.sort((a, b) {
+                      final t1 = a['createdAt'] is Timestamp ? (a['createdAt'] as Timestamp).toDate() : DateTime.now();
+                      final t2 = b['createdAt'] is Timestamp ? (b['createdAt'] as Timestamp).toDate() : DateTime.now();
+                      return t1.compareTo(t2);
+                    });
+
+                    for (var child in children) {
+                      result.add({
+                        ...child,
+                        'isChild': true,
+                        'replyToUserName': parentName,
+                      });
+                      
+                      result.addAll(getDescendants(child['id'], child['authorName'] ?? 'Unknown', allReplies));
+                    }
+                    
+                    return result;
+                  }
+
+                  final rootReplies = replies.where((r) => 
+                      r['replyToId'] == null || r['replyToId'].toString().isEmpty
+                  ).toList();
+                  
+                  rootReplies.sort((a, b) {
+                    final t1 = a['createdAt'] is Timestamp ? (a['createdAt'] as Timestamp).toDate() : DateTime.now();
+                    final t2 = b['createdAt'] is Timestamp ? (b['createdAt'] as Timestamp).toDate() : DateTime.now();
+                    return t1.compareTo(t2);
+                  });
+
+                  List<Map<String, dynamic>> displayList = [];
+
+                  for (var root in rootReplies) {
+                    displayList.add({...root, 'isChild': false});
+                    displayList.addAll(getDescendants(root['id'], root['authorName'] ?? 'Unknown', replies));
+                  }
+
+                  return ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    itemCount: displayList.length,
+                    itemBuilder: (context, index) {
+                      final reply = displayList[index];
+
+                      return _ReplyItem(
+                        authorName: reply['authorName'] ?? 'Unknown',
+                        content: reply['content'] ?? '',
+                        timeAgo: _formatTimeAgo(_parseDateTime(reply['createdAt'])),
+                        isChild: reply['isChild'] ?? false,
+                        replyToUserName: reply['replyToUserName'],
+                        attachments: reply['attachments'] ?? [],
+                        onReply: () {
+                          setState(() {
+                            _replyingToId = reply['id'];
+                            _replyingToAuthor = reply['authorName'];
+                          });
+                        },
+                      );
+                    },
+                  );
+                },
               ),
             ),
           ),
@@ -402,32 +402,11 @@ class _TopicDetailScreenState extends ConsumerState<TopicDetailScreen> {
                   
                   // Hiển thị file đang chọn
                   if (_replyFiles.isNotEmpty) ...[
-                    SizedBox(
-                      height: 50,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: _replyFiles.length,
-                        itemBuilder: (context, index) => Container(
-                          margin: const EdgeInsets.only(right: 8),
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[800],
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Row(
-                            children: [
-                              Text(
-                                _replyFiles[index].name,
-                                style: const TextStyle(color: Colors.white, fontSize: 10),
-                              ),
-                              InkWell(
-                                onTap: () => setState(() => _replyFiles.removeAt(index)),
-                                child: const Icon(Icons.close, size: 14, color: Colors.white),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
+                    SelectedFilesListWidget(
+                      files: _replyFiles,
+                      onRemove: (index) {
+                        setState(() => _replyFiles.removeAt(index));
+                      },
                     ),
                     const SizedBox(height: 8),
                   ],
@@ -644,201 +623,5 @@ class _ReplyItem extends StatelessWidget {
           ],
         ),
       );
-  }
-}
-
-class AttachmentDisplayWidget extends StatelessWidget {
-  final List<dynamic>? attachments;
-  const AttachmentDisplayWidget({super.key, this.attachments});
-
-  void _showImageDialog(BuildContext context, String imageUrl) {
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        insetPadding: EdgeInsets.zero,
-        child: Stack(
-          children: [
-            // Background tap to close
-            GestureDetector(
-              onTap: () => Navigator.pop(context),
-              child: Container(
-                color: Colors.black87,
-                width: double.infinity,
-                height: double.infinity,
-              ),
-            ),
-            // Image viewer
-            Center(
-              child: InteractiveViewer(
-                minScale: 0.5,
-                maxScale: 4.0,
-                child: Image.network(
-                  imageUrl,
-                  fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) => const Icon(
-                    Icons.error_outline,
-                    color: Colors.red,
-                    size: 48,
-                  ),
-                ),
-              ),
-            ),
-            // Close button
-            Positioned(
-              top: 40,
-              right: 20,
-              child: IconButton(
-                onPressed: () => Navigator.pop(context),
-                icon: const Icon(Icons.close, color: Colors.white, size: 32),
-                style: IconButton.styleFrom(
-                  backgroundColor: Colors.black54,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _openFile(BuildContext context, String url) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1F2937),
-        title: const Text(
-          'File Options',
-          style: TextStyle(color: Colors.white),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'File: ${url.split('/').last.split('?').first}',
-              style: const TextStyle(color: Colors.white70, fontSize: 12),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'What would you like to do?',
-              style: TextStyle(color: Colors.white70, fontSize: 14),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton.icon(
-            onPressed: () async {
-              Navigator.pop(context);
-              try {
-                final uri = Uri.parse(url);
-                if (await canLaunchUrl(uri)) {
-                  await launchUrl(uri, mode: LaunchMode.externalApplication);
-                } else {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Cannot open this file'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                }
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Error: $e'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              }
-            },
-            icon: const Icon(Icons.open_in_browser, color: Colors.blue),
-            label: const Text('Open in Browser', style: TextStyle(color: Colors.blue)),
-          ),
-          TextButton.icon(
-            onPressed: () async {
-              Navigator.pop(context);
-              await Clipboard.setData(ClipboardData(text: url));
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('URL copied to clipboard'),
-                    backgroundColor: Colors.green,
-                    duration: Duration(seconds: 2),
-                  ),
-                );
-              }
-            },
-            icon: const Icon(Icons.copy, color: Colors.green),
-            label: const Text('Copy Link', style: TextStyle(color: Colors.green)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (attachments == null || attachments!.isEmpty) return const SizedBox.shrink();
-
-    return Padding(
-      padding: const EdgeInsets.only(top: 10),
-      child: Wrap(
-        spacing: 8, runSpacing: 8,
-        children: attachments!.map((url) {
-          final urlStr = url.toString();
-          final isImage = urlStr.contains('.jpg') || urlStr.contains('.png') || urlStr.contains('.jpeg') || urlStr.contains('alt=media');
-          
-          if (isImage) {
-            return GestureDetector(
-              onTap: () => _showImageDialog(context, urlStr),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.network(
-                  urlStr, 
-                  height: 100, 
-                  width: 100, 
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    height: 100,
-                    width: 100,
-                    color: Colors.grey[800],
-                    child: const Icon(Icons.broken_image, color: Colors.grey),
-                  ),
-                ),
-              ),
-            );
-          } else {
-            return GestureDetector(
-              onTap: () => _openFile(context, urlStr),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.grey[800], 
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.insert_drive_file, size: 16, color: Colors.white70),
-                    SizedBox(width: 8),
-                    Text('Attachment', style: TextStyle(color: Colors.white70, fontSize: 12)),
-                  ],
-                ),
-              ),
-            );
-          }
-        }).toList(),
-      ),
-    );
   }
 }
