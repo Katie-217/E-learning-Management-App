@@ -361,7 +361,10 @@ class _GradebookTableState extends State<GradebookTable> {
     Assignment assignment,
     ScrollController horizontalScrollController,
   ) {
-    const double baseUnitWidth = 160.0;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmall = screenWidth < 600;
+    final isVerySmall = screenWidth < 400;
+    final baseUnitWidth = isVerySmall ? 100.0 : (isSmall ? 120.0 : 160.0);
     final allSelected = gradeData.isNotEmpty &&
         gradeData
             .every((data) => widget.selectedStudentIds.contains(data.studentId));
@@ -377,13 +380,16 @@ class _GradebookTableState extends State<GradebookTable> {
               widthPerUnit > baseUnitWidth ? widthPerUnit : baseUnitWidth;
         }
 
-        final double colStudent = effectiveUnitWidth * 2; // rộng hơn cho tên/email
-        final double colGroup = effectiveUnitWidth;
-        final double colStatus = effectiveUnitWidth;
-        final double colSubmissionTime = effectiveUnitWidth;
-        final double colAttempts = effectiveUnitWidth;
-        final double colLatestGrade = effectiveUnitWidth;
-        final double colFiles = effectiveUnitWidth;
+        // Trên màn hình nhỏ, giảm tỷ lệ các cột để vừa màn hình
+        final double colStudent = isSmall 
+            ? effectiveUnitWidth * 1.8 
+            : effectiveUnitWidth * 2; // rộng hơn cho tên/email
+        final double colGroup = isSmall ? effectiveUnitWidth * 0.8 : effectiveUnitWidth;
+        final double colStatus = isSmall ? effectiveUnitWidth * 0.9 : effectiveUnitWidth;
+        final double colSubmissionTime = isSmall ? effectiveUnitWidth * 1.1 : effectiveUnitWidth;
+        final double colAttempts = isSmall ? effectiveUnitWidth * 0.7 : effectiveUnitWidth;
+        final double colLatestGrade = isSmall ? effectiveUnitWidth * 0.9 : effectiveUnitWidth;
+        final double colFiles = isSmall ? effectiveUnitWidth * 0.8 : effectiveUnitWidth;
 
         final double totalWidth = colStudent +
             colGroup +
@@ -446,12 +452,13 @@ class _GradebookTableState extends State<GradebookTable> {
                                   widget.onSelectionChanged(newSelection);
                                 },
                               ),
-                              const SizedBox(width: 4),
-                              const Text(
+                              SizedBox(width: isSmall ? 2 : 4),
+                              Text(
                                 'Student',
                                 style: TextStyle(
                                   color: AppColors.textPrimary,
                                   fontWeight: FontWeight.w600,
+                                  fontSize: isSmall ? 12 : 14,
                                 ),
                               ),
                             ],
@@ -505,6 +512,7 @@ class _GradebookTableState extends State<GradebookTable> {
                           colAttempts,
                           colLatestGrade,
                           colFiles,
+                          isSmall: isSmall,
                         ),
                       ],
                     ],
@@ -524,10 +532,11 @@ class _GradebookTableState extends State<GradebookTable> {
     Widget? child,
     bool isLast = false,
     Alignment alignment = Alignment.center,
+    bool isSmall = false,
   }) {
     return Container(
       width: width,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
+      padding: EdgeInsets.symmetric(horizontal: isSmall ? 4 : 8),
       decoration: BoxDecoration(
         border: Border(
           right: isLast
@@ -542,9 +551,10 @@ class _GradebookTableState extends State<GradebookTable> {
             textAlign: TextAlign.center,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
+            style: TextStyle(
               color: AppColors.textPrimary,
               fontWeight: FontWeight.w600,
+              fontSize: isSmall ? 11 : 14,
             ),
           ),
     );
@@ -555,10 +565,11 @@ class _GradebookTableState extends State<GradebookTable> {
     required Widget child,
     bool isLast = false,
     Alignment alignment = Alignment.center,
+    bool isSmall = false,
   }) {
     return Container(
       width: width,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
+      padding: EdgeInsets.symmetric(horizontal: isSmall ? 4 : 8),
       decoration: BoxDecoration(
         border: Border(
           right: isLast
@@ -581,8 +592,9 @@ class _GradebookTableState extends State<GradebookTable> {
     double colSubmissionTime,
     double colAttempts,
     double colLatestGrade,
-    double colFiles,
-  ) {
+    double colFiles, {
+    bool isSmall = false,
+  }) {
     final submission = data.submissions[assignment.id];
     final rowKey = _rowKey(data.studentId, assignment.id);
     final isEditingInline = _editingRows.contains(rowKey);
@@ -608,7 +620,10 @@ class _GradebookTableState extends State<GradebookTable> {
         widget.selectedStudentIds.contains(data.studentId);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: EdgeInsets.symmetric(
+        horizontal: isSmall ? 8 : 16,
+        vertical: isSmall ? 8 : 12,
+      ),
       color:
           isSelected ? AppColors.surfaceVariant.withOpacity(0.3) : null,
       child: Row(
@@ -616,6 +631,7 @@ class _GradebookTableState extends State<GradebookTable> {
           _buildSingleAssignmentBodyCell(
             width: colStudent,
             alignment: Alignment.centerLeft,
+            isSmall: isSmall,
             child: Row(
               children: [
                 Checkbox(
@@ -630,11 +646,14 @@ class _GradebookTableState extends State<GradebookTable> {
                     }
                     widget.onSelectionChanged(newSelection);
                   },
+                  materialTapTargetSize: isSmall 
+                      ? MaterialTapTargetSize.shrinkWrap 
+                      : MaterialTapTargetSize.padded,
                 ),
-                const SizedBox(width: 8),
+                SizedBox(width: isSmall ? 4 : 8),
                 Container(
-                  width: 32,
-                  height: 32,
+                  width: isSmall ? 28 : 32,
+                  height: isSmall ? 28 : 32,
                   decoration: BoxDecoration(
                     color: _getStudentColor(data.studentId),
                     shape: BoxShape.circle,
@@ -642,15 +661,15 @@ class _GradebookTableState extends State<GradebookTable> {
                   child: Center(
                     child: Text(
                       _getInitials(data.studentName),
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
-                        fontSize: 12,
+                        fontSize: isSmall ? 10 : 12,
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
+                SizedBox(width: isSmall ? 8 : 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -660,9 +679,9 @@ class _GradebookTableState extends State<GradebookTable> {
                         data.studentName,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: AppColors.textPrimary,
-                          fontSize: 14,
+                          fontSize: isSmall ? 12 : 14,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -670,9 +689,9 @@ class _GradebookTableState extends State<GradebookTable> {
                         data.studentEmail,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: AppColors.textSecondary,
-                          fontSize: 11,
+                          fontSize: isSmall ? 10 : 11,
                         ),
                       ),
                     ],
@@ -684,21 +703,25 @@ class _GradebookTableState extends State<GradebookTable> {
 
           _buildSingleAssignmentBodyCell(
             width: colGroup,
+            isSmall: isSmall,
             child: Text(
               data.groupName,
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppColors.textPrimary,
-                fontSize: 13,
+                fontSize: isSmall ? 11 : 13,
               ),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
             ),
           ),
 
           _buildSingleAssignmentBodyCell(
             width: colStatus,
+            isSmall: isSmall,
             child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 8,
-                vertical: 4,
+              padding: EdgeInsets.symmetric(
+                horizontal: isSmall ? 4 : 8,
+                vertical: isSmall ? 2 : 4,
               ),
               decoration: BoxDecoration(
                 color: statusColor.withOpacity(0.15),
@@ -710,7 +733,7 @@ class _GradebookTableState extends State<GradebookTable> {
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: statusColor,
-                  fontSize: 11,
+                  fontSize: isSmall ? 10 : 11,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -719,28 +742,31 @@ class _GradebookTableState extends State<GradebookTable> {
 
           _buildSingleAssignmentBodyCell(
             width: colSubmissionTime,
+            isSmall: isSmall,
             child: Text(
               submissionTime,
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppColors.textSecondary,
-                fontSize: 12,
+                fontSize: isSmall ? 10 : 12,
               ),
             ),
           ),
 
           _buildSingleAssignmentBodyCell(
             width: colAttempts,
+            isSmall: isSmall,
             child: Text(
               attempts.toString(),
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppColors.textSecondary,
-                fontSize: 12,
+                fontSize: isSmall ? 10 : 12,
               ),
             ),
           ),
 
           _buildSingleAssignmentBodyCell(
             width: colLatestGrade,
+            isSmall: isSmall,
             child: _buildLatestGradeCell(
               context,
               data,
@@ -749,18 +775,20 @@ class _GradebookTableState extends State<GradebookTable> {
               rowKey,
               latestGradeStr,
               latestGradeColor,
+              isSmall: isSmall,
             ),
           ),
 
           _buildSingleAssignmentBodyCell(
             width: colFiles,
             isLast: true,
+            isSmall: isSmall,
             child: submission == null || submission.files.isEmpty
-                ? const Text(
+                ? Text(
                     '-',
                     style: TextStyle(
                       color: AppColors.textSecondary,
-                      fontSize: 12,
+                      fontSize: isSmall ? 10 : 12,
                     ),
                   )
                 : TextButton.icon(
@@ -772,17 +800,25 @@ class _GradebookTableState extends State<GradebookTable> {
                         submission,
                       );
                     },
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.attach_file,
-                      size: 16,
+                      size: isSmall ? 14 : 16,
                       color: AppColors.textSecondary,
                     ),
                     label: Text(
                       '${submission.files.length} file${submission.files.length > 1 ? 's' : ''}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: AppColors.textSecondary,
-                        fontSize: 12,
+                        fontSize: isSmall ? 10 : 12,
                       ),
+                    ),
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isSmall ? 4 : 8,
+                        vertical: isSmall ? 2 : 4,
+                      ),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
                   ),
           ),
@@ -1288,14 +1324,15 @@ class _GradebookTableState extends State<GradebookTable> {
     MockSubmissionData? submission,
     String rowKey,
     String latestGradeStr,
-    Color latestGradeColor,
-  ) {
+    Color latestGradeColor, {
+    bool isSmall = false,
+  }) {
     if (submission == null) {
-      return const Text(
+      return Text(
         '-',
         style: TextStyle(
           color: AppColors.textSecondary,
-          fontSize: 12,
+          fontSize: isSmall ? 10 : 12,
         ),
       );
     }
@@ -1310,16 +1347,16 @@ class _GradebookTableState extends State<GradebookTable> {
             latestGradeStr,
             style: TextStyle(
               color: latestGradeColor,
-              fontSize: 13,
+              fontSize: isSmall ? 11 : 13,
               fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(width: 4),
+          SizedBox(width: isSmall ? 2 : 4),
           IconButton(
             tooltip: 'Edit grade',
-            icon: const Icon(
+            icon: Icon(
               Icons.edit,
-              size: 16,
+              size: isSmall ? 14 : 16,
               color: AppColors.textSecondary,
             ),
             onPressed: () {
@@ -1328,6 +1365,11 @@ class _GradebookTableState extends State<GradebookTable> {
                 _getInlineScoreController(rowKey, submission.score);
               });
             },
+            padding: EdgeInsets.zero,
+            constraints: BoxConstraints(
+              minWidth: isSmall ? 24 : 32,
+              minHeight: isSmall ? 24 : 32,
+            ),
           ),
         ],
       );
@@ -1352,17 +1394,17 @@ class _GradebookTableState extends State<GradebookTable> {
         controller: controller,
         decoration: InputDecoration(
           isDense: true,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 8,
-            vertical: 6,
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: isSmall ? 6 : 8,
+            vertical: isSmall ? 4 : 6,
           ),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(6),
           ),
           suffixText: '/ ${submission.maxScore.toStringAsFixed(0)}',
         ),
-        style: const TextStyle(
-          fontSize: 12,
+        style: TextStyle(
+          fontSize: isSmall ? 11 : 12,
           color: AppColors.textPrimary,
         ),
         keyboardType:

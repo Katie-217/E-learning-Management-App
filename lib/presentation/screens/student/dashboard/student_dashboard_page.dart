@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:elearning_management_app/domain/models/task_model.dart';
 import 'package:elearning_management_app/application/controllers/student/student_dashboard_metrics_provider.dart';
+import 'package:elearning_management_app/data/repositories/semester/semester_repository.dart';
 import 'package:elearning_management_app/presentation/widgets/student/dashboard/summary_metrics/stats_card.dart';
 import 'package:elearning_management_app/presentation/widgets/student/dashboard/progress_overview/pie_chart_widget.dart';
 import 'package:elearning_management_app/presentation/widgets/student/dashboard/calendar/student_calendar_panel.dart';
@@ -26,30 +27,82 @@ class StudentDashboardPage extends ConsumerStatefulWidget {
 }
 
 class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
-  // final FirestoreService _service = FirestoreService.instance;
-
-  final List<SemesterOption> _semesters = const [
-    SemesterOption(id: 'hk1_25', label: 'HK1/2025', isReadonly: false),
-    SemesterOption(id: 'hk2_25', label: 'HK2/2025', isReadonly: true),
-    SemesterOption(id: 'hkhe_25', label: 'HKH/2025', isReadonly: true),
-  ];
-
+  List<SemesterOption> _semesters = [];
   String? _selectedSemesterId;
   String _userName = 'User';
   StudentDashboardMetrics? _metricsData;
   bool _isMetricsLoading = true;
+  bool _isSemestersLoading = true;
   Object? _metricsError;
+  
+  // Sử dụng providers có sẵn trong controller
 
   @override
   void initState() {
     super.initState();
-    if (_semesters.isNotEmpty) {
-      _selectedSemesterId = _semesters.first.id;
-    }
     _loadUserName();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadMetricsForCurrentSemester();
-    });
+    _loadSemesters(); // Sẽ tự động load metrics sau khi semesters load xong
+  }
+
+  Future<void> _loadSemesters() async {
+    try {
+      setState(() => _isSemestersLoading = true);
+      // Gọi trực tiếp repository để lấy semesters thật
+      final semesterRepo = SemesterRepository();
+      final semesters = await semesterRepo.getAllSemesters();
+      
+      if (mounted) {
+        setState(() {
+          _semesters = semesters.map((semester) {
+            // Kiểm tra xem semester có đang active không (dựa vào startDate và endDate)
+            final now = DateTime.now();
+            final isReadonly = semester.endDate != null && 
+                              now.isAfter(semester.endDate!);
+            
+            return SemesterOption(
+              id: semester.id,
+              label: semester.name,
+              isReadonly: isReadonly,
+            );
+          }).toList();
+          
+          // Sắp xếp: active trước, readonly sau
+          _semesters.sort((a, b) {
+            if (a.isReadonly == b.isReadonly) return 0;
+            return a.isReadonly ? 1 : -1;
+          });
+          
+          _isSemestersLoading = false;
+          
+          // Chọn semester đầu tiên nếu chưa có và load metrics
+          if (_selectedSemesterId == null && _semesters.isNotEmpty) {
+            _selectedSemesterId = _semesters.first.id;
+            // Load metrics sau khi đã có semester
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _loadMetricsForCurrentSemester();
+            });
+          } else if (_selectedSemesterId != null) {
+            // Nếu đã có semester, load metrics ngay
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _loadMetricsForCurrentSemester();
+            });
+          }
+        });
+      }
+    } catch (e) {
+      print('DEBUG: ❌ Error loading semesters: $e');
+      if (mounted) {
+        setState(() {
+          _isSemestersLoading = false;
+          // Fallback to empty list nếu lỗi
+          _semesters = [];
+          // Vẫn load metrics với semester mặc định
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _loadMetricsForCurrentSemester();
+          });
+        });
+      }
+    }
   }
 
   Future<void> _loadUserName() async {
@@ -146,50 +199,7 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
     ];
   }
 
-  final List<SubmissionItem> _recentSubmissions = const [
-    SubmissionItem(
-      title: 'Machine Learning Lab 4',
-      timeLabel: 'Submitted 2h ago',
-      type: DashboardSubmissionType.assignment,
-      status: DashboardSubmissionStatus.onTime,
-    ),
-    SubmissionItem(
-      title: 'Database Systems Essay',
-      timeLabel: 'Submitted yesterday',
-      type: DashboardSubmissionType.assignment,
-      status: DashboardSubmissionStatus.early,
-    ),
-    SubmissionItem(
-      title: 'Networks Quiz',
-      timeLabel: 'Submitted 4 days ago',
-      type: DashboardSubmissionType.quiz,
-      status: DashboardSubmissionStatus.late,
-    ),
-  ];
-
-  List<CompletedQuizItem> get _completedQuizzes => const [
-        CompletedQuizItem(
-          title: 'Database Systems Quiz 1',
-          courseName: 'Database Systems',
-          score: 85,
-          maxScore: 100,
-          completedDate: '2024-01-15',
-        ),
-        CompletedQuizItem(
-          title: 'Machine Learning Midterm',
-          courseName: 'Machine Learning',
-          score: 92,
-          maxScore: 100,
-          completedDate: '2024-01-10',
-        ),
-        CompletedQuizItem(
-          title: 'Networks Quiz 2',
-          courseName: 'Computer Networks',
-          score: 78,
-          maxScore: 100,
-          completedDate: '2024-01-08',
-        ),
-      ];
+  // Removed hardcoded data - now using real data from repositories
 
   // Data for pie charts - loaded from real data in _loadSummaryMetrics()
 
@@ -240,21 +250,36 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
   }
 
   Future<void> _loadMetricsForCurrentSemester() async {
+    if (!mounted) return;
+    
     final semester = _activeSemester;
     final key = buildStudentSemesterKey(semester.id, semester.label);
+    
+    print('DEBUG: 🔍 Loading metrics for semester: ${semester.label} (key: $key)');
+    
     setState(() {
       _isMetricsLoading = true;
       _metricsError = null;
     });
+    
     try {
-      final metrics =
-          await ref.read(studentDashboardMetricsProvider(key).future);
+      final metrics = await ref.read(studentDashboardMetricsProvider(key).future);
+      
+      print('DEBUG: ✅ Metrics loaded:');
+      print('  - Courses: ${metrics.coursesCount}');
+      print('  - Assignments: ${metrics.assignmentsCount}');
+      print('  - Completed: ${metrics.assignmentsCompleted}');
+      print('  - Pending: ${metrics.assignmentsPending}');
+      print('  - Pending/Late: ${metrics.pendingLateCount}');
+      
       if (!mounted) return;
       setState(() {
         _metricsData = metrics;
         _isMetricsLoading = false;
       });
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('DEBUG: ❌ Error loading metrics: $e');
+      print('DEBUG: Stack trace: $stackTrace');
       if (!mounted) return;
       setState(() {
         _metricsError = e;
@@ -414,8 +439,21 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
-                                  RecentSubmissionsCard(
-                                    submissions: _recentSubmissions,
+                                  Consumer(
+                                    builder: (context, ref, child) {
+                                      final submissionsAsync = ref.watch(studentRecentSubmissionsItemProvider);
+                                      return submissionsAsync.when(
+                                        data: (submissions) => RecentSubmissionsCard(
+                                          submissions: submissions,
+                                        ),
+                                        loading: () => RecentSubmissionsCard(
+                                          submissions: [],
+                                        ),
+                                        error: (_, __) => RecentSubmissionsCard(
+                                          submissions: [],
+                                        ),
+                                      );
+                                    },
                                   ),
                                   SizedBox(height: mainScreenWidth > 600 ? 12 : 8),
                                   StudentDashboardCard(
@@ -503,8 +541,21 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
                                     ),
                                   ),
                                   SizedBox(height: mainScreenWidth > 600 ? 12 : 8),
-                                  CompletedQuizzesCard(
-                                    quizzes: _completedQuizzes,
+                                  Consumer(
+                                    builder: (context, ref, child) {
+                                      final quizzesAsync = ref.watch(studentCompletedQuizzesItemProvider);
+                                      return quizzesAsync.when(
+                                        data: (quizzes) => CompletedQuizzesCard(
+                                          quizzes: quizzes,
+                                        ),
+                                        loading: () => CompletedQuizzesCard(
+                                          quizzes: [],
+                                        ),
+                                        error: (_, __) => CompletedQuizzesCard(
+                                          quizzes: [],
+                                        ),
+                                      );
+                                    },
                                   ),
                                   SizedBox(height: mainScreenWidth > 600 ? 12 : 8),
                                 ],
@@ -515,8 +566,21 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                RecentSubmissionsCard(
-                                  submissions: _recentSubmissions,
+                                Consumer(
+                                  builder: (context, ref, child) {
+                                    final submissionsAsync = ref.watch(studentRecentSubmissionsItemProvider);
+                                    return submissionsAsync.when(
+                                      data: (submissions) => RecentSubmissionsCard(
+                                        submissions: submissions,
+                                      ),
+                                      loading: () => RecentSubmissionsCard(
+                                        submissions: [],
+                                      ),
+                                      error: (_, __) => RecentSubmissionsCard(
+                                        submissions: [],
+                                      ),
+                                    );
+                                  },
                                 ),
                                 SizedBox(height: mainScreenWidth > 600 ? 12 : 8),
                                 StudentDashboardCard(
@@ -604,8 +668,21 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
                                   ),
                                 ),
                                 SizedBox(height: mainScreenWidth > 600 ? 12 : 8),
-                                CompletedQuizzesCard(
-                                  quizzes: _completedQuizzes,
+                                Consumer(
+                                  builder: (context, ref, child) {
+                                    final quizzesAsync = ref.watch(studentCompletedQuizzesItemProvider);
+                                    return quizzesAsync.when(
+                                      data: (quizzes) => CompletedQuizzesCard(
+                                        quizzes: quizzes,
+                                      ),
+                                      loading: () => CompletedQuizzesCard(
+                                        quizzes: [],
+                                      ),
+                                      error: (_, __) => CompletedQuizzesCard(
+                                        quizzes: [],
+                                      ),
+                                    );
+                                  },
                                 ),
                                 SizedBox(height: mainScreenWidth > 600 ? 12 : 8),
                               ],

@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../../data/repositories/auth/auth_repository.dart';
 import '../../../data/repositories/auth/user_session_service.dart';
-import '../../screens/profile/profile_page.dart';
 import '../../screens/auth/auth_overlay_screen.dart';
 import '../../../core/config/users-role.dart';
 
@@ -25,44 +23,7 @@ class UserMenuDropdown extends StatefulWidget {
 }
 
 class _UserMenuDropdownState extends State<UserMenuDropdown> {
-  bool _isDarkMode = true; // Default dark mode
   final AuthRepository _authRepository = AuthRepository.defaultClient();
-
-  @override
-  void initState() {
-    super.initState();
-    _loadThemePreference();
-  }
-
-  Future<void> _loadThemePreference() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _isDarkMode = prefs.getBool('is_dark_mode') ?? true;
-    });
-  }
-
-  Future<void> _toggleTheme() async {
-    final prefs = await SharedPreferences.getInstance();
-    final newTheme = !_isDarkMode;
-    await prefs.setBool('is_dark_mode', newTheme);
-    setState(() {
-      _isDarkMode = newTheme;
-    });
-    
-    // Show snackbar to inform user (actual theme change would need MaterialApp rebuild)
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            newTheme 
-              ? 'Đã chuyển sang chế độ tối' 
-              : 'Đã chuyển sang chế độ sáng',
-          ),
-          duration: const Duration(seconds: 2),
-        ),
-      );
-    }
-  }
 
   Future<void> _handleLogout() async {
     // Show confirmation dialog
@@ -71,24 +32,24 @@ class _UserMenuDropdownState extends State<UserMenuDropdown> {
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF1F2937),
         title: const Text(
-          'Đăng xuất',
+          'Logout',
           style: TextStyle(color: Colors.white),
         ),
         content: const Text(
-          'Bạn có chắc chắn muốn đăng xuất?',
+          'Are you sure you want to logout?',
           style: TextStyle(color: Colors.white70),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Hủy'),
+            child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: TextButton.styleFrom(
               foregroundColor: Colors.red,
             ),
-            child: const Text('Đăng xuất'),
+            child: const Text('Logout'),
           ),
         ],
       ),
@@ -100,7 +61,7 @@ class _UserMenuDropdownState extends State<UserMenuDropdown> {
         await UserSessionService.clearUserSession();
         
         if (mounted) {
-          // Điều hướng về màn hình đăng nhập
+          // Navigate to login screen
           Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(
               builder: (context) =>
@@ -113,7 +74,7 @@ class _UserMenuDropdownState extends State<UserMenuDropdown> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Lỗi đăng xuất: $e'),
+              content: Text('Logout error: $e'),
               backgroundColor: Colors.red,
             ),
           );
@@ -122,27 +83,6 @@ class _UserMenuDropdownState extends State<UserMenuDropdown> {
     }
   }
 
-  void _navigateToProfile() {
-    // Sử dụng push để mở profile page, không thay thế MainShell
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const ProfilePage(),
-        // Đảm bảo profile page không thay thế MainShell
-        fullscreenDialog: false,
-      ),
-    ).then((result) {
-      // Chỉ gọi callback khi thực sự quay lại từ profile (result != null hoặc khi pop)
-      // Không gọi callback khi reload/restart vì không có profile page trong stack
-      if (mounted && widget.onReturnFromProfile != null) {
-        // Delay nhỏ để đảm bảo navigation đã hoàn tất
-        Future.microtask(() {
-          if (mounted) {
-            widget.onReturnFromProfile!();
-          }
-        });
-      }
-    });
-  }
 
   void _showMenu(BuildContext context) {
     final RenderBox? button = context.findRenderObject() as RenderBox?;
@@ -199,59 +139,6 @@ class _UserMenuDropdownState extends State<UserMenuDropdown> {
           ),
         ),
         const PopupMenuDivider(),
-        // Theme Toggle
-        PopupMenuItem(
-          onTap: () {
-            // PopupMenuItem tự động đóng menu trước khi onTap được gọi
-            // Không cần delay, có thể gọi trực tiếp
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) {
-                _toggleTheme();
-              }
-            });
-          },
-          child: Row(
-            children: [
-              Icon(
-                _isDarkMode ? Icons.light_mode : Icons.dark_mode,
-                color: Colors.white70,
-                size: 20,
-              ),
-              const SizedBox(width: 12),
-              Text(
-                _isDarkMode ? 'Chế độ sáng' : 'Chế độ tối',
-                style: const TextStyle(color: Colors.white),
-              ),
-            ],
-          ),
-        ),
-        // Edit Profile
-        PopupMenuItem(
-          onTap: () {
-            // PopupMenuItem tự động đóng menu trước khi onTap được gọi
-            // Không cần delay, có thể navigate trực tiếp
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) {
-                _navigateToProfile();
-              }
-            });
-          },
-          child: const Row(
-            children: [
-              Icon(
-                Icons.person_outline,
-                color: Colors.white70,
-                size: 20,
-              ),
-              SizedBox(width: 12),
-              Text(
-                'Thông tin cá nhân',
-                style: TextStyle(color: Colors.white),
-              ),
-            ],
-          ),
-        ),
-        const PopupMenuDivider(),
         // Logout
         PopupMenuItem(
           onTap: () {
@@ -272,7 +159,7 @@ class _UserMenuDropdownState extends State<UserMenuDropdown> {
               ),
               SizedBox(width: 12),
               Text(
-                'Đăng xuất',
+                'Logout',
                 style: TextStyle(color: Colors.red),
               ),
             ],

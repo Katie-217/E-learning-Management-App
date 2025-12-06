@@ -40,156 +40,326 @@ class GradeFilterBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        children: [
-          TextField(
-            onChanged: onSearchChanged,
-            style: const TextStyle(color: AppColors.textPrimary),
-            decoration: InputDecoration(
-              hintText: 'Search by name, ID, or group...',
-              hintStyle: const TextStyle(color: AppColors.textSecondary),
-              prefixIcon: const Icon(Icons.search, color: AppColors.textSecondary),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: AppColors.border),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: AppColors.border),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: AppColors.primary),
-              ),
-            ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final screenWidth = MediaQuery.of(context).size.width;
+        final isSmall = screenWidth < 600;
+        final padding = isSmall 
+            ? const EdgeInsets.all(12)
+            : const EdgeInsets.all(16);
+        final spacing = isSmall ? 8.0 : 12.0;
+        final fontSize = isSmall ? 13.0 : 14.0;
+        final iconSize = isSmall ? 18.0 : 20.0;
+        
+        return Container(
+          padding: padding,
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.border),
           ),
-          const SizedBox(height: 12),
-          Row(
+          child: Column(
             children: [
-              Expanded(
-                child: _buildFilterDropdown<String>(
-                  label: 'Type',
-                  value: selectedType ?? 'All',
-                  items: const ['All', 'assignment', 'quiz'],
-                  onChanged: onTypeChanged,
-                  displayText: (value) {
-                    if (value == 'All' || value == null) return 'All';
-                    switch (value) {
-                      case 'assignment':
-                        return 'Assignment';
-                      case 'quiz':
-                        return 'Quiz';
-                      default:
-                        return value;
-                    }
-                  },
+              TextField(
+                onChanged: onSearchChanged,
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: fontSize,
+                ),
+                decoration: InputDecoration(
+                  hintText: isSmall 
+                      ? 'Search...' 
+                      : 'Search by name, ID, or group...',
+                  hintStyle: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: fontSize,
+                  ),
+                  prefixIcon: Icon(
+                    Icons.search, 
+                    color: AppColors.textSecondary,
+                    size: iconSize,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: AppColors.border),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: AppColors.border),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: AppColors.primary),
+                  ),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: isSmall ? 12 : 16,
+                    vertical: isSmall ? 12 : 16,
+                  ),
+                  isDense: isSmall,
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Opacity(
-                  opacity: isItemDisabled ? 0.5 : 1.0,
-                  child: IgnorePointer(
-                    ignoring: isItemDisabled,
-                    child: _buildFilterDropdown<String>(
-                      label: 'Item',
-                      value: selectedItemId,
-                      items: [
-                        'All',
-                        ...availableItems.map((a) => a.id),
+              SizedBox(height: spacing),
+              isSmall
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _buildFilterDropdown<String>(
+                          label: 'Type',
+                          value: selectedType ?? 'All',
+                          items: const ['All', 'assignment', 'quiz'],
+                          onChanged: onTypeChanged,
+                          isSmall: isSmall,
+                          displayText: (value) {
+                            if (value == 'All' || value == null) return 'All';
+                            switch (value) {
+                              case 'assignment':
+                                return 'Assignment';
+                              case 'quiz':
+                                return 'Quiz';
+                              default:
+                                return value;
+                            }
+                          },
+                        ),
+                        SizedBox(height: spacing),
+                        Opacity(
+                          opacity: isItemDisabled ? 0.5 : 1.0,
+                          child: IgnorePointer(
+                            ignoring: isItemDisabled,
+                            child: _buildFilterDropdown<String>(
+                              label: 'Item',
+                              value: selectedItemId,
+                              items: [
+                                'All',
+                                ...availableItems.map((a) => a.id),
+                              ],
+                              onChanged: onItemChanged,
+                              isSmall: isSmall,
+                              displayText: (value) {
+                                if (value == 'All' || value == null) {
+                                  if (selectedType == 'assignment') return 'All Assignments';
+                                  if (selectedType == 'quiz') return 'All Quizzes';
+                                  return 'All';
+                                }
+                                try {
+                                  final assignment = assignments.firstWhere((a) => a.id == value);
+                                  return assignment.title;
+                                } catch (e) {
+                                  return value;
+                                }
+                              },
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: spacing),
+                        Opacity(
+                          opacity: selectedItemId == null || selectedItemId == 'All' ? 0.5 : 1.0,
+                          child: IgnorePointer(
+                            ignoring: selectedItemId == null || selectedItemId == 'All',
+                            child: _buildFilterDropdown<String>(
+                              label: 'Group',
+                              value: selectedGroup,
+                              items: availableGroups,
+                              onChanged: onGroupChanged,
+                              isSmall: isSmall,
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: spacing),
+                        Opacity(
+                          opacity: selectedItemId == null || selectedItemId == 'All' ? 0.5 : 1.0,
+                          child: IgnorePointer(
+                            ignoring: selectedItemId == null || selectedItemId == 'All',
+                            child: _buildFilterDropdown<String>(
+                              label: 'Status',
+                              value: selectedStatus ?? 'all',
+                              items: ['all', 'submitted', 'late', 'not_submitted'],
+                              onChanged: onStatusChanged,
+                              isSmall: isSmall,
+                              displayText: (value) {
+                                switch (value) {
+                                  case 'all':
+                                    return 'All';
+                                  case 'submitted':
+                                    return 'Submitted';
+                                  case 'late':
+                                    return 'Late';
+                                  case 'not_submitted':
+                                    return 'Not Submitted';
+                                  default:
+                                    return value;
+                                }
+                              },
+                              iconBuilder: (value) {
+                                if (value == 'all') return null;
+                                switch (value) {
+                                  case 'submitted':
+                                    return Icon(Icons.check_circle, color: Colors.blue, size: iconSize);
+                                  case 'late':
+                                    return Icon(Icons.warning, color: Colors.orange, size: iconSize);
+                                  case 'not_submitted':
+                                    return Icon(Icons.cancel, color: Colors.red, size: iconSize);
+                                  default:
+                                    return null;
+                                }
+                              },
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: spacing),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: IconButton(
+                            onPressed: onReset,
+                            tooltip: 'Reset filters',
+                            icon: Icon(
+                              Icons.refresh, 
+                              color: AppColors.primary,
+                              size: iconSize,
+                            ),
+                            padding: EdgeInsets.all(isSmall ? 4 : 8),
+                            constraints: BoxConstraints(
+                              minWidth: isSmall ? 32 : 48,
+                              minHeight: isSmall ? 32 : 48,
+                            ),
+                          ),
+                        ),
                       ],
-                      onChanged: onItemChanged,
-                      displayText: (value) {
-                        if (value == 'All' || value == null) {
-                          if (selectedType == 'assignment') return 'All Assignments';
-                          if (selectedType == 'quiz') return 'All Quizzes';
-                          return 'All';
-                        }
-                        try {
-                          final assignment = assignments.firstWhere((a) => a.id == value);
-                          return assignment.title;
-                        } catch (e) {
-                          return value;
-                        }
-                      },
+                    )
+                  : Row(
+                      children: [
+                        Expanded(
+                          child: _buildFilterDropdown<String>(
+                            label: 'Type',
+                            value: selectedType ?? 'All',
+                            items: const ['All', 'assignment', 'quiz'],
+                            onChanged: onTypeChanged,
+                            isSmall: isSmall,
+                            displayText: (value) {
+                              if (value == 'All' || value == null) return 'All';
+                              switch (value) {
+                                case 'assignment':
+                                  return 'Assignment';
+                                case 'quiz':
+                                  return 'Quiz';
+                                default:
+                                  return value;
+                              }
+                            },
+                          ),
+                        ),
+                        SizedBox(width: spacing),
+                        Expanded(
+                          child: Opacity(
+                            opacity: isItemDisabled ? 0.5 : 1.0,
+                            child: IgnorePointer(
+                              ignoring: isItemDisabled,
+                              child: _buildFilterDropdown<String>(
+                                label: 'Item',
+                                value: selectedItemId,
+                                items: [
+                                  'All',
+                                  ...availableItems.map((a) => a.id),
+                                ],
+                                onChanged: onItemChanged,
+                                isSmall: isSmall,
+                                displayText: (value) {
+                                  if (value == 'All' || value == null) {
+                                    if (selectedType == 'assignment') return 'All Assignments';
+                                    if (selectedType == 'quiz') return 'All Quizzes';
+                                    return 'All';
+                                  }
+                                  try {
+                                    final assignment = assignments.firstWhere((a) => a.id == value);
+                                    return assignment.title;
+                                  } catch (e) {
+                                    return value;
+                                  }
+                                },
+                              ),
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: spacing),
+                        Expanded(
+                          child: Opacity(
+                            opacity: selectedItemId == null || selectedItemId == 'All' ? 0.5 : 1.0,
+                            child: IgnorePointer(
+                              ignoring: selectedItemId == null || selectedItemId == 'All',
+                              child: _buildFilterDropdown<String>(
+                                label: 'Group',
+                                value: selectedGroup,
+                                items: availableGroups,
+                                onChanged: onGroupChanged,
+                                isSmall: isSmall,
+                              ),
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: spacing),
+                        Expanded(
+                          child: Opacity(
+                            opacity: selectedItemId == null || selectedItemId == 'All' ? 0.5 : 1.0,
+                            child: IgnorePointer(
+                              ignoring: selectedItemId == null || selectedItemId == 'All',
+                              child: _buildFilterDropdown<String>(
+                                label: 'Status',
+                                value: selectedStatus ?? 'all',
+                                items: ['all', 'submitted', 'late', 'not_submitted'],
+                                onChanged: onStatusChanged,
+                                isSmall: isSmall,
+                                displayText: (value) {
+                                  switch (value) {
+                                    case 'all':
+                                      return 'All';
+                                    case 'submitted':
+                                      return 'Submitted';
+                                    case 'late':
+                                      return 'Late';
+                                    case 'not_submitted':
+                                      return 'Not Submitted';
+                                    default:
+                                      return value;
+                                  }
+                                },
+                                iconBuilder: (value) {
+                                  if (value == 'all') return null;
+                                  switch (value) {
+                                    case 'submitted':
+                                      return Icon(Icons.check_circle, color: Colors.blue, size: iconSize);
+                                    case 'late':
+                                      return Icon(Icons.warning, color: Colors.orange, size: iconSize);
+                                    case 'not_submitted':
+                                      return Icon(Icons.cancel, color: Colors.red, size: iconSize);
+                                    default:
+                                      return null;
+                                  }
+                                },
+                              ),
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: spacing),
+                        IconButton(
+                          onPressed: onReset,
+                          tooltip: 'Reset filters',
+                          icon: Icon(
+                            Icons.refresh, 
+                            color: AppColors.primary,
+                            size: iconSize,
+                          ),
+                          padding: EdgeInsets.all(isSmall ? 4 : 8),
+                          constraints: BoxConstraints(
+                            minWidth: isSmall ? 32 : 48,
+                            minHeight: isSmall ? 32 : 48,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Opacity(
-                  opacity: selectedItemId == null || selectedItemId == 'All' ? 0.5 : 1.0,
-                  child: IgnorePointer(
-                    ignoring: selectedItemId == null || selectedItemId == 'All',
-                    child: _buildFilterDropdown<String>(
-                      label: 'Group',
-                      value: selectedGroup,
-                      items: availableGroups,
-                      onChanged: onGroupChanged,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Opacity(
-                  opacity: selectedItemId == null || selectedItemId == 'All' ? 0.5 : 1.0,
-                  child: IgnorePointer(
-                    ignoring: selectedItemId == null || selectedItemId == 'All',
-                    child: _buildFilterDropdown<String>(
-                      label: 'Status',
-                      value: selectedStatus ?? 'all',
-                      items: ['all', 'submitted', 'late', 'not_submitted'],
-                      onChanged: onStatusChanged,
-                      displayText: (value) {
-                        switch (value) {
-                          case 'all':
-                            return 'All';
-                          case 'submitted':
-                            return 'Submitted';
-                          case 'late':
-                            return 'Late';
-                          case 'not_submitted':
-                            return 'Not Submitted';
-                          default:
-                            return value;
-                        }
-                      },
-                      iconBuilder: (value) {
-                        if (value == 'all') return null;
-                        switch (value) {
-                          case 'submitted':
-                            return const Icon(Icons.check_circle, color: Colors.blue, size: 20);
-                          case 'late':
-                            return const Icon(Icons.warning, color: Colors.orange, size: 20);
-                          case 'not_submitted':
-                            return const Icon(Icons.cancel, color: Colors.red, size: 20);
-                          default:
-                            return null;
-                        }
-                      },
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              IconButton(
-                onPressed: onReset,
-                tooltip: 'Reset filters',
-                icon: const Icon(Icons.refresh, color: AppColors.primary),
-              ),
             ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -198,6 +368,7 @@ class GradeFilterBar extends StatelessWidget {
     required T? value,
     required List<T> items,
     required Function(T?) onChanged,
+    required bool isSmall,
     String Function(T)? displayText,
     Widget? Function(T)? iconBuilder,
   }) {
@@ -208,6 +379,7 @@ class GradeFilterBar extends StatelessWidget {
       value: effectiveValue,
       items: items,
       onChanged: onChanged,
+      isSmall: isSmall,
       displayText: displayText,
       iconBuilder: iconBuilder,
     );
@@ -219,6 +391,7 @@ class _CustomDropdownButton<T> extends StatefulWidget {
   final T? value;
   final List<T> items;
   final Function(T?) onChanged;
+  final bool isSmall;
   final String Function(T)? displayText;
   final Widget? Function(T)? iconBuilder;
 
@@ -227,6 +400,7 @@ class _CustomDropdownButton<T> extends StatefulWidget {
     required this.value,
     required this.items,
     required this.onChanged,
+    required this.isSmall,
     this.displayText,
     this.iconBuilder,
   });
@@ -304,6 +478,12 @@ class _CustomDropdownButtonState<T> extends State<_CustomDropdownButton<T>> {
 
   @override
   Widget build(BuildContext context) {
+    final fontSize = widget.isSmall ? 13.0 : 14.0;
+    final iconSize = widget.isSmall ? 18.0 : 20.0;
+    final padding = widget.isSmall 
+        ? const EdgeInsets.symmetric(horizontal: 12, vertical: 12)
+        : const EdgeInsets.symmetric(horizontal: 16, vertical: 16);
+    
     return InkWell(
       key: _buttonKey,
       onTap: () => _showMenu(context),
@@ -311,7 +491,10 @@ class _CustomDropdownButtonState<T> extends State<_CustomDropdownButton<T>> {
       child: InputDecorator(
         decoration: InputDecoration(
           labelText: widget.label,
-          labelStyle: const TextStyle(color: AppColors.textSecondary),
+          labelStyle: TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: fontSize,
+          ),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
             borderSide: const BorderSide(color: AppColors.border),
@@ -324,10 +507,12 @@ class _CustomDropdownButtonState<T> extends State<_CustomDropdownButton<T>> {
             borderRadius: BorderRadius.circular(8),
             borderSide: const BorderSide(color: AppColors.primary),
           ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          suffixIcon: const Icon(
+          contentPadding: padding,
+          isDense: widget.isSmall,
+          suffixIcon: Icon(
             Icons.arrow_drop_down,
             color: AppColors.textSecondary,
+            size: iconSize,
           ),
         ),
         child: Text(
@@ -336,8 +521,12 @@ class _CustomDropdownButtonState<T> extends State<_CustomDropdownButton<T>> {
                   ? widget.displayText!(widget.value!)
                   : widget.value.toString())
               : '',
-          style: const TextStyle(color: AppColors.textPrimary),
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: fontSize,
+          ),
           overflow: TextOverflow.ellipsis,
+          maxLines: 1,
         ),
       ),
     );

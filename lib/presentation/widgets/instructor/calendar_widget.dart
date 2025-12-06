@@ -113,209 +113,228 @@ class SimpleCalendar extends StatelessWidget {
     // Check if currentDate is the current month (year and month match)
     final isCurrentMonth = currentDate.year == now.year && currentDate.month == now.month;
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // Month and Year Header with Navigation
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.chevron_left, size: 24),
-                onPressed: onPreviousMonth,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-                color: Colors.grey[700],
-              ),
-              Expanded(
-                child: Center(
-                  child: Text(
-                    '${_getMonthName(currentDate.month)} ${currentDate.year}',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth.isFinite && constraints.maxWidth > 0
+            ? constraints.maxWidth
+            : 300.0;
+        return SizedBox(
+          width: width,
+          child: AspectRatio(
+      aspectRatio: 1.0,
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Month and Year Header with Navigation
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.chevron_left, size: 18),
+                  onPressed: onPreviousMonth,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  color: Colors.grey[700],
+                ),
+                Expanded(
+                  child: Center(
+                    child: Text(
+                      '${_getMonthName(currentDate.month)} ${currentDate.year}',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
                     ),
                   ),
                 ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.chevron_right, size: 24),
-                onPressed: onNextMonth,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-                color: Colors.grey[700],
-              ),
-            ],
-          ),
-          // Show "Today" button only when IN the current month
-          // (when viewing the month that contains today's date)
-          if (isCurrentMonth && onGoToToday != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 8, bottom: 12),
-              child: TextButton(
-                onPressed: onGoToToday,
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                IconButton(
+                  icon: const Icon(Icons.chevron_right, size: 18),
+                  onPressed: onNextMonth,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  color: Colors.grey[700],
                 ),
-                child: const Text(
-                  'Today',
-                  style: TextStyle(fontSize: 12, color: Colors.blue),
-                ),
-              ),
+              ],
             ),
-          if (!isCurrentMonth || onGoToToday == null)
-            const SizedBox(height: 20),
-          // Days of week header
-          Row(
-            children: ['S', 'M', 'T', 'W', 'T', 'F', 'S']
-                .map((day) => Expanded(
-                      child: Center(
-                        child: Text(
-                          day,
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
+            // Show "Today" button only when IN the current month
+            // (when viewing the month that contains today's date)
+            if (isCurrentMonth && onGoToToday != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 2, bottom: 4),
+                child: TextButton(
+                  onPressed: onGoToToday,
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: const Text(
+                    'Today',
+                    style: TextStyle(fontSize: 10, color: Colors.blue),
+                  ),
+                ),
+              ),
+            if (!isCurrentMonth || onGoToToday == null)
+              const SizedBox(height: 4),
+            // Days of week header
+            Row(
+              children: ['S', 'M', 'T', 'W', 'T', 'F', 'S']
+                  .map((day) => Expanded(
+                        child: Center(
+                          child: Text(
+                            day,
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
-                      ),
-                    ))
-                .toList(),
-          ),
-          const SizedBox(height: 12),
-          // Calendar grid
-          ...List.generate(6, (week) {
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 2),
-              child: Row(
-                children: List.generate(7, (dayIndex) {
-                  final dayNumber = week * 7 + dayIndex - firstWeekday + 1;
-                  final isCurrentMonthDay = dayNumber > 0 && dayNumber <= daysInMonth;
-                  
-                  if (!isCurrentMonthDay) {
-                    return Expanded(
-                      child: Container(
-                        height: 40,
-                        margin: const EdgeInsets.symmetric(horizontal: 2),
-                      ),
-                    );
-                  }
-
-                  final date = DateTime(currentDate.year, currentDate.month, dayNumber);
-                  // Only highlight today if we're viewing the current month AND the date is actually today
-                  // This prevents showing "today" indicator in other months
-                  final isToday = (currentDate.year == now.year && 
-                                   currentDate.month == now.month) &&
-                                  (date.year == now.year && 
-                                   date.month == now.month && 
-                                   date.day == now.day);
-                  // Only highlight selected date if we're viewing the same month/year as the selected date
-                  final isSelected = currentDate.year == selectedDate.year &&
-                                    currentDate.month == selectedDate.month &&
-                                    date.year == selectedDate.year && 
-                                    date.month == selectedDate.month && 
-                                    date.day == selectedDate.day;
-                  
-                  // Check if this date has tasks
-                  final hasTasks = tasksForMonth.any((task) {
-                    final taskDate = DateTime(
-                      task.dateTime.year,
-                      task.dateTime.month,
-                      task.dateTime.day,
-                    );
-                    return taskDate.year == date.year &&
-                           taskDate.month == date.month &&
-                           taskDate.day == date.day;
-                  });
-
+                      ))
+                  .toList(),
+            ),
+            const SizedBox(height: 4),
+            // Calendar grid
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: List.generate(6, (week) {
                   return Expanded(
-                    child: GestureDetector(
-                      onTap: () => onDateSelected?.call(date),
-                      child: Container(
-                        height: 40,
-                        margin: const EdgeInsets.symmetric(horizontal: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.transparent,
-                          borderRadius: BorderRadius.circular(8),
-                          border: isToday && !isSelected
-                              ? Border.all(color: Colors.blue.withOpacity(0.5), width: 1.5)
-                              : null,
-                        ),
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            // Selected indicator - only show for selected date
-                            if (isSelected)
-                              Container(
-                                width: 32,
-                                height: 32,
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF3B82F6), // Blue-500
-                                  borderRadius: BorderRadius.circular(6),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: const Color(0xFF3B82F6).withOpacity(0.3),
-                                      blurRadius: 4,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 1),
+                      child: Row(
+                        children: List.generate(7, (dayIndex) {
+                          final dayNumber = week * 7 + dayIndex - firstWeekday + 1;
+                          final isCurrentMonthDay = dayNumber > 0 && dayNumber <= daysInMonth;
+                          
+                          if (!isCurrentMonthDay) {
+                            return Expanded(
+                              child: Container(
+                                margin: const EdgeInsets.symmetric(horizontal: 1),
                               ),
-                            Center(
-                              child: Text(
-                                dayNumber.toString(),
-                                style: TextStyle(
-                                  color: isSelected
-                                      ? Colors.white
-                                      : isToday
-                                          ? Colors.blue
-                                          : Colors.black87,
-                                  fontSize: 14,
-                                  fontWeight: (isSelected || isToday) 
-                                      ? FontWeight.bold 
-                                      : FontWeight.normal,
-                                ),
+                            );
+                        }
+
+                          final date = DateTime(currentDate.year, currentDate.month, dayNumber);
+                          // Only highlight today if we're viewing the current month AND the date is actually today
+                          // This prevents showing "today" indicator in other months
+                          final isToday = (currentDate.year == now.year && 
+                                           currentDate.month == now.month) &&
+                                          (date.year == now.year && 
+                                           date.month == now.month && 
+                                           date.day == now.day);
+                          // Only highlight selected date if we're viewing the same month/year as the selected date
+                          final isSelected = currentDate.year == selectedDate.year &&
+                                            currentDate.month == selectedDate.month &&
+                                            date.year == selectedDate.year && 
+                                            date.month == selectedDate.month && 
+                                            date.day == selectedDate.day;
+                          
+                          // Check if this date has tasks
+                          final hasTasks = tasksForMonth.any((task) {
+                            final taskDate = DateTime(
+                              task.dateTime.year,
+                              task.dateTime.month,
+                              task.dateTime.day,
+                            );
+                            return taskDate.year == date.year &&
+                                   taskDate.month == date.month &&
+                                   taskDate.day == date.day;
+                          });
+
+                          return Expanded(
+                            child: GestureDetector(
+                              onTap: () => onDateSelected?.call(date),
+                              child: Container(
+                              margin: const EdgeInsets.symmetric(horizontal: 1),
+                              decoration: BoxDecoration(
+                                color: Colors.transparent,
+                                borderRadius: BorderRadius.circular(4),
+                                border: isToday && !isSelected
+                                    ? Border.all(color: Colors.blue.withOpacity(0.5), width: 1)
+                                    : null,
+                              ),
+                              child: Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  // Selected indicator - only show for selected date
+                                  if (isSelected)
+                                    Container(
+                                      width: 24,
+                                      height: 24,
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF3B82F6), // Blue-500
+                                        borderRadius: BorderRadius.circular(4),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: const Color(0xFF3B82F6).withOpacity(0.3),
+                                            blurRadius: 3,
+                                            offset: const Offset(0, 1),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  Center(
+                                    child: Text(
+                                      dayNumber.toString(),
+                                      style: TextStyle(
+                                        color: isSelected
+                                            ? Colors.white
+                                            : isToday
+                                                ? Colors.blue
+                                                : Colors.black87,
+                                        fontSize: 11,
+                                        fontWeight: (isSelected || isToday) 
+                                            ? FontWeight.bold 
+                                            : FontWeight.normal,
+                                      ),
+                                    ),
+                                  ),
+                                  // Indicator for days with tasks
+                                  if (hasTasks && !isSelected && !isToday)
+                                    Positioned(
+                                      bottom: 2,
+                                      child: Container(
+                                        width: 3,
+                                        height: 3,
+                                        decoration: BoxDecoration(
+                                          color: Colors.blue,
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                    ),
+                                ],
                               ),
                             ),
-                            // Indicator for days with tasks
-                            if (hasTasks && !isSelected && !isToday)
-                              Positioned(
-                                bottom: 4,
-                                child: Container(
-                                  width: 4,
-                                  height: 4,
-                                  decoration: BoxDecoration(
-                                    color: Colors.blue,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
+                          ),
+                        );
+                      }),
                     ),
-                  );
-                }),
-              ),
-            );
-          }),
+                  ),
+                );
+              }),
+            ),
+          ),
         ],
       ),
+            ),
+          ),
+        );
+      },
     );
   }
 

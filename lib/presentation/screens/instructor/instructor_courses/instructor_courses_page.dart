@@ -51,9 +51,12 @@ class _InstructorCoursesPageState extends ConsumerState<InstructorCoursesPage> {
   @override
   void initState() {
     super.initState();
-    // Load instructor courses when page initializes
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(courseInstructorProvider.notifier).loadInstructorCourses();
+    // Preload courses ngay lập tức, không đợi frame callback
+    // Sử dụng Future.microtask để preload ngay sau initState
+    Future.microtask(() {
+      if (mounted) {
+        ref.read(courseInstructorProvider.notifier).loadInstructorCourses();
+      }
     });
   }
 
@@ -269,9 +272,10 @@ class _InstructorCoursesPageState extends ConsumerState<InstructorCoursesPage> {
                               setState(() {
                                 _selectedSemesterId = semesterId;
                               });
+                              // Gọi async version nhưng không await để không block UI
                               ref
                                   .read(courseInstructorProvider.notifier)
-                                  .filterCoursesBySemester(semesterId);
+                                  .filterCoursesBySemesterAsync(semesterId);
                             },
                           ),
                         ),
@@ -346,9 +350,10 @@ class _InstructorCoursesPageState extends ConsumerState<InstructorCoursesPage> {
                               setState(() {
                                 _selectedSemesterId = semesterId;
                               });
+                              // Gọi async version nhưng không await để không block UI
                               ref
                                   .read(courseInstructorProvider.notifier)
-                                  .filterCoursesBySemester(semesterId);
+                                  .filterCoursesBySemesterAsync(semesterId);
                             },
                           ),
                         ),

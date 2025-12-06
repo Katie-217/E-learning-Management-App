@@ -70,9 +70,11 @@ class _InstructorForumScreenState extends ConsumerState<InstructorForumScreen> {
   @override
   void initState() {
     super.initState();
-    // Load instructor courses when screen opens
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(courseInstructorProvider.notifier).loadInstructorCourses();
+    // Preload courses ngay lập tức, không đợi frame callback
+    Future.microtask(() {
+      if (mounted) {
+        ref.read(courseInstructorProvider.notifier).loadInstructorCourses();
+      }
     });
   }
 
