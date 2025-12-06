@@ -32,24 +32,24 @@ class _UserMenuDropdownState extends State<UserMenuDropdown> {
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF1F2937),
         title: const Text(
-          'Đăng xuất',
+          'Logout',
           style: TextStyle(color: Colors.white),
         ),
         content: const Text(
-          'Bạn có chắc chắn muốn đăng xuất?',
+          'Are you sure you want to logout?',
           style: TextStyle(color: Colors.white70),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Hủy'),
+            child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: TextButton.styleFrom(
               foregroundColor: Colors.red,
             ),
-            child: const Text('Đăng xuất'),
+            child: const Text('Logout'),
           ),
         ],
       ),
@@ -61,7 +61,7 @@ class _UserMenuDropdownState extends State<UserMenuDropdown> {
         await UserSessionService.clearUserSession();
         
         if (mounted) {
-          // Điều hướng về màn hình đăng nhập
+          // Navigate to login screen
           Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(
               builder: (context) =>
@@ -74,7 +74,7 @@ class _UserMenuDropdownState extends State<UserMenuDropdown> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Lỗi đăng xuất: $e'),
+              content: Text('Logout error: $e'),
               backgroundColor: Colors.red,
             ),
           );
@@ -159,7 +159,7 @@ class _UserMenuDropdownState extends State<UserMenuDropdown> {
               ),
               SizedBox(width: 12),
               Text(
-                'Đăng xuất',
+                'Logout',
                 style: TextStyle(color: Colors.red),
               ),
             ],

@@ -69,18 +69,22 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
         if (doc.exists && mounted) {
           final data = doc.data()!;
           setState(() {
+            // Ưu tiên: name -> displayName -> Firebase Auth displayName -> email (username part) -> 'User'
             _userName = data['name'] ?? 
                        data['displayName'] ?? 
                        user.displayName ?? 
-                       'User';
+                       (user.email?.split('@')[0] ?? 'User');
             _userEmail = data['email'] ?? user.email ?? '';
           });
+          print('DEBUG: Loaded user name: $_userName, email: $_userEmail');
         } else if (mounted) {
           // Fallback to Firebase Auth data
           setState(() {
-            _userName = user.displayName ?? 'User';
+            _userName = user.displayName ?? 
+                       (user.email?.split('@')[0] ?? 'User');
             _userEmail = user.email ?? '';
           });
+          print('DEBUG: Using Firebase Auth - name: $_userName, email: $_userEmail');
         }
       }
     } catch (e) {
@@ -327,29 +331,10 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
                   constraints: BoxConstraints(
                     maxWidth: isVerySmall ? 120.0 : 180.0,
                   ),
-                  child: Consumer(
-                    builder: (context, ref, child) {
-                      final profileAsync = ref.watch(instructorProfileProvider);
-                      return profileAsync.when(
-                        data: (profile) => UserMenuDropdown(
-                          userName: profile?['name'] ??
-                              profile?['displayName'] ??
-                              'Dr. Johnson',
-                          userEmail: profile?['email'] ?? 'dr.johnson@university.edu',
-                          userPhotoUrl: profile?['photoUrl'],
-                        ),
-                        loading: () => const UserMenuDropdown(
-                          userName: 'Dr. Johnson',
-                          userEmail: 'dr.johnson@university.edu',
-                          userPhotoUrl: null,
-                        ),
-                        error: (_, __) => const UserMenuDropdown(
-                          userName: 'Dr. Johnson',
-                          userEmail: 'dr.johnson@university.edu',
-                          userPhotoUrl: null,
-                        ),
-                      );
-                    },
+                  child: UserMenuDropdown(
+                    userName: _userName,
+                    userEmail: _userEmail,
+                    userPhotoUrl: null,
                   ),
                 );
               },
@@ -505,9 +490,7 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
                                     ),
                                     SizedBox(height: screenWidth > 600 ? 4 : 3),
                                     Text(
-                                      _userEmail.isNotEmpty 
-                                          ? _userEmail
-                                          : "Ready to inspire your students today?",
+                                      "Ready to inspire your students today?",
                                       style: TextStyle(
                                         color: Colors.grey[400],
                                         fontSize: screenWidth > 600 ? 16 : 14,
@@ -556,12 +539,12 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
                                           fontWeight: FontWeight.bold,
                                           color: Colors.white,
                                         ),
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 1,
                                       ),
                                       SizedBox(height: screenWidth > 600 ? 4 : 3),
                                       Text(
-                                        _userEmail.isNotEmpty 
-                                            ? _userEmail
-                                            : "Ready to inspire your students today?",
+                                        "Ready to inspire your students today?",
                                         style: TextStyle(
                                           color: Colors.grey[400],
                                           fontSize: screenWidth > 600 ? 16 : 14,

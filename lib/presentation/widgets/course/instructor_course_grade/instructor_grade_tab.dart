@@ -1313,9 +1313,9 @@ class _InstructorGradeTabState extends ConsumerState<InstructorGradeTab> {
     }
 
     final padding = isSmall 
-        ? const EdgeInsets.all(12)
+        ? const EdgeInsets.symmetric(horizontal: 12, vertical: 12)
         : const EdgeInsets.all(16);
-    final spacing = isSmall ? 8.0 : 12.0;
+    final spacing = isSmall ? 10.0 : 12.0;
 
     return Container(
       padding: padding,
@@ -1325,7 +1325,8 @@ class _InstructorGradeTabState extends ConsumerState<InstructorGradeTab> {
         border: Border.all(color: AppColors.border),
       ),
       child: isSmall
-          ?           Column(
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _buildStatItem('Students', totalStudents.toString(), Icons.people, isSmall),
                 SizedBox(height: spacing),
@@ -1367,6 +1368,46 @@ class _InstructorGradeTabState extends ConsumerState<InstructorGradeTab> {
     final labelSize = isSmall ? 11.0 : 12.0;
     final spacing = isSmall ? 6.0 : 8.0;
     
+    if (isSmall) {
+      // On small screens: align everything to the right
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Icon(icon, size: iconSize, color: iconColor ?? AppColors.primary),
+          SizedBox(width: spacing),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: valueSize,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+                textAlign: TextAlign.right,
+              ),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: labelSize,
+                  color: AppColors.textSecondary,
+                ),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 2,
+                textAlign: TextAlign.right,
+              ),
+            ],
+          ),
+        ],
+      );
+    }
+    
+    // On large screens: center align
     return Center(
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
