@@ -1,6 +1,6 @@
 // ========================================
-// FILE: announcement_tracking_screen.dart
-// MÔ TẢ: Announcement Tracking Screen với REAL Firebase data
+// FILE: announcement_tracking_screen.dart (UPDATED)
+// MÔ TẢ: Announcement Tracking Screen với FULL STATISTICS
 // ========================================
 
 import 'package:flutter/material.dart';
@@ -11,27 +11,83 @@ import 'dart:convert';
 
 import 'package:elearning_management_app/domain/models/announcement_tracking_model.dart';
 import 'package:elearning_management_app/data/repositories/announcement/announcement_repository.dart';
+import 'package:elearning_management_app/data/repositories/course/enrollment_repository.dart';
 
 // ========================================
-// PROVIDER: Stream tracking data từ Firebase
+// PROVIDER: Enhanced tracking with enrollment data
 // ========================================
-final announcementTrackingProvider = StreamProvider.family<List<AnnouncementTrackingModel>, String>(
-  (ref, announcementId) {
-    final repo = ref.watch(AnnouncementRepositoryProvider);
+final announcementTrackingProvider = FutureProvider.family<Map<String, dynamic>, Map<String, String>>(
+  (ref, params) async {
+    final announcementId = params['announcementId']!;
+    final courseId = params['courseId']!;
     
-    // Query tracking documents for this announcement
-    return repo.getTrackingStream(announcementId); // <--- DÒNG ĐÃ SỬA
+    print('🔍 PROVIDER START:');
+    print('   announcementId: $announcementId');
+    print('   courseId: $courseId');
+    
+    final repo = ref.watch(AnnouncementRepositoryProvider);
+    final enrollmentRepo = EnrollmentRepository();
+    
+    // ✅ Get tracking data using repository method
+    final trackingData = await repo.getTrackingList(announcementId);
+    print('📊 Tracking records: ${trackingData.length}');
+    
+    // Get ALL enrolled students
+    final allEnrollments = await enrollmentRepo.getStudentsInCourse(courseId);
+    print('👥 Total enrolled: ${allEnrollments.length}');
+    
+    // Create tracking models for students who haven't viewed yet
+    final trackedStudentIds = trackingData.map((t) => t.studentId).toSet();
+    print('✅ Students with tracking: ${trackedStudentIds.length}');
+    
+    final notViewedStudents = allEnrollments
+        .where((enrollment) {
+          final notTracked = !trackedStudentIds.contains(enrollment.userId);
+          if (notTracked) {
+            print('   ❌ Student ${enrollment.userId} has NO tracking record');
+          }
+          return notTracked;
+        })
+        .map((enrollment) {
+          print('   🆕 Creating fake tracking for: ${enrollment.userId}');
+          return AnnouncementTrackingModel(
+            id: AnnouncementTrackingModel.generateId(
+              announcementId: announcementId,
+              studentId: enrollment.userId,
+            ),
+            announcementId: announcementId,
+            studentId: enrollment.userId,
+            courseId: courseId,
+            groupId: enrollment.groupId,
+            hasViewed: false,  // ✅ MUST BE FALSE
+            hasDownloaded: false,
+            lastViewedAt: DateTime.now(), // Placeholder
+          );
+        })
+        .toList();
+    
+    print('❌ Students without tracking: ${notViewedStudents.length}');
+    
+    final allTracking = [...trackingData, ...notViewedStudents];
+    print('📋 FINAL tracking records: ${allTracking.length}');
+    print('   Viewed: ${allTracking.where((t) => t.hasViewed).length}');
+    print('   Not Viewed: ${allTracking.where((t) => !t.hasViewed).length}');
+    
+    return {
+      'trackingData': allTracking,
+      'enrollments': allEnrollments,
+    };
   },
 );
 
 // ========================================
-// SCREEN: Announcement Tracking
+// SCREEN: Announcement Tracking (UPDATED)
 // ========================================
 class AnnouncementTrackingScreen extends ConsumerStatefulWidget {
   final String announcementId;
   final String announcementTitle;
   final String courseId;
-  final List<String> targetGroupIds; // Empty = all groups
+  final List<String> targetGroupIds;
 
   const AnnouncementTrackingScreen({
     super.key,
@@ -51,7 +107,7 @@ class _AnnouncementTrackingScreenState
   String _searchQuery = '';
   String _statusFilter = 'All'; // All, Viewed, Not Viewed, Downloaded
   String _groupFilter = 'All';
-  String _sortColumn = 'studentName';
+  String _sortColumn = 'studentId';
   bool _sortAscending = true;
 
   // ========================================
@@ -63,7 +119,6 @@ class _AnnouncementTrackingScreenState
       
       // Header
       csvData.add([
-        'Student Name',
         'Student ID',
         'Group',
         'Has Viewed',
@@ -75,7 +130,6 @@ class _AnnouncementTrackingScreenState
       // Data rows
       for (final track in trackingData) {
         csvData.add([
-          'Student ${track.studentId}', // Replace with actual student name from lookup
           track.studentId,
           track.groupId,
           track.hasViewed ? 'Yes' : 'No',
@@ -104,7 +158,7 @@ class _AnnouncementTrackingScreenState
       if (result != null && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('CSV exported successfully: $result'),
+            content: Text('CSV exported successfully'),
             backgroundColor: Colors.green,
           ),
         );
@@ -157,7 +211,7 @@ class _AnnouncementTrackingScreenState
     filtered.sort((a, b) {
       int comparison = 0;
       switch (_sortColumn) {
-        case 'studentName':
+        case 'studentId':
           comparison = a.studentId.compareTo(b.studentId);
           break;
         case 'group':
@@ -184,7 +238,12 @@ class _AnnouncementTrackingScreenState
   // ========================================
   @override
   Widget build(BuildContext context) {
-    final trackingAsync = ref.watch(announcementTrackingProvider(widget.announcementId));
+    final trackingAsync = ref.watch(
+      announcementTrackingProvider({
+        'announcementId': widget.announcementId,
+        'courseId': widget.courseId,
+      }),
+    );
 
     return Scaffold(
       backgroundColor: const Color(0xFF0F1720),
@@ -201,22 +260,41 @@ class _AnnouncementTrackingScreenState
             style: const TextStyle(color: Colors.red),
           ),
         ),
-        data: (trackingData) {
+        data: (dataMap) {
+          print('🎯 DATA RECEIVED IN UI:');
+          print('   dataMap keys: ${dataMap.keys}');
+          
+          final trackingData = dataMap['trackingData'] as List<AnnouncementTrackingModel>;
+          print('   trackingData length: ${trackingData.length}');
+          
           final filteredData = _applyFilters(trackingData);
           final groups = trackingData.map((e) => e.groupId).toSet().toList()..sort();
           
-          // Statistics
+          // ✅ ACCURATE STATISTICS
+          final totalStudents = trackingData.length;
           final viewedCount = trackingData.where((t) => t.hasViewed).length;
-          final notViewedCount = trackingData.length - viewedCount;
+          final notViewedCount = totalStudents - viewedCount;
           final downloadedCount = trackingData.where((t) => t.hasDownloaded).length;
+
+          print('📊 CALCULATED STATS:');
+          print('   Total: $totalStudents');
+          print('   Viewed: $viewedCount');
+          print('   Not Viewed: $notViewedCount');
+          print('   Downloaded: $downloadedCount');
+          
+          // Debug individual tracking records
+          print('📋 Individual tracking records:');
+          for (var track in trackingData) {
+            print('   - ${track.studentId}: hasViewed=${track.hasViewed}, hasDownloaded=${track.hasDownloaded}');
+          }
 
           return Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Statistics Cards
-                _buildStatisticsCards(viewedCount, notViewedCount, downloadedCount, trackingData.length),
+                // ✅ ACCURATE Statistics Cards
+                _buildStatisticsCards(viewedCount, notViewedCount, downloadedCount, totalStudents),
                 const SizedBox(height: 16),
 
                 // Filters
@@ -280,14 +358,24 @@ class _AnnouncementTrackingScreenState
   }
 
   Widget _buildStatisticsCards(int viewed, int notViewed, int downloaded, int total) {
+    // ✅ DEBUG: Print values trước khi render
+    print('📊 STATS UI VALUES:');
+    print('   Total: $total');
+    print('   Viewed: $viewed');
+    print('   Not Viewed: $notViewed');
+    print('   Downloaded: $downloaded');
+    print('   View %: ${total > 0 ? ((viewed / total) * 100).toStringAsFixed(0) : 0}');
+    print('   Not View %: ${total > 0 ? ((notViewed / total) * 100).toStringAsFixed(0) : 0}');
+    
     return Row(
       children: [
         Expanded(
           child: _StatCard(
             title: 'Viewed',
             value: viewed.toString(),
-            subtitle: '${((viewed / total) * 100).toStringAsFixed(0)}%',
+            subtitle: '${total > 0 ? ((viewed / total) * 100).toStringAsFixed(0) : 0}%',
             color: const Color(0xFF34D399),
+            icon: Icons.visibility,
           ),
         ),
         const SizedBox(width: 12),
@@ -295,8 +383,9 @@ class _AnnouncementTrackingScreenState
           child: _StatCard(
             title: 'Not Viewed',
             value: notViewed.toString(),
-            subtitle: '${((notViewed / total) * 100).toStringAsFixed(0)}%',
+            subtitle: '${total > 0 ? ((notViewed / total) * 100).toStringAsFixed(0) : 0}%',
             color: const Color(0xFFFF6B6B),
+            icon: Icons.visibility_off,
           ),
         ),
         const SizedBox(width: 12),
@@ -304,8 +393,9 @@ class _AnnouncementTrackingScreenState
           child: _StatCard(
             title: 'Downloaded',
             value: downloaded.toString(),
-            subtitle: '${((downloaded / total) * 100).toStringAsFixed(0)}%',
+            subtitle: '${total > 0 ? ((downloaded / total) * 100).toStringAsFixed(0) : 0}%',
             color: const Color(0xFF60A5FA),
+            icon: Icons.download,
           ),
         ),
         const SizedBox(width: 12),
@@ -315,6 +405,7 @@ class _AnnouncementTrackingScreenState
             value: total.toString(),
             subtitle: 'Enrolled',
             color: const Color(0xFF9CA3AF),
+            icon: Icons.people,
           ),
         ),
       ],
@@ -368,10 +459,10 @@ class _AnnouncementTrackingScreenState
               DataColumn(
                 label: const Text('Student ID', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                 onSort: (_, __) => setState(() {
-                  if (_sortColumn == 'studentName') {
+                  if (_sortColumn == 'studentId') {
                     _sortAscending = !_sortAscending;
                   } else {
-                    _sortColumn = 'studentName';
+                    _sortColumn = 'studentId';
                     _sortAscending = true;
                   }
                 }),
@@ -416,19 +507,21 @@ class _AnnouncementTrackingScreenState
 }
 
 // ========================================
-// WIDGET: Statistics Card
+// WIDGET: Statistics Card (UPDATED with icon)
 // ========================================
 class _StatCard extends StatelessWidget {
   final String title;
   final String value;
   final String subtitle;
   final Color color;
+  final IconData icon;
 
   const _StatCard({
     required this.title,
     required this.value,
     required this.subtitle,
     required this.color,
+    required this.icon,
   });
 
   @override
@@ -443,7 +536,13 @@ class _StatCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600)),
+          Row(
+            children: [
+              Icon(icon, color: color, size: 20),
+              const SizedBox(width: 8),
+              Text(title, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600)),
+            ],
+          ),
           const SizedBox(height: 8),
           Text(value, style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
           Text(subtitle, style: const TextStyle(color: Colors.white70, fontSize: 11)),

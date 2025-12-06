@@ -73,6 +73,12 @@ class _SidebarWidgetState extends State<SidebarWidget>
             isSelected: widget.activeKey == 'forum',
             onTap: () => widget.onSelect?.call('forum'),
           ),
+          _buildSidebarItem(
+            icon: Icons.chat,
+            title: 'Chat',
+            isSelected: widget.activeKey == 'chat',
+            onTap: () => widget.onSelect?.call('chat'),
+          ),
           // const ListTile(
           //   leading: Icon(Icons.assignment),
           //   title: Text('Assignments'),

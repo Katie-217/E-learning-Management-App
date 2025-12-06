@@ -155,7 +155,7 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
         case 'chat':
         return const Padding(
           padding: EdgeInsets.all(18),
-          child: SelectStudentScreen(),
+          child: InstructorChatScreen(),
         );
       default: // dashboard
         final semesterName = _selectedSemester?.name ?? 'Fall 2024';

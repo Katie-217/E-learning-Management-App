@@ -208,33 +208,58 @@ class AnnouncementRepository {
   }
 
   /// Get tracking statistics
-  Future<Map<String, dynamic>> getTrackingStats(String announcementId) async {
+  Future<Map<String, dynamic>> getTrackingStats({
+    required String announcementId,
+    required String courseId,
+  }) async {
     try {
-      final snapshot = await _firestore
+      // Get tracking data
+      final trackingSnapshot = await _firestore
           .collection('announcementTracking')
           .where('announcementId', isEqualTo: announcementId)
           .get();
       
       int viewedCount = 0;
       int downloadedCount = 0;
+      Set<String> trackedStudentIds = {};
       
-      for (var doc in snapshot.docs) {
+      for (var doc in trackingSnapshot.docs) {
         final data = doc.data();
+        trackedStudentIds.add(data['studentId']);
         if (data['hasViewed'] == true) viewedCount++;
         if (data['hasDownloaded'] == true) downloadedCount++;
       }
       
+      // ✅ GET TOTAL ENROLLED STUDENTS from enrollments collection
+      final enrollmentsSnapshot = await _firestore
+          .collection('enrollments')
+          .where('courseId', isEqualTo: courseId)
+          .where('status', isEqualTo: 'active')
+          .where('role', isEqualTo: 'student')
+          .get();
+      
+      final totalStudents = enrollmentsSnapshot.docs.length;
+      final notViewedCount = totalStudents - viewedCount;
+      
+      print('📊 Tracking Stats:');
+      print('   - Total Students: $totalStudents');
+      print('   - Viewed: $viewedCount');
+      print('   - Not Viewed: $notViewedCount');
+      print('   - Downloaded: $downloadedCount');
+      
       return {
-        'totalStudents': snapshot.docs.length,
+        'totalStudents': totalStudents,
         'viewedCount': viewedCount,
-        'notViewedCount': snapshot.docs.length - viewedCount,
+        'notViewedCount': notViewedCount,
         'downloadedCount': downloadedCount,
+        'viewPercentage': totalStudents > 0 
+            ? ((viewedCount / totalStudents) * 100).toStringAsFixed(1) 
+            : '0.0',
       };
     } catch (e) {
       throw Exception('Failed to get tracking stats: $e');
     }
   }
-
   /// Get tracking data stream
   Stream<List<AnnouncementTrackingModel>> getTrackingStream(String announcementId) {
     return _firestore
@@ -369,6 +394,23 @@ class AnnouncementRepository {
               return data;
             })
             .toList());
+  }
+  // Thêm vào AnnouncementRepository class
+  /// Get tracking data as list (for provider)
+  Future<List<AnnouncementTrackingModel>> getTrackingList(String announcementId) async {
+  try {
+    final snapshot = await _firestore
+        .collection('announcementTracking')
+        .where('announcementId', isEqualTo: announcementId)
+        .get();
+    
+    return snapshot.docs
+        .map((doc) => AnnouncementTrackingModel.fromFirestore(doc))
+        .toList();
+  } catch (e) {
+    print('Error getting tracking list: $e');
+    return [];
+  }
   }
 
   /// Check if student has viewed announcement

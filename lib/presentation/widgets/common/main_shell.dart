@@ -6,6 +6,7 @@ import 'user_menu_dropdown.dart';
 import '../../screens/student/dashboard/student_dashboard_page.dart';
 import '../../screens/student/course/course_page.dart';
 import '../../screens/forum/student_forums_list_screen.dart';
+import '../../screens/chat/student_chat_screen.dart';
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
 
@@ -112,7 +113,7 @@ class _MainShellState extends State<MainShell> {
   void onSelect(String key) {
     // Chỉ cho phép set activeKey là 'dashboard' hoặc 'courses'
     // Profile không được set làm activeKey - profile chỉ mở qua Navigator.push
-    if (key == 'dashboard' || key == 'courses' || key == 'forum') {
+    if (key == 'dashboard' || key == 'courses' || key == 'forum' || key == 'chat') {
       setState(() {
         activeKey = key;
       });
@@ -133,6 +134,8 @@ class _MainShellState extends State<MainShell> {
         return const CoursePage(showSidebar: false);
       case 'forum':
         return const CourseForumsListScreen(showSidebar: false);      
+      case 'chat':
+        return const StudentChatScreen();     
       default:
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
