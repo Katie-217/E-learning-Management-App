@@ -39,7 +39,8 @@ class _InstructorPeopleTabState extends ConsumerState<InstructorPeopleTab> {
   Future<void> _loadInstructorName() async {
     try {
       // If instructor field looks like a name (contains space or no special chars), use it directly
-      if (widget.course.instructor.contains(' ') || !widget.course.instructor.contains('_')) {
+      if (widget.course.instructor.contains(' ') ||
+          !widget.course.instructor.contains('_')) {
         setState(() {
           _instructorName = widget.course.instructor;
         });
@@ -204,7 +205,9 @@ class _InstructorPeopleTabState extends ConsumerState<InstructorPeopleTab> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                _instructorName.isEmpty ? 'Loading...' : _instructorName,
+                                _instructorName.isEmpty
+                                    ? 'Loading...'
+                                    : _instructorName,
                                 style: TextStyle(
                                   fontWeight: FontWeight.w600,
                                   fontSize: teacherNameSize,
@@ -1040,7 +1043,9 @@ class _InstructorPeopleTabState extends ConsumerState<InstructorPeopleTab> {
                 ),
               );
               // Refresh groups after import
-              ref.read(groupControllerProvider.notifier).getGroupsByCourse(widget.course.id);
+              ref
+                  .read(groupControllerProvider.notifier)
+                  .getGroupsByCourse(widget.course.id);
             },
             onCancel: () {
               Navigator.of(context).pop();

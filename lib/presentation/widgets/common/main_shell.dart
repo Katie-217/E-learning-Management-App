@@ -12,6 +12,7 @@ import '../student/dashboard/app_bar/notification/notification_detail_dialog.dar
 
 import '../../screens/forum/student_forums_list_screen.dart';
 import '../../screens/chat/student_chat_screen.dart';
+
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
 
@@ -127,7 +128,10 @@ class _MainShellState extends State<MainShell> {
   void onSelect(String key) {
     // Ch? cho ph�p set activeKey l� 'dashboard' ho?c 'courses'
     // Profile kh�ng du?c set l�m activeKey - profile ch? m? qua Navigator.push
-    if (key == 'dashboard' || key == 'courses' || key == 'forum' || key == 'chat') {
+    if (key == 'dashboard' ||
+        key == 'courses' ||
+        key == 'forum' ||
+        key == 'chat') {
       setState(() {
         activeKey = key;
       });
@@ -146,9 +150,9 @@ class _MainShellState extends State<MainShell> {
       case 'courses':
         return const CoursePage(showSidebar: false);
       case 'forum':
-        return const CourseForumsListScreen(showSidebar: false);      
+        return const CourseForumsListScreen(showSidebar: false);
       case 'chat':
-        return const StudentChatScreen();     
+        return const StudentChatScreen();
       default:
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
@@ -164,7 +168,8 @@ class _MainShellState extends State<MainShell> {
   @override
   Widget build(BuildContext context) {
     final isWide = MediaQuery.of(context).size.width > 800;
-    final showBottomNav = !kIsWeb && !isWide; // ch? d�ng bottom nav cho mobile/app, tr�nh cho web
+    final showBottomNav =
+        !kIsWeb && !isWide; // ch? d�ng bottom nav cho mobile/app, tr�nh cho web
     int _navIndex() {
       switch (activeKey) {
         case 'dashboard':
@@ -187,7 +192,8 @@ class _MainShellState extends State<MainShell> {
           children: [
             if (!isWide)
               PopupMenuButton<String>(
-                offset: const Offset(0, kToolbarHeight), // menu xu?t hi?n du?i icon
+                offset:
+                    const Offset(0, kToolbarHeight), // menu xu?t hi?n du?i icon
                 icon: const Icon(Icons.menu, color: Colors.white),
                 color: const Color(0xFF1F2937),
                 onSelected: (value) => onSelect(value),
@@ -195,22 +201,28 @@ class _MainShellState extends State<MainShell> {
                   PopupMenuItem(
                     value: 'dashboard',
                     child: ListTile(
-                      leading: Icon(Icons.dashboard_outlined, color: Colors.white70),
-                      title: Text('Dashboard', style: TextStyle(color: Colors.white)),
+                      leading:
+                          Icon(Icons.dashboard_outlined, color: Colors.white70),
+                      title: Text('Dashboard',
+                          style: TextStyle(color: Colors.white)),
                     ),
                   ),
                   PopupMenuItem(
                     value: 'courses',
                     child: ListTile(
-                      leading: Icon(Icons.menu_book_outlined, color: Colors.white70),
-                      title: Text('Courses', style: TextStyle(color: Colors.white)),
+                      leading:
+                          Icon(Icons.menu_book_outlined, color: Colors.white70),
+                      title: Text('Courses',
+                          style: TextStyle(color: Colors.white)),
                     ),
                   ),
                   PopupMenuItem(
                     value: 'forum',
                     child: ListTile(
-                      leading: Icon(Icons.forum_outlined, color: Colors.white70),
-                      title: Text('Forum', style: TextStyle(color: Colors.white)),
+                      leading:
+                          Icon(Icons.forum_outlined, color: Colors.white70),
+                      title:
+                          Text('Forum', style: TextStyle(color: Colors.white)),
                     ),
                   ),
                 ],
@@ -330,8 +342,7 @@ class _MainShellState extends State<MainShell> {
       body: Row(
         children: [
           const SizedBox(width: 0),
-          if (isWide)
-            SidebarWidget(onSelect: onSelect, activeKey: activeKey),
+          if (isWide) SidebarWidget(onSelect: onSelect, activeKey: activeKey),
           Expanded(
             child: _buildCurrentPage(),
           ),

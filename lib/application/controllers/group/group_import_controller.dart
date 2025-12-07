@@ -32,9 +32,10 @@ class GroupImportController {
       }
 
       // Validate header
-      final headers = csvTable[0].map((e) => e.toString().toLowerCase().trim()).toList();
+      final headers =
+          csvTable[0].map((e) => e.toString().toLowerCase().trim()).toList();
       final requiredHeaders = ['code', 'name'];
-      
+
       for (final required in requiredHeaders) {
         if (!headers.contains(required)) {
           throw Exception('Missing required column: $required');
@@ -44,30 +45,32 @@ class GroupImportController {
       // Get column indices
       final codeIdx = headers.indexOf('code');
       final nameIdx = headers.indexOf('name');
-      final descIdx = headers.contains('description') ? headers.indexOf('description') : -1;
+      final descIdx =
+          headers.contains('description') ? headers.indexOf('description') : -1;
 
       // Get existing group codes in this course
       final existingCodes = await _getExistingGroupCodes(courseId);
-      
+
       // Parse data rows
       final rows = <GroupImportRow>[];
       final seenCodes = <String>{};
-      
+
       for (int i = 1; i < csvTable.length; i++) {
         final row = csvTable[i];
-        if (row.isEmpty || row.every((cell) => cell.toString().trim().isEmpty)) {
+        if (row.isEmpty ||
+            row.every((cell) => cell.toString().trim().isEmpty)) {
           continue; // Skip empty rows
         }
 
         final code = row[codeIdx].toString().trim();
         final name = row[nameIdx].toString().trim();
-        final description = descIdx >= 0 && row.length > descIdx 
-            ? row[descIdx].toString().trim() 
+        final description = descIdx >= 0 && row.length > descIdx
+            ? row[descIdx].toString().trim()
             : null;
 
         // Validation
         final errors = <String>[];
-        
+
         if (code.isEmpty) {
           errors.add('Code is required');
         } else {
@@ -77,7 +80,7 @@ class GroupImportController {
           } else {
             seenCodes.add(code);
           }
-          
+
           // Check if already exists in course
           if (existingCodes.contains(code)) {
             errors.add('Group code already exists in this course');
@@ -101,7 +104,8 @@ class GroupImportController {
       final validCount = rows.where((r) => r.isValid).length;
       final errorCount = rows.where((r) => !r.isValid).length;
       final duplicateCodes = rows
-          .where((r) => r.validationErrors.any((e) => e.contains('already exists')))
+          .where((r) =>
+              r.validationErrors.any((e) => e.contains('already exists')))
           .map((r) => r.code)
           .toList();
 
@@ -158,7 +162,7 @@ class GroupImportController {
     for (final row in validRows) {
       try {
         final groupId = _firestore.collection('groups').doc().id;
-        
+
         final group = GroupModel(
           id: groupId,
           courseId: courseId,
@@ -170,10 +174,7 @@ class GroupImportController {
           isActive: true,
         );
 
-        await _firestore
-            .collection('groups')
-            .doc(groupId)
-            .set(group.toMap());
+        await _firestore.collection('groups').doc(groupId).set(group.toMap());
 
         successCount++;
       } catch (e) {

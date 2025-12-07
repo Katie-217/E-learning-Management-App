@@ -23,7 +23,7 @@ class ExportStudentCSV extends StatelessWidget {
   Widget build(BuildContext context) {
     final iconSize = isSmallScreen ? 18.0 : 24.0;
     final buttonSize = isSmallScreen ? 36.0 : 48.0;
-    
+
     return IconButton(
       icon: Icon(Icons.download, color: Colors.blue, size: iconSize),
       tooltip: 'Export student list',
@@ -41,14 +41,16 @@ class ExportStudentCSV extends StatelessWidget {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF1F2937),
-        title: const Text('Export Student List', style: TextStyle(color: Colors.white)),
+        title: const Text('Export Student List',
+            style: TextStyle(color: Colors.white)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               'Course: $courseName',
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                  color: Colors.white, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Text(
@@ -109,7 +111,7 @@ class ExportStudentCSV extends StatelessWidget {
 
       // Prepare CSV data
       List<List<dynamic>> rows = [];
-      
+
       // Header row
       rows.add(['Course Name', 'Group Name', 'Student Name', 'Email']);
 
@@ -128,10 +130,11 @@ class ExportStudentCSV extends StatelessWidget {
 
       // Create filename with timestamp
       final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
-      final groupSuffix = selectedGroup != 'All Groups' 
-          ? '_${selectedGroup.replaceAll(' ', '_')}' 
+      final groupSuffix = selectedGroup != 'All Groups'
+          ? '_${selectedGroup.replaceAll(' ', '_')}'
           : '_AllGroups';
-      final filename = 'students_${courseName.replaceAll(' ', '_')}$groupSuffix\_$timestamp.csv';
+      final filename =
+          'students_${courseName.replaceAll(' ', '_')}$groupSuffix\_$timestamp.csv';
 
       // Download file (web)
       final bytes = html.Blob([csv], 'text/csv');

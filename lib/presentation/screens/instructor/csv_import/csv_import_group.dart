@@ -76,7 +76,8 @@ class _CsvImportGroupScreenState extends State<CsvImportGroupScreen> {
             return;
           }
         } else {
-          _showError('File data not available. Please try selecting the file again.');
+          _showError(
+              'File data not available. Please try selecting the file again.');
           return;
         }
 
@@ -235,7 +236,8 @@ class _CsvImportGroupScreenState extends State<CsvImportGroupScreen> {
             ),
           ),
           // Action buttons
-          if (_currentStep > 1 || (_currentStep == 1 && _selectedFileName != null))
+          if (_currentStep > 1 ||
+              (_currentStep == 1 && _selectedFileName != null))
             AnimatedContainer(
               duration: const Duration(milliseconds: 300),
               curve: Curves.easeInOut,
@@ -280,11 +282,14 @@ class _CsvImportGroupScreenState extends State<CsvImportGroupScreen> {
                       ),
                       child: Center(
                         child: isCompleted
-                            ? const Icon(Icons.check, color: Colors.white, size: 18)
+                            ? const Icon(Icons.check,
+                                color: Colors.white, size: 18)
                             : Text(
                                 '$stepNum',
                                 style: TextStyle(
-                                  color: isActive ? Colors.white : Colors.grey[400],
+                                  color: isActive
+                                      ? Colors.white
+                                      : Colors.grey[400],
                                   fontWeight: FontWeight.bold,
                                   fontSize: 14,
                                 ),
@@ -354,7 +359,7 @@ class _CsvImportGroupScreenState extends State<CsvImportGroupScreen> {
       children: [
         _buildStepHeader(1, 'Upload CSV File'),
         const SizedBox(height: 24),
-        
+
         // File format instructions
         Container(
           padding: const EdgeInsets.all(16),
@@ -386,8 +391,10 @@ class _CsvImportGroupScreenState extends State<CsvImportGroupScreen> {
                 style: TextStyle(color: Colors.grey[400], fontSize: 13),
               ),
               SizedBox(height: 8),
-              _buildFormatItem('code', 'Required', 'Unique group code (e.g., G01, G02)'),
-              _buildFormatItem('name', 'Required', 'Group name (e.g., Group 1)'),
+              _buildFormatItem(
+                  'code', 'Required', 'Unique group code (e.g., G01, G02)'),
+              _buildFormatItem(
+                  'name', 'Required', 'Group name (e.g., Group 1)'),
               _buildFormatItem('description', 'Optional', 'Group description'),
               SizedBox(height: 12),
               Container(
@@ -422,9 +429,9 @@ class _CsvImportGroupScreenState extends State<CsvImportGroupScreen> {
             ],
           ),
         ),
-        
+
         SizedBox(height: 24),
-        
+
         // File upload button
         Center(
           child: _isValidating
@@ -456,11 +463,14 @@ class _CsvImportGroupScreenState extends State<CsvImportGroupScreen> {
                             children: [
                               Text(
                                 'File selected:',
-                                style: TextStyle(color: Colors.grey[400], fontSize: 12),
+                                style: TextStyle(
+                                    color: Colors.grey[400], fontSize: 12),
                               ),
                               Text(
                                 _selectedFileName!,
-                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold),
                               ),
                             ],
                           ),
@@ -484,7 +494,8 @@ class _CsvImportGroupScreenState extends State<CsvImportGroupScreen> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.blue,
                         foregroundColor: Colors.white,
-                        padding: EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 32, vertical: 16),
                         textStyle: TextStyle(fontSize: 16),
                       ),
                     ),
@@ -502,13 +513,16 @@ class _CsvImportGroupScreenState extends State<CsvImportGroupScreen> {
           Container(
             padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
             decoration: BoxDecoration(
-              color: required == 'Required' ? Colors.red.withOpacity(0.2) : Colors.grey.withOpacity(0.2),
+              color: required == 'Required'
+                  ? Colors.red.withOpacity(0.2)
+                  : Colors.grey.withOpacity(0.2),
               borderRadius: BorderRadius.circular(4),
             ),
             child: Text(
               column,
               style: TextStyle(
-                color: required == 'Required' ? Colors.red[300] : Colors.grey[300],
+                color:
+                    required == 'Required' ? Colors.red[300] : Colors.grey[300],
                 fontFamily: 'monospace',
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
@@ -519,13 +533,17 @@ class _CsvImportGroupScreenState extends State<CsvImportGroupScreen> {
           Container(
             padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
-              color: required == 'Required' ? Colors.orange.withOpacity(0.2) : Colors.blue.withOpacity(0.2),
+              color: required == 'Required'
+                  ? Colors.orange.withOpacity(0.2)
+                  : Colors.blue.withOpacity(0.2),
               borderRadius: BorderRadius.circular(4),
             ),
             child: Text(
               required,
               style: TextStyle(
-                color: required == 'Required' ? Colors.orange[300] : Colors.blue[300],
+                color: required == 'Required'
+                    ? Colors.orange[300]
+                    : Colors.blue[300],
                 fontSize: 10,
               ),
             ),
@@ -552,7 +570,7 @@ class _CsvImportGroupScreenState extends State<CsvImportGroupScreen> {
       children: [
         _buildStepHeader(2, 'Preview & Validation'),
         SizedBox(height: 24),
-        
+
         // Summary cards
         Row(
           children: [
@@ -584,9 +602,9 @@ class _CsvImportGroupScreenState extends State<CsvImportGroupScreen> {
             ),
           ],
         ),
-        
+
         SizedBox(height: 24),
-        
+
         // Duplicate warning
         if (hasDuplicates)
           Container(
@@ -616,7 +634,8 @@ class _CsvImportGroupScreenState extends State<CsvImportGroupScreen> {
                       SizedBox(height: 4),
                       Text(
                         'The following group codes already exist in this course: ${_sessionData!.duplicateCodes.join(", ")}',
-                        style: TextStyle(color: Colors.orange[200], fontSize: 12),
+                        style:
+                            TextStyle(color: Colors.orange[200], fontSize: 12),
                       ),
                     ],
                   ),
@@ -624,7 +643,7 @@ class _CsvImportGroupScreenState extends State<CsvImportGroupScreen> {
               ],
             ),
           ),
-        
+
         // Data table
         Container(
           decoration: BoxDecoration(
@@ -648,23 +667,38 @@ class _CsvImportGroupScreenState extends State<CsvImportGroupScreen> {
                   children: [
                     SizedBox(
                       width: 60,
-                      child: Text('#', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      child: Text('#',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold)),
                     ),
                     Expanded(
                       flex: 2,
-                      child: Text('Code', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      child: Text('Code',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold)),
                     ),
                     Expanded(
                       flex: 3,
-                      child: Text('Name', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      child: Text('Name',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold)),
                     ),
                     Expanded(
                       flex: 3,
-                      child: Text('Description', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      child: Text('Description',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold)),
                     ),
                     Expanded(
                       flex: 2,
-                      child: Text('Status', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      child: Text('Status',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold)),
                     ),
                   ],
                 ),
@@ -725,15 +759,20 @@ class _CsvImportGroupScreenState extends State<CsvImportGroupScreen> {
                               child: Row(
                                 children: [
                                   Icon(
-                                    row.isValid ? Icons.check_circle : Icons.error,
-                                    color: row.isValid ? Colors.green : Colors.red,
+                                    row.isValid
+                                        ? Icons.check_circle
+                                        : Icons.error,
+                                    color:
+                                        row.isValid ? Colors.green : Colors.red,
                                     size: 16,
                                   ),
                                   SizedBox(width: 4),
                                   Text(
                                     row.isValid ? 'Valid' : 'Error',
                                     style: TextStyle(
-                                      color: row.isValid ? Colors.green : Colors.red,
+                                      color: row.isValid
+                                          ? Colors.green
+                                          : Colors.red,
                                       fontSize: 12,
                                     ),
                                   ),
@@ -748,11 +787,13 @@ class _CsvImportGroupScreenState extends State<CsvImportGroupScreen> {
                                 padding: EdgeInsets.only(left: 60),
                                 child: Row(
                                   children: [
-                                    Icon(Icons.warning, color: Colors.orange, size: 14),
+                                    Icon(Icons.warning,
+                                        color: Colors.orange, size: 14),
                                     SizedBox(width: 4),
                                     Text(
                                       error,
-                                      style: TextStyle(color: Colors.orange, fontSize: 12),
+                                      style: TextStyle(
+                                          color: Colors.orange, fontSize: 12),
                                     ),
                                   ],
                                 ),
@@ -778,7 +819,6 @@ class _CsvImportGroupScreenState extends State<CsvImportGroupScreen> {
       children: [
         _buildStepHeader(3, 'Confirm Import'),
         SizedBox(height: 24),
-        
         Container(
           padding: EdgeInsets.all(24),
           decoration: BoxDecoration(
@@ -807,9 +847,11 @@ class _CsvImportGroupScreenState extends State<CsvImportGroupScreen> {
               ),
               SizedBox(height: 24),
               _buildConfirmItem('Course', widget.courseName),
-              _buildConfirmItem('Groups to import', '${_sessionData!.validCount}'),
+              _buildConfirmItem(
+                  'Groups to import', '${_sessionData!.validCount}'),
               if (_sessionData!.errorCount > 0)
-                _buildConfirmItem('Rows with errors (will be skipped)', '${_sessionData!.errorCount}'),
+                _buildConfirmItem('Rows with errors (will be skipped)',
+                    '${_sessionData!.errorCount}'),
               SizedBox(height: 24),
               Container(
                 padding: EdgeInsets.all(16),
@@ -825,7 +867,8 @@ class _CsvImportGroupScreenState extends State<CsvImportGroupScreen> {
                     Expanded(
                       child: Text(
                         'This action will create ${_sessionData!.validCount} new group(s) in the course. Please confirm to proceed.',
-                        style: TextStyle(color: Colors.amber[200], fontSize: 13),
+                        style:
+                            TextStyle(color: Colors.amber[200], fontSize: 13),
                       ),
                     ),
                   ],
@@ -849,7 +892,7 @@ class _CsvImportGroupScreenState extends State<CsvImportGroupScreen> {
       children: [
         _buildStepHeader(4, 'Import Summary'),
         SizedBox(height: 24),
-        
+
         // Success/Failure summary
         Container(
           padding: EdgeInsets.all(24),
@@ -896,7 +939,7 @@ class _CsvImportGroupScreenState extends State<CsvImportGroupScreen> {
             ],
           ),
         ),
-        
+
         // Failure details
         if (hasFailures) ...[
           SizedBox(height: 24),
@@ -988,7 +1031,8 @@ class _CsvImportGroupScreenState extends State<CsvImportGroupScreen> {
     );
   }
 
-  Widget _buildSummaryCard(String label, String value, IconData icon, Color color) {
+  Widget _buildSummaryCard(
+      String label, String value, IconData icon, Color color) {
     return Container(
       padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1112,9 +1156,9 @@ class _CsvImportGroupScreenState extends State<CsvImportGroupScreen> {
               foregroundColor: Colors.grey[400],
             ),
           ),
-        
+
         Spacer(),
-        
+
         // Next/Import button
         if (_currentStep == 2)
           ElevatedButton.icon(
