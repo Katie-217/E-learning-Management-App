@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -32,6 +33,8 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
   bool _isSemestersLoading = true;
   String _userName = 'User';
   String _userEmail = '';
+  Timer? _autoRefreshTimer;
+  bool _isRefreshing = false;
   
   int _getBottomNavIndex() {
     switch (_activeTab) {
@@ -58,6 +61,84 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
     // Không cần preload ở đây vì đã được preload trong RoleBasedDashboard
     // Chỉ cần load semesters để hiển thị dropdown
     _loadSemesters();
+    // Bắt đầu auto-refresh mỗi 30 giây
+    _startAutoRefresh();
+  }
+
+  @override
+  void dispose() {
+    _autoRefreshTimer?.cancel();
+    super.dispose();
+  }
+
+  void _startAutoRefresh() {
+    // Auto-refresh mỗi 30 giây để cập nhật dữ liệu real-time
+    // CHỈ refresh khi đang ở dashboard tab và không đang refresh
+    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
+      if (mounted && _activeTab == 'dashboard' && !_isRefreshing) {
+        // Chỉ refresh nếu đã ở dashboard một lúc (tránh refresh ngay khi quay lại)
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted && _activeTab == 'dashboard' && !_isRefreshing) {
+            _refreshDashboardData();
+          }
+        });
+      }
+    });
+  }
+
+  Future<void> _refreshDashboardData() async {
+    // CHỈ refresh khi đang ở dashboard và không đang refresh
+    if (_isRefreshing || !mounted || _activeTab != 'dashboard') return;
+    
+    setState(() {
+      _isRefreshing = true;
+    });
+
+    try {
+      final semesterName = _selectedSemester?.name ?? 'All';
+      final now = DateTime.now();
+      final monthKey = DateTime(now.year, now.month);
+
+      print('DEBUG: 🔄 Refreshing dashboard data for semester: $semesterName');
+
+      // Đợi để đảm bảo build đã hoàn tất
+      await Future.delayed(const Duration(milliseconds: 200));
+      
+      if (!mounted || _activeTab != 'dashboard') return;
+
+      // Sử dụng addPostFrameCallback để đảm bảo không invalidate trong quá trình build
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || _activeTab != 'dashboard') return;
+        
+        // Invalidate providers sau khi build hoàn tất
+        Future.microtask(() {
+          if (!mounted || _activeTab != 'dashboard') return;
+          
+          ref.invalidate(instructorKPIStatsProvider(semesterName));
+          ref.invalidate(instructorAssignmentSubmissionStatsProvider(semesterName));
+          ref.invalidate(instructorQuizCompletionStatsProvider(semesterName));
+          ref.invalidate(instructorTasksForMonthProvider(InstructorTaskMonthKey(monthKey, semesterName)));
+          ref.invalidate(instructorTasksForDateProvider(InstructorTaskKey(now, semesterName)));
+
+          // Preload lại data
+          if (mounted && _activeTab == 'dashboard') {
+            _preloadDashboardDataWithSemester(semesterName).catchError((e) {
+              print('DEBUG: ❌ Error preloading data: $e');
+            });
+          }
+        });
+      });
+
+      print('DEBUG: ✅ Dashboard data refresh scheduled');
+    } catch (e) {
+      print('DEBUG: ❌ Error refreshing dashboard data: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isRefreshing = false;
+        });
+      }
+    }
   }
 
   Future<void> _loadUserInfo() async {
@@ -111,6 +192,7 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
               code: semester.code ?? semester.name,
               name: semester.name,
               startDate: semester.startDate,
+              endDate: semester.endDate,
             );
           }).toList();
           
@@ -241,7 +323,10 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
                     color: const Color(0xFF1F2937),
                     onSelected: (value) {
                       setState(() {
+                        final previousTab = _activeTab;
                         _activeTab = value;
+                        // KHÔNG refresh ngay khi quay lại - để auto-refresh timer xử lý
+                        // Tránh gây lỗi layout khi quay lại tab
                       });
                     },
                     itemBuilder: (context) => const [
@@ -376,6 +461,7 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
               currentIndex: _getBottomNavIndex(),
               onTap: (index) {
                 setState(() {
+                  final previousTab = _activeTab;
                   switch (index) {
                     case 0:
                       _activeTab = 'dashboard';
@@ -393,6 +479,8 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
                       _activeTab = 'chat';
                       break;
                   }
+                  // KHÔNG refresh ngay khi quay lại - để auto-refresh timer xử lý
+                  // Tránh gây lỗi layout khi quay lại tab
                 });
               },
               type: BottomNavigationBarType.fixed,
@@ -484,17 +572,25 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
             final semesterName = _selectedSemester?.name ?? 'All';
             final kpiStatsAsync =
                 ref.watch(instructorKPIStatsProvider(semesterName));
+            // Lấy screenWidth ở đây để dùng cho cả Builder và SizedBox
+            final screenWidth = MediaQuery.of(context).size.width;
+            final isNarrow = screenWidth < 600;
+            
+            // DEBUG: Đảm bảo Welcome section luôn được render
+            print('DEBUG: 🎯 Rendering Dashboard - screenWidth=$screenWidth, isNarrow=$isNarrow, userName=$_userName');
+            
             return SingleChildScrollView(
+              key: const ValueKey('dashboard_scroll_view'),
               padding: EdgeInsets.all(padding),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Welcome and Semester Switcher in same row
-                  LayoutBuilder(
-                    builder: (context, headerConstraints) {
-                      final screenWidth = MediaQuery.of(context).size.width;
-                      final isNarrow = headerConstraints.maxWidth < 600;
-                      return isNarrow
+                  // Welcome and Semester Switcher in same row - LUÔN HIỂN THỊ
+                  // Wrap trong Container để đảm bảo có constraints và luôn hiển thị
+                  SizedBox(
+                    width: double.infinity,
+                    child: isNarrow
                           ? Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -521,7 +617,7 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
                                   ],
                                 ),
                                 SizedBox(height: screenWidth > 600 ? 16 : 12),
-                                // Semester Switcher
+                                // Semester Switcher và Refresh Button
                                 _isSemestersLoading
                                     ? const Center(
                                         child: Padding(
@@ -529,19 +625,38 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
                                           child: CircularProgressIndicator(),
                                         ),
                                       )
-                                    : Align(
-                                        alignment: Alignment.centerLeft,
-                                        child: InstructorSemesterSwitcher(
-                                          semesters: _semesters,
-                                          initialSemester: _selectedSemester,
-                                          onSemesterChanged: (semester) {
-                                            setState(() {
-                                              _selectedSemester = semester;
-                                            });
-                                            // Không cần preload lại vì data đã được preload cho tất cả semesters
-                                            // Chỉ cần trigger rebuild để UI cập nhật với data từ cache
-                                          },
-                                        ),
+                                    : Row(
+                                        children: [
+                                          Expanded(
+                                            child: InstructorSemesterSwitcher(
+                                              semesters: _semesters,
+                                              initialSemester: _selectedSemester,
+                                              onSemesterChanged: (semester) {
+                                                setState(() {
+                                                  _selectedSemester = semester;
+                                                });
+                                                // Không cần preload lại vì data đã được preload cho tất cả semesters
+                                                // Chỉ cần trigger rebuild để UI cập nhật với data từ cache
+                                              },
+                                            ),
+                                          ),
+                                          SizedBox(width: 12),
+                                          // Refresh Button
+                                          IconButton(
+                                            icon: _isRefreshing
+                                                ? const SizedBox(
+                                                    width: 20,
+                                                    height: 20,
+                                                    child: CircularProgressIndicator(
+                                                      strokeWidth: 2,
+                                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                                                    ),
+                                                  )
+                                                : const Icon(Icons.refresh, color: Colors.blue),
+                                            tooltip: 'Refresh data',
+                                            onPressed: _isRefreshing ? null : _refreshDashboardData,
+                                          ),
+                                        ],
                                       ),
                               ],
                             )
@@ -576,7 +691,7 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
                                   ),
                                 ),
                                 SizedBox(width: screenWidth > 800 ? 16 : 12),
-                                // Right: Semester Switcher
+                                // Right: Semester Switcher và Refresh Button
                                 _isSemestersLoading
                                     ? const Center(
                                         child: Padding(
@@ -584,95 +699,75 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
                                           child: CircularProgressIndicator(),
                                         ),
                                       )
-                                    : Flexible(
-                                        child: InstructorSemesterSwitcher(
-                                          semesters: _semesters,
-                                          initialSemester: _selectedSemester,
-                                          onSemesterChanged: (semester) {
-                                            setState(() {
-                                              _selectedSemester = semester;
-                                            });
-                                            // Không cần preload lại vì data đã được preload cho tất cả semesters
-                                            // Chỉ cần trigger rebuild để UI cập nhật với data từ cache
-                                          },
-                                        ),
+                                    : Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          InstructorSemesterSwitcher(
+                                            semesters: _semesters,
+                                            initialSemester: _selectedSemester,
+                                            onSemesterChanged: (semester) {
+                                              setState(() {
+                                                _selectedSemester = semester;
+                                              });
+                                              // Không cần preload lại vì data đã được preload cho tất cả semesters
+                                              // Chỉ cần trigger rebuild để UI cập nhật với data từ cache
+                                            },
+                                          ),
+                                          SizedBox(width: 12),
+                                          // Refresh Button
+                                          IconButton(
+                                            icon: _isRefreshing
+                                                ? const SizedBox(
+                                                    width: 20,
+                                                    height: 20,
+                                                    child: CircularProgressIndicator(
+                                                      strokeWidth: 2,
+                                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                                                    ),
+                                                  )
+                                                : const Icon(Icons.refresh, color: Colors.blue),
+                                            tooltip: 'Refresh data',
+                                            onPressed: _isRefreshing ? null : _refreshDashboardData,
+                                          ),
+                                        ],
                                       ),
                               ],
-                            );
+                            ),
+                  ),
+                  SizedBox(height: screenWidth > 600 ? 20 : 16),
+                  // KPI Cards - 5 cards bắt buộc
+                  kpiStatsAsync.when(
+                    data: (stats) => InstructorKPICards(stats: stats),
+                    loading: () => const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(20.0),
+                        child: CircularProgressIndicator(),
+                      ),
+                    ),
+                    error: (error, stackTrace) {
+                      print('DEBUG: ❌ KPI Stats Error: $error');
+                      return Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF111827),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.red.withOpacity(0.3)),
+                        ),
+                        child: Text(
+                          'Unable to load KPI stats: $error',
+                          style: const TextStyle(color: Colors.redAccent, fontSize: 12),
+                        ),
+                      );
                     },
                   ),
                   SizedBox(height: screenWidth > 600 ? 20 : 16),
-              // KPI Cards - 5 cards bắt buộc
-              kpiStatsAsync.when(
-                data: (stats) => InstructorKPICards(stats: stats),
-                loading: () => const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(20.0),
-                    child: CircularProgressIndicator(),
+                  // Student Performance Chart (gộp 2 chart cũ)
+                  StudentPerformanceChart(
+                    selectedSemester: _selectedSemester,
                   ),
-                ),
-                error: (error, _) => Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF111827),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.red.withOpacity(0.3)),
-                  ),
-                  child: Text(
-                    'Unable to load KPI stats: $error',
-                    style:
-                        const TextStyle(color: Colors.redAccent, fontSize: 12),
-                  ),
-                ),
-              ),
-              SizedBox(height: screenWidth > 600 ? 20 : 16),
-              // Charts and Calendar Layout
-              LayoutBuilder(builder: (context, constraints) {
-                final spacing = screenWidth > 600 ? 12.0 : 8.0;
-                return Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // 2 Charts in a row
-                    LayoutBuilder(
-                      builder: (context, chartConstraints) {
-                        final canFitTwoCharts =
-                            chartConstraints.maxWidth > 600;
-                        return canFitTwoCharts
-                            ? Row(
-                                children: [
-                                  Expanded(
-                                    child: AssignmentSubmissionChart(
-                                      selectedSemester: _selectedSemester,
-                                    ),
-                                  ),
-                                  SizedBox(width: spacing),
-                                  Expanded(
-                                    child: QuizCompletionChart(
-                                      selectedSemester: _selectedSemester,
-                                    ),
-                                  ),
-                                ],
-                              )
-                            : Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  AssignmentSubmissionChart(
-                                    selectedSemester: _selectedSemester,
-                                  ),
-                                  SizedBox(height: spacing),
-                                  QuizCompletionChart(
-                                    selectedSemester: _selectedSemester,
-                                  ),
-                                ],
-                              );
-                      },
-                    ),
-                    SizedBox(height: spacing),
-                    // Calendar Panel below charts
-                    _buildCalendarTasksPanel(),
-                  ],
-                );
-              }),
+                  SizedBox(height: screenWidth > 600 ? 20 : 16),
+                  // Calendar Panel
+                  _buildCalendarTasksPanel(),
             ],
           ),
         );
@@ -738,7 +833,12 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
           ),
         ),
         onTap: () {
-          setState(() => _activeTab = tabKey);
+          setState(() {
+            final previousTab = _activeTab;
+            _activeTab = tabKey;
+            // KHÔNG refresh ngay khi quay lại - để auto-refresh timer xử lý
+            // Tránh gây lỗi layout khi quay lại tab
+          });
         },
       ),
     );
@@ -797,16 +897,37 @@ class _InstructorDashboardState extends ConsumerState<InstructorDashboard> {
   }
 
   Widget _buildCalendarTasksPanel() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF111827),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[800]!),
-      ),
-      child: InstructorCalendarPanel(selectedSemester: _selectedSemester),
-    );
+    try {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFF111827),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[800]!),
+        ),
+        child: InstructorCalendarPanel(
+          key: const ValueKey('instructor_calendar_panel'),
+          selectedSemester: _selectedSemester,
+        ),
+      );
+    } catch (e, stackTrace) {
+      print('DEBUG: ❌ Calendar Panel Error: $e');
+      print('DEBUG: ❌ StackTrace: $stackTrace');
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFF111827),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.red.withOpacity(0.3)),
+        ),
+        child: Text(
+          'Calendar Error: $e',
+          style: const TextStyle(color: Colors.redAccent, fontSize: 12),
+        ),
+      );
+    }
   }
 }
 

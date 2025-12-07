@@ -1,8 +1,3 @@
-// ========================================
-// FILE: login_form.dart
-// MÔ TẢ: Login Form sử dụng AuthRepository - Clean Architecture
-// ========================================
-
 import 'package:flutter/material.dart';
 import '../../../../core/config/users-role.dart';
 import '../../../../data/repositories/auth/auth_repository.dart';

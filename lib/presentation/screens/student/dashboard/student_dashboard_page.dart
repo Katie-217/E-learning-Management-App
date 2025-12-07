@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:elearning_management_app/domain/models/task_model.dart';
 import 'package:elearning_management_app/application/controllers/student/student_dashboard_metrics_provider.dart';
 import 'package:elearning_management_app/data/repositories/semester/semester_repository.dart';
+import 'package:elearning_management_app/domain/models/semester_model.dart';
 import 'package:elearning_management_app/presentation/widgets/student/dashboard/summary_metrics/stats_card.dart';
 import 'package:elearning_management_app/presentation/widgets/student/dashboard/progress_overview/pie_chart_widget.dart';
 import 'package:elearning_management_app/presentation/widgets/student/dashboard/calendar/student_calendar_panel.dart';
@@ -28,12 +29,10 @@ class StudentDashboardPage extends ConsumerStatefulWidget {
 
 class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
   List<SemesterOption> _semesters = [];
+  List<SemesterModel> _semesterModels = []; // Lưu semester models để lấy startDate/endDate
   String? _selectedSemesterId;
   String _userName = 'User';
-  StudentDashboardMetrics? _metricsData;
-  bool _isMetricsLoading = true;
   bool _isSemestersLoading = true;
-  Object? _metricsError;
   
   // Sử dụng providers có sẵn trong controller
 
@@ -41,7 +40,7 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
   void initState() {
     super.initState();
     _loadUserName();
-    _loadSemesters(); // Sẽ tự động load metrics sau khi semesters load xong
+    _loadSemesters(); // Load semesters (data đã được preload trong auth_wrapper, chỉ cần lấy từ cache)
   }
 
   Future<void> _loadSemesters() async {
@@ -53,9 +52,10 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
       
       if (mounted) {
         setState(() {
+          final now = DateTime.now();
+          _semesterModels = semesters; // Lưu semester models
           _semesters = semesters.map((semester) {
             // Kiểm tra xem semester có đang active không (dựa vào startDate và endDate)
-            final now = DateTime.now();
             final isReadonly = semester.endDate != null && 
                               now.isAfter(semester.endDate!);
             
@@ -74,18 +74,43 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
           
           _isSemestersLoading = false;
           
-          // Chọn semester đầu tiên nếu chưa có và load metrics
-          if (_selectedSemesterId == null && _semesters.isNotEmpty) {
-            _selectedSemesterId = _semesters.first.id;
-            // Load metrics sau khi đã có semester
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              _loadMetricsForCurrentSemester();
-            });
-          } else if (_selectedSemesterId != null) {
-            // Nếu đã có semester, load metrics ngay
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              _loadMetricsForCurrentSemester();
-            });
+          // Luôn chọn học kì hiện tại khi load semesters (giống instructor)
+          // Điều này đảm bảo khi vào trang hoặc reload/restart, luôn hiển thị học kì hiện tại
+          if (_semesters.isNotEmpty) {
+            // Tìm học kì hiện tại (dựa vào isCurrentSemester)
+            SemesterOption? currentSemester;
+            
+            // Tìm semester có isCurrentSemester = true
+            for (final semester in semesters) {
+              if (semester.isCurrentSemester) {
+                // Tìm SemesterOption tương ứng
+                currentSemester = _semesters.firstWhere(
+                  (s) => s.id == semester.id,
+                  orElse: () => _semesters.first,
+                );
+                print('DEBUG: ✅ Student - Found current semester: ${currentSemester.label}');
+                break;
+              }
+            }
+            
+            // Nếu tìm thấy học kì hiện tại, luôn chọn nó (kể cả khi đã có semester được chọn trước đó)
+            // Nếu không tìm thấy, chọn học kì active đầu tiên (không readonly)
+            final newSelectedSemesterId = currentSemester?.id ?? 
+                (_semesters.where((s) => !s.isReadonly).isNotEmpty 
+                    ? _semesters.where((s) => !s.isReadonly).first.id 
+                    : _semesters.first.id);
+            
+            // Chỉ cập nhật nếu semester thay đổi hoặc chưa có semester được chọn
+            if (_selectedSemesterId != newSelectedSemesterId) {
+              _selectedSemesterId = newSelectedSemesterId;
+              
+              if (currentSemester == null) {
+                print('DEBUG: ⚠️ Student - No current semester found, using first active semester: ${_selectedSemesterId}');
+              }
+              
+              // Không cần load metrics nữa vì đã được preload trong auth_wrapper
+              // Data sẽ có sẵn khi watch provider
+            }
           }
         });
       }
@@ -96,10 +121,8 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
           _isSemestersLoading = false;
           // Fallback to empty list nếu lỗi
           _semesters = [];
-          // Vẫn load metrics với semester mặc định
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            _loadMetricsForCurrentSemester();
-          });
+          // Không cần load metrics nữa vì đã được preload trong auth_wrapper
+          // Data sẽ tự động hiển thị khi watch provider
         });
       }
     }
@@ -212,7 +235,7 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
       ..sort((a, b) => a.dateTime.compareTo(b.dateTime));
     if (relevantTasks.isEmpty) {
       return const Text(
-        'Không có quiz hoặc exam trong tháng này.',
+        'No quizzes or exams this month.',
         style: TextStyle(color: Colors.white70, fontSize: 12),
       );
     }
@@ -231,7 +254,7 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
   Widget _buildDailyTasks(List<TaskModel> tasks) {
     if (tasks.isEmpty) {
       return const Text(
-        'Không có nhiệm vụ nào cho ngày đã chọn.',
+        'No tasks for selected date.',
         style: TextStyle(color: Colors.white70, fontSize: 12),
       );
     }
@@ -249,57 +272,28 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
     );
   }
 
-  Future<void> _loadMetricsForCurrentSemester() async {
-    if (!mounted) return;
-    
-    final semester = _activeSemester;
-    final key = buildStudentSemesterKey(semester.id, semester.label);
-    
-    print('DEBUG: 🔍 Loading metrics for semester: ${semester.label} (key: $key)');
-    
-    setState(() {
-      _isMetricsLoading = true;
-      _metricsError = null;
-    });
-    
-    try {
-      final metrics = await ref.read(studentDashboardMetricsProvider(key).future);
-      
-      print('DEBUG: ✅ Metrics loaded:');
-      print('  - Courses: ${metrics.coursesCount}');
-      print('  - Assignments: ${metrics.assignmentsCount}');
-      print('  - Completed: ${metrics.assignmentsCompleted}');
-      print('  - Pending: ${metrics.assignmentsPending}');
-      print('  - Pending/Late: ${metrics.pendingLateCount}');
-      
-      if (!mounted) return;
-      setState(() {
-        _metricsData = metrics;
-        _isMetricsLoading = false;
-      });
-    } catch (e, stackTrace) {
-      print('DEBUG: ❌ Error loading metrics: $e');
-      print('DEBUG: Stack trace: $stackTrace');
-      if (!mounted) return;
-      setState(() {
-        _metricsError = e;
-        _isMetricsLoading = false;
-      });
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
     final baseTheme = Theme.of(context);
 
     final activeSemester = _activeSemester;
-    final summaryMetrics =
-        _buildSummaryMetrics(_metricsData, _isMetricsLoading);
+    final semesterKey = buildStudentSemesterKey(activeSemester.id, activeSemester.label);
+    
+    // Sử dụng ref.watch() trực tiếp để lấy data đã được preload
+    // Data đã có sẵn trong cache từ auth_wrapper, không cần load lại
+    final metricsAsync = ref.watch(studentDashboardMetricsProvider(semesterKey));
+    
+    final metrics = metricsAsync.value;
+    final isMetricsLoading = metricsAsync.isLoading;
+    final metricsError = metricsAsync.error;
+    
+    final summaryMetrics = _buildSummaryMetrics(metrics, isMetricsLoading);
     final isReadonlySemester = activeSemester.isReadonly;
-    final assignmentsCompleted = _metricsData?.assignmentsCompleted ?? 0;
-    final assignmentsPending = _metricsData?.assignmentsPending ?? 0;
-    final quizzesCompleted = _metricsData?.quizzesCompleted ?? 0;
-    final quizzesPending = _metricsData?.quizzesPending ?? 0;
+    final assignmentsCompleted = metrics?.assignmentsCompleted ?? 0;
+    final assignmentsPending = metrics?.assignmentsPending ?? 0;
+    final quizzesCompleted = metrics?.quizzesCompleted ?? 0;
+    final quizzesPending = metrics?.quizzesPending ?? 0;
 
     return Theme(
       data: baseTheme.copyWith(
@@ -331,7 +325,7 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
                           ? 16.0
                           : 12.0;
                   return SingleChildScrollView(
-                    padding: EdgeInsets.all(padding),
+                    padding: EdgeInsets.symmetric(horizontal: padding, vertical: padding),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -345,7 +339,18 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
                             setState(() {
                               _selectedSemesterId = value;
                             });
-                            _loadMetricsForCurrentSemester();
+                            // Khi đổi semester, chỉ cần invalidate providers
+                            // Data sẽ được load từ cache nếu đã được preload, hoặc load mới nếu chưa có
+                            final semester = _semesters.firstWhere((s) => s.id == value);
+                            final semesterKey = buildStudentSemesterKey(semester.id, semester.label);
+                            final now = DateTime.now();
+                            final monthKey = DateTime(now.year, now.month);
+                            
+                            // Invalidate các providers liên quan để trigger reload
+                            // Nếu data đã được preload trong background, sẽ có sẵn ngay
+                            ref.invalidate(studentDashboardMetricsProvider(semesterKey));
+                            ref.invalidate(studentTasksForMonthProvider(StudentTaskMonthKey(month: monthKey, semesterKey: semesterKey)));
+                            ref.invalidate(studentTasksForDateProvider(StudentTaskDateKey(date: now, semesterKey: semesterKey)));
                           },
                         ),
                         LayoutBuilder(builder: (context, headerCons) {
@@ -353,9 +358,19 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
                           return SizedBox(height: headerScreenWidth > 600 ? 24 : 16);
                         }),
                     LayoutBuilder(builder: (context, cons) {
-                      final isNarrow = cons.maxWidth < 600;
-                      final currentScreenWidth = MediaQuery.of(context).size.width;
-                      final spacing = currentScreenWidth > 600 ? 12.0 : 8.0;
+                      // Sử dụng constraints.maxWidth thay vì screen width để tính toán chính xác hơn
+                      final availableWidth = cons.maxWidth;
+                      final isNarrow = availableWidth < 600;
+                      // Tính toán spacing dựa trên available width, đảm bảo không bị overflow
+                      // Với 4 cards, cần 3 khoảng cách giữa chúng
+                      final numCards = summaryMetrics.length;
+                      final totalSpacingNeeded = (numCards - 1) * 12.0; // Tối đa 12px mỗi khoảng cách
+                      final spacing = availableWidth > 800 
+                          ? 12.0 
+                          : availableWidth > 600 
+                              ? 10.0 
+                              : 8.0;
+                      
                       // Đảm bảo bố cục chính không bị phá vỡ - chỉ thay đổi direction của cards
                       return isNarrow
                           ? Column(
@@ -376,12 +391,14 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
                             )
                           : Row(
                               crossAxisAlignment: CrossAxisAlignment.start, // Giữ alignment
+                              mainAxisSize: MainAxisSize.max, // Đảm bảo Row không vượt quá không gian
                               children:
                                   summaryMetrics.asMap().entries.map((entry) {
                                 final index = entry.key;
                                 final metric = entry.value;
-                                return Expanded(
-                                  // Dùng Expanded để chia đều không gian, đảm bảo không overflow
+                                return Flexible(
+                                  // Dùng Flexible thay vì Expanded để cho phép co giãn tốt hơn
+                                  flex: 1,
                                   child: Padding(
                                     padding: EdgeInsets.only(
                                       right: index < summaryMetrics.length - 1
@@ -401,7 +418,7 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
                               }).toList(),
                             );
                     }),
-                    if (_metricsError != null)
+                    if (metricsError != null)
                       Container(
                         width: double.infinity,
                         margin: const EdgeInsets.only(top: 12),
@@ -414,7 +431,7 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
                           ),
                         ),
                         child: Text(
-                          'Không thể tải dữ liệu thống kê: $_metricsError',
+                          'Unable to load statistics data: $metricsError',
                           style: const TextStyle(
                             color: Colors.redAccent,
                             fontSize: 12,
@@ -699,7 +716,13 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
                                 children: [
                                   StudentDashboardCard(
                                     title: 'Calendar',
-                                    child: const StudentCalendarPanel(),
+                                    child: StudentCalendarPanel(
+                                      semesterKey: buildStudentSemesterKey(activeSemester.id, activeSemester.label),
+                                      semesterModel: _semesterModels.firstWhere(
+                                        (s) => s.id == activeSemester.id,
+                                        orElse: () => _semesterModels.isNotEmpty ? _semesterModels.first : throw Exception('No semester found'),
+                                      ),
+                                    ),
                                   ),
                                 ],
                               ),
@@ -711,7 +734,9 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
                               children: [
                                 StudentDashboardCard(
                                   title: 'Calendar',
-                                  child: const StudentCalendarPanel(),
+                                  child: StudentCalendarPanel(
+                                    semesterKey: buildStudentSemesterKey(activeSemester.id, activeSemester.label),
+                                  ),
                                 ),
                               ],
                             ),

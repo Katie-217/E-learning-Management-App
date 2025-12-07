@@ -5,18 +5,51 @@ import 'package:intl/intl.dart';
 import 'package:elearning_management_app/application/controllers/instructor/task_provider.dart';
 import 'package:elearning_management_app/application/controllers/student/student_dashboard_metrics_provider.dart';
 import 'package:elearning_management_app/domain/models/task_model.dart';
+import 'package:elearning_management_app/domain/models/semester_model.dart';
 import 'package:elearning_management_app/presentation/widgets/instructor/calendar_widget.dart';
+import 'package:elearning_management_app/presentation/widgets/instructor/semester_switcher.dart';
 
 class StudentCalendarPanel extends ConsumerWidget {
-  const StudentCalendarPanel({super.key});
+  final String? semesterKey; // Semester key để filter tasks theo semester
+  final SemesterModel? semesterModel; // Semester model để lấy startDate/endDate cho calendar
+  
+  const StudentCalendarPanel({
+    super.key,
+    this.semesterKey,
+    this.semesterModel,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedDate = ref.watch(selectedDateProvider);
-    final monthKey = DateTime(selectedDate.year, selectedDate.month);
-    // Sử dụng providers từ student dashboard metrics provider (dữ liệu thật từ assignments)
-    final monthlyTasksAsync = ref.watch(studentTasksForMonthProvider(monthKey));
-    final dailyTasksAsync = ref.watch(studentTasksForDateProvider(selectedDate));
+    // Lấy tất cả tasks từ nhiều tháng để calendar có thể hiển thị khi chuyển tháng
+    // Fetch tasks cho tháng hiện tại và các tháng xung quanh
+    final currentMonthKey = DateTime(selectedDate.year, selectedDate.month);
+    final prevMonthKey = DateTime(selectedDate.year, selectedDate.month - 1);
+    final nextMonthKey = DateTime(selectedDate.year, selectedDate.month + 1);
+    
+    // Tạo keys với semester để filter
+    final currentMonthTaskKey = StudentTaskMonthKey(month: currentMonthKey, semesterKey: semesterKey);
+    final prevMonthTaskKey = StudentTaskMonthKey(month: prevMonthKey, semesterKey: semesterKey);
+    final nextMonthTaskKey = StudentTaskMonthKey(month: nextMonthKey, semesterKey: semesterKey);
+    final dateTaskKey = StudentTaskDateKey(date: selectedDate, semesterKey: semesterKey);
+    
+    final currentMonthTasksAsync = ref.watch(studentTasksForMonthProvider(currentMonthTaskKey));
+    final prevMonthTasksAsync = ref.watch(studentTasksForMonthProvider(prevMonthTaskKey));
+    final nextMonthTasksAsync = ref.watch(studentTasksForMonthProvider(nextMonthTaskKey));
+    
+    final dailyTasksAsync = ref.watch(studentTasksForDateProvider(dateTaskKey));
+
+    // Convert SemesterModel thành InstructorSemester để CalendarWidget có thể xử lý
+    final selectedSemester = semesterModel != null
+        ? InstructorSemester(
+            id: semesterModel!.id,
+            code: semesterModel!.code,
+            name: semesterModel!.name,
+            startDate: semesterModel!.startDate,
+            endDate: semesterModel!.endDate,
+          )
+        : null;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -25,17 +58,44 @@ class StudentCalendarPanel extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            const CalendarWidget(),
+            // Truyền tasks từ student provider vào CalendarWidget
+            // Combine tasks từ 3 tháng để calendar có thể hiển thị khi chuyển tháng
+            // Key bao gồm semester để force rebuild khi semester thay đổi
+            currentMonthTasksAsync.when(
+              data: (currentTasks) {
+                final prevTasks = prevMonthTasksAsync.value ?? [];
+                final nextTasks = nextMonthTasksAsync.value ?? [];
+                final allTasks = [...prevTasks, ...currentTasks, ...nextTasks];
+                return CalendarWidget(
+                  key: ValueKey('student_calendar_${semesterKey ?? 'all'}_${currentMonthKey.year}_${currentMonthKey.month}'),
+                  tasksForMonth: allTasks,
+                  isStudent: true,
+                  selectedSemester: selectedSemester, // Truyền semester để calendar tự động jump khi đổi semester
+                );
+              },
+              loading: () => CalendarWidget(
+                key: ValueKey('student_calendar_${semesterKey ?? 'all'}_loading_${currentMonthKey.year}_${currentMonthKey.month}'),
+                tasksForMonth: [],
+                isStudent: true,
+                selectedSemester: selectedSemester,
+              ),
+              error: (_, __) => CalendarWidget(
+                key: ValueKey('student_calendar_${semesterKey ?? 'all'}_error_${currentMonthKey.year}_${currentMonthKey.month}'),
+                tasksForMonth: [],
+                isStudent: true,
+                selectedSemester: selectedSemester,
+              ),
+            ),
             SizedBox(height: isSmall ? 8 : 10),
             Text(
-              'Ngày đã chọn: ${DateFormat('EEEE, MMM d').format(selectedDate)}',
+              'Selected date: ${DateFormat('EEEE, MMM d').format(selectedDate)}',
               style: TextStyle(
                 color: Colors.white70,
                 fontSize: isSmall ? 11 : 12,
               ),
             ),
             SizedBox(height: isSmall ? 8 : 10),
-            monthlyTasksAsync.when(
+            currentMonthTasksAsync.when(
               data: (tasks) => TaskSnapshotSummary(
                 tasks: tasks,
                 selectedDate: selectedDate,
@@ -49,7 +109,7 @@ class StudentCalendarPanel extends ConsumerWidget {
                 ),
               ),
               error: (error, _) => Text(
-                'Không thể tải dữ liệu tháng: $error',
+                'Unable to load month data: $error',
                 style: TextStyle(color: Colors.redAccent, fontSize: isSmall ? 11 : 12),
               ),
             ),
@@ -73,7 +133,7 @@ class StudentCalendarPanel extends ConsumerWidget {
                 ),
               ),
               error: (error, _) => Text(
-                'Không thể tải nhiệm vụ: $error',
+                'Unable to load tasks: $error',
                 style: TextStyle(
                   color: Colors.redAccent,
                   fontSize: isSmall ? 11 : 12,
@@ -89,7 +149,7 @@ class StudentCalendarPanel extends ConsumerWidget {
   Widget _buildDailyTasks(List<TaskModel> tasks, bool isSmall) {
     if (tasks.isEmpty) {
       return Text(
-        'Không có nhiệm vụ nào cho ngày đã chọn.',
+        'No tasks for selected date.',
         style: TextStyle(color: Colors.white70, fontSize: isSmall ? 11 : 12),
       );
     }
@@ -97,13 +157,35 @@ class StudentCalendarPanel extends ConsumerWidget {
     final sortedTasks = tasks.toList()
       ..sort((a, b) => a.dateTime.compareTo(b.dateTime));
 
-    return Column(
-      children: sortedTasks
-          .map((task) => Padding(
-                padding: EdgeInsets.only(bottom: isSmall ? 6 : 8),
-                child: _TaskTile(task: task, isSmall: isSmall),
-              ))
-          .toList(),
+    // Tính chiều cao cố định để hiển thị khoảng 2.5 items (như trong hình)
+    // Mỗi item thực tế có chiều cao khoảng 130-140px (màn hình nhỏ) hoặc 150-160px (màn hình lớn)
+    // Bao gồm: container padding + icon + text + pills + spacing
+    final singleItemHeight = isSmall ? 130.0 : 150.0;
+    final paddingBetween = isSmall ? 6.0 : 8.0;
+    // Chiều cao cố định = 2.5 items + 2 khoảng cách giữa chúng (để item thứ 3 bị cắt một phần)
+    final fixedHeight = (singleItemHeight * 2.5) + (paddingBetween * 2);
+
+    return Container(
+      height: fixedHeight,
+      decoration: BoxDecoration(
+        // Không cần decoration, chỉ để giới hạn chiều cao
+      ),
+      child: ClipRect(
+        clipBehavior: Clip.hardEdge,
+        child: SingleChildScrollView(
+          clipBehavior: Clip.hardEdge,
+          physics: const ClampingScrollPhysics(),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: sortedTasks
+                .map((task) => Padding(
+                      padding: EdgeInsets.only(bottom: isSmall ? 6 : 8),
+                      child: _TaskTile(task: task, isSmall: isSmall),
+                    ))
+                .toList(),
+          ),
+        ),
+      ),
     );
   }
 }
