@@ -5,12 +5,14 @@ class InstructorSemester {
   final String code;
   final String name;
   final DateTime startDate;
+  final DateTime? endDate;
 
   const InstructorSemester({
     required this.id,
     required this.code,
     required this.name,
     required this.startDate,
+    this.endDate,
   });
 }
 
@@ -42,18 +44,21 @@ class _InstructorSemesterSwitcherState
       code: 'HK1/25',
       name: 'Spring 2025',
       startDate: DateTime(2025, 1, 10),
+      endDate: DateTime(2025, 5, 31),
     ),
     InstructorSemester(
       id: 'hk2_2024',
       code: 'HK2/24',
       name: 'Fall 2024',
       startDate: DateTime(2024, 9, 1),
+      endDate: DateTime(2024, 12, 31),
     ),
     InstructorSemester(
       id: 'hk1_2024',
       code: 'HK1/24',
       name: 'Spring 2024',
       startDate: DateTime(2024, 1, 8),
+      endDate: DateTime(2024, 5, 31),
     ),
   ];
 
@@ -98,7 +103,8 @@ class _InstructorSemesterSwitcherState
         children: [
           Icon(Icons.school, size: iconSize, color: Colors.white),
           SizedBox(width: spacing),
-          Flexible(
+          ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 150, maxWidth: 300),
             child: _buildDropdown(isSmall),
           ),
         ],
@@ -122,6 +128,8 @@ class _InstructorSemesterSwitcherState
         ),
         icon: Icon(Icons.expand_more, color: Colors.white70, size: iconSize),
         iconSize: iconSize + 2,
+        // Đảm bảo menu hiển thị bên dưới, không đè lên
+        menuMaxHeight: 300, // Giới hạn chiều cao menu
         onChanged: (value) {
           if (value != null) {
             _onSelect(value);

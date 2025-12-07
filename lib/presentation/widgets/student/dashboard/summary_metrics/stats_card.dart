@@ -76,7 +76,7 @@ class StatsCard extends StatelessWidget {
                     title,
                     maxLines: 2, // Cho phép tối đa 2 dòng
                     softWrap: true, // Cho phép wrap text
-                    overflow: TextOverflow.visible, // Hiển thị đầy đủ text
+                    overflow: TextOverflow.ellipsis, // Sử dụng ellipsis thay vì visible để tránh overflow
                     style: TextStyle(
                       color: Colors.grey[300],
                       fontSize: titleSize,
@@ -86,12 +86,16 @@ class StatsCard extends StatelessWidget {
                 ),
               ],
             ),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: valueSize,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
+            Align(
+              alignment: Alignment.bottomRight,
+              child: Text(
+                value,
+                style: TextStyle(
+                  fontSize: valueSize,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+                overflow: TextOverflow.ellipsis, // Đảm bảo value không overflow
               ),
             ),
           ],

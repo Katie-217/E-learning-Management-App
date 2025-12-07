@@ -60,12 +60,14 @@ final instructorKPIStatsProvider = FutureProvider.family<InstructorKPIStats, Str
         
         // Tìm semester từ repository để lấy semester string chính xác
         String? actualSemesterString;
+        dynamic matchedSemester; // Lưu matched semester để dùng trong fallback
+        
         try {
           final semesterRepo = SemesterRepository();
           final allSemesters = await semesterRepo.getAllSemesters();
           
           // Tìm semester match với semesterName
-          final matchedSemester = allSemesters.firstWhere(
+          matchedSemester = allSemesters.firstWhere(
             (s) => s.name.toLowerCase().trim() == semesterName.toLowerCase().trim() ||
                    s.code.toLowerCase().trim() == semesterName.toLowerCase().trim() ||
                    s.id.toLowerCase().trim() == semesterName.toLowerCase().trim(),
@@ -93,14 +95,69 @@ final instructorKPIStatsProvider = FutureProvider.family<InstructorKPIStats, Str
           print('DEBUG: ⚠️ Could not find semester from repository: $e');
           // Fallback: dùng semesterName trực tiếp
           actualSemesterString = semesterName;
+          matchedSemester = null;
         }
         
         // Sử dụng controller method để lấy courses theo semester
         try {
-          coursesForMetrics = await courseController.getInstructorCoursesBySemester(actualSemesterString);
-          print('DEBUG: ✅ Loaded ${coursesForMetrics.length} courses for semester "$actualSemesterString"');
+          coursesForMetrics = await courseController.getInstructorCoursesBySemester(actualSemesterString!);
+          print('DEBUG: ✅ Loaded ${coursesForMetrics.length} courses for semester "$actualSemesterString" via repository');
+          
+          // Nếu repository trả về empty (do exact match không khớp), dùng fallback filter thủ công
+          if (coursesForMetrics.isEmpty) {
+            print('DEBUG: ⚠️ Repository returned 0 courses (exact match failed), using flexible filter');
+            final allCourses = await courseController.getInstructorCourses();
+            print('DEBUG: 📚 Available courses: ${allCourses.length}');
+            
+            // Flexible matching: so sánh nhiều cách
+            coursesForMetrics = allCourses.where((course) {
+              final courseSemester = course.semester.toLowerCase().trim();
+              final filterSemester = actualSemesterString!.toLowerCase().trim();
+              
+              // Normalize: bỏ ký tự đặc biệt và khoảng trắng thừa
+              final normalizedCourseSemester = courseSemester.replaceAll(RegExp(r'[_\s-]+'), ' ').trim();
+              final normalizedFilter = filterSemester.replaceAll(RegExp(r'[_\s-]+'), ' ').trim();
+              
+              // Kiểm tra nhiều cách match
+              bool matches = 
+                  normalizedCourseSemester == normalizedFilter ||
+                  normalizedCourseSemester.contains(normalizedFilter) ||
+                  normalizedFilter.contains(normalizedCourseSemester);
+              
+              // Nếu có matchedSemester, thử match với name và code
+              if (!matches && matchedSemester != null) {
+                final matchedSemesterName = matchedSemester.name.toLowerCase().trim();
+                final matchedSemesterCode = matchedSemester.code.toLowerCase().trim();
+                final normalizedMatchedName = matchedSemesterName.replaceAll(RegExp(r'[_\s-]+'), ' ').trim();
+                final normalizedMatchedCode = matchedSemesterCode.replaceAll(RegExp(r'[_\s-]+'), ' ').trim();
+                
+                matches = 
+                    normalizedCourseSemester == normalizedMatchedName ||
+                    normalizedCourseSemester.contains(normalizedMatchedName) ||
+                    normalizedMatchedName.contains(normalizedCourseSemester) ||
+                    normalizedCourseSemester.contains(normalizedMatchedCode) ||
+                    normalizedMatchedCode.contains(normalizedCourseSemester);
+              }
+              
+              if (!matches) {
+                print('DEBUG: ❌ Course "${course.name}" does NOT match semester filter');
+                print('DEBUG:   - Course semester: "${course.semester}"');
+                print('DEBUG:   - Filter semester: "$actualSemesterString"');
+                if (matchedSemester != null) {
+                  print('DEBUG:   - Matched semester name: "${matchedSemester.name}"');
+                  print('DEBUG:   - Matched semester code: "${matchedSemester.code}"');
+                }
+              } else {
+                print('DEBUG: ✅ Course "${course.name}" matches semester filter (${course.semester})');
+              }
+              
+              return matches;
+            }).toList();
+            
+            print('DEBUG: ✅ Filtered courses count: ${coursesForMetrics.length}');
+          }
         } catch (e) {
-          print('DEBUG: ⚠️ Error loading courses by semester, falling back to all courses: $e');
+          print('DEBUG: ⚠️ Error loading courses by semester, falling back to flexible filter: $e');
           // Fallback: lấy tất cả courses và filter thủ công
           final allCourses = await courseController.getInstructorCourses();
           coursesForMetrics = allCourses.where((course) {
@@ -116,20 +173,29 @@ final instructorKPIStatsProvider = FutureProvider.family<InstructorKPIStats, Str
         coursesForMetrics = await courseController.getInstructorCourses();
       }
 
-      // Fallback: nếu không có course nào, dùng tất cả courses
-      if (coursesForMetrics.isEmpty) {
-        print('DEBUG: ⚠️ No courses found for semester, using all courses');
-        coursesForMetrics = await courseController.getInstructorCourses();
-      }
+      // KHÔNG dùng fallback nữa - nếu không có courses thì trả về 0
+      // Điều này đảm bảo KPI cards hiển thị đúng số courses đã filter
+      print('DEBUG: 📊 Final courses for metrics: ${coursesForMetrics.length}');
       
       print('DEBUG: 📊 Final courses for metrics: ${coursesForMetrics.length}');
 
       final coursesCount = coursesForMetrics.length;
       print('DEBUG: 📊 Courses for metrics: $coursesCount');
 
-      // 3. Lấy students count từ enrollment stats qua controller (controller gọi repository bên trong)
-      final dashboardStats = await courseController.getInstructorDashboardStats();
-      final studentsCount = dashboardStats['totalStudents'] ?? 0;
+      // 3. Lấy students count - CHỈ đếm từ courses đã filter (đồng bộ với coursesCount)
+      int studentsCount = 0;
+      final enrollmentRepo = EnrollmentRepository();
+      print('DEBUG: 👥 Counting students for ${coursesForMetrics.length} courses');
+      for (final course in coursesForMetrics) {
+        try {
+          final count = await enrollmentRepo.countStudentsInCourse(course.id);
+          studentsCount += count;
+          print('DEBUG: 👥 Course "${course.name}": $count students');
+        } catch (e) {
+          print('DEBUG: ❌ Error counting students for course ${course.id}: $e');
+        }
+      }
+      print('DEBUG: ✅ Total students count: $studentsCount');
 
       // 4. Lấy groups count - gọi repository trực tiếp (GroupRepository là static methods)
       int totalGroups = 0;
@@ -377,11 +443,13 @@ final instructorTasksForMonthProvider = FutureProvider.family<List<TaskModel>, I
       
       // Tìm semester từ repository để lấy semester string chính xác
       String? actualSemesterString;
+      dynamic matchedSemester; // Lưu matched semester để dùng trong fallback
+      
       try {
         final semesterRepo = SemesterRepository();
         final allSemesters = await semesterRepo.getAllSemesters();
         
-        final matchedSemester = allSemesters.firstWhere(
+        matchedSemester = allSemesters.firstWhere(
           (s) => s.name.toLowerCase().trim() == semesterName.toLowerCase().trim() ||
                  s.code.toLowerCase().trim() == semesterName.toLowerCase().trim() ||
                  s.id.toLowerCase().trim() == semesterName.toLowerCase().trim(),
@@ -402,11 +470,51 @@ final instructorTasksForMonthProvider = FutureProvider.family<List<TaskModel>, I
         actualSemesterString = matchedSemester.name;
       } catch (e) {
         actualSemesterString = semesterName;
+        matchedSemester = null;
       }
       
       // Sử dụng controller method để lấy courses theo semester
       try {
-        coursesForTasks = await courseController.getInstructorCoursesBySemester(actualSemesterString);
+        coursesForTasks = await courseController.getInstructorCoursesBySemester(actualSemesterString!);
+        
+        // Nếu repository trả về empty (do exact match không khớp), dùng fallback filter thủ công
+        if (coursesForTasks.isEmpty) {
+          print('DEBUG: ⚠️ Repository returned 0 courses for tasks (exact match failed), using flexible filter');
+          final allCourses = await courseController.getInstructorCourses();
+          
+          // Flexible matching: so sánh nhiều cách
+          coursesForTasks = allCourses.where((course) {
+            final courseSemester = course.semester.toLowerCase().trim();
+            final filterSemester = actualSemesterString!.toLowerCase().trim();
+            
+            // Normalize: bỏ ký tự đặc biệt và khoảng trắng thừa
+            final normalizedCourseSemester = courseSemester.replaceAll(RegExp(r'[_\s-]+'), ' ').trim();
+            final normalizedFilter = filterSemester.replaceAll(RegExp(r'[_\s-]+'), ' ').trim();
+            
+            // Kiểm tra nhiều cách match
+            bool matches = 
+                normalizedCourseSemester == normalizedFilter ||
+                normalizedCourseSemester.contains(normalizedFilter) ||
+                normalizedFilter.contains(normalizedCourseSemester);
+            
+            // Nếu có matchedSemester, thử match với name và code
+            if (!matches && matchedSemester != null) {
+              final matchedSemesterName = matchedSemester.name.toLowerCase().trim();
+              final matchedSemesterCode = matchedSemester.code.toLowerCase().trim();
+              final normalizedMatchedName = matchedSemesterName.replaceAll(RegExp(r'[_\s-]+'), ' ').trim();
+              final normalizedMatchedCode = matchedSemesterCode.replaceAll(RegExp(r'[_\s-]+'), ' ').trim();
+              
+              matches = 
+                  normalizedCourseSemester == normalizedMatchedName ||
+                  normalizedCourseSemester.contains(normalizedMatchedName) ||
+                  normalizedMatchedName.contains(normalizedCourseSemester) ||
+                  normalizedCourseSemester.contains(normalizedMatchedCode) ||
+                  normalizedMatchedCode.contains(normalizedCourseSemester);
+            }
+            
+            return matches;
+          }).toList();
+        }
       } catch (e) {
         // Fallback: lấy tất cả courses và filter thủ công
         final allCourses = await courseController.getInstructorCourses();
@@ -422,7 +530,11 @@ final instructorTasksForMonthProvider = FutureProvider.family<List<TaskModel>, I
       coursesForTasks = await courseController.getInstructorCourses();
     }
     
-    if (coursesForTasks.isEmpty) return [];
+    // KHÔNG dùng fallback - nếu không có courses thì trả về empty tasks
+    if (coursesForTasks.isEmpty) {
+      print('DEBUG: ⚠️ No courses found for semester "$semesterName", returning empty tasks');
+      return [];
+    }
 
     // Lấy tất cả assignments từ các courses - gọi repository trực tiếp (AssignmentRepository là static methods)
     final List<Assignment> allAssignments = [];
@@ -556,8 +668,15 @@ final instructorAssignmentSubmissionStatsProvider = FutureProvider.family<Map<St
         coursesForMetrics = await courseController.getInstructorCourses();
       }
 
+      // KHÔNG dùng fallback - nếu không có courses thì trả về 0 stats
       if (coursesForMetrics.isEmpty) {
-        coursesForMetrics = await courseController.getInstructorCourses();
+        print('DEBUG: ⚠️ No courses found for semester "$semesterName", returning empty stats');
+        return {
+          'notSubmitted': 0,
+          'submitted': 0,
+          'late': 0,
+          'graded': 0,
+        };
       }
 
       int notSubmitted = 0;
@@ -645,10 +764,13 @@ final instructorQuizCompletionStatsProvider = FutureProvider.family<Map<String, 
       if (semesterName.isNotEmpty && semesterName != 'All') {
         // Tìm semester từ repository để lấy semester string chính xác
         String? actualSemesterString;
+        dynamic matchedSemester; // Lưu matched semester để dùng trong fallback
+        
         try {
           final semesterRepo = SemesterRepository();
           final allSemesters = await semesterRepo.getAllSemesters();
-          final matchedSemester = allSemesters.firstWhere(
+          
+          matchedSemester = allSemesters.firstWhere(
             (s) => s.name.toLowerCase().trim() == semesterName.toLowerCase().trim() ||
                    s.code.toLowerCase().trim() == semesterName.toLowerCase().trim() ||
                    s.id.toLowerCase().trim() == semesterName.toLowerCase().trim(),
@@ -665,14 +787,55 @@ final instructorQuizCompletionStatsProvider = FutureProvider.family<Map<String, 
               }
             },
           );
+          
           actualSemesterString = matchedSemester.name;
         } catch (e) {
           actualSemesterString = semesterName;
+          matchedSemester = null;
         }
         
         // Sử dụng controller method để lấy courses theo semester
         try {
-          coursesForMetrics = await courseController.getInstructorCoursesBySemester(actualSemesterString);
+          coursesForMetrics = await courseController.getInstructorCoursesBySemester(actualSemesterString!);
+          
+          // Nếu repository trả về empty (do exact match không khớp), dùng fallback filter thủ công
+          if (coursesForMetrics.isEmpty) {
+            print('DEBUG: ⚠️ Repository returned 0 courses for quiz stats (exact match failed), using flexible filter');
+            final allCourses = await courseController.getInstructorCourses();
+            
+            // Flexible matching: so sánh nhiều cách
+            coursesForMetrics = allCourses.where((course) {
+              final courseSemester = course.semester.toLowerCase().trim();
+              final filterSemester = actualSemesterString!.toLowerCase().trim();
+              
+              // Normalize: bỏ ký tự đặc biệt và khoảng trắng thừa
+              final normalizedCourseSemester = courseSemester.replaceAll(RegExp(r'[_\s-]+'), ' ').trim();
+              final normalizedFilter = filterSemester.replaceAll(RegExp(r'[_\s-]+'), ' ').trim();
+              
+              // Kiểm tra nhiều cách match
+              bool matches = 
+                  normalizedCourseSemester == normalizedFilter ||
+                  normalizedCourseSemester.contains(normalizedFilter) ||
+                  normalizedFilter.contains(normalizedCourseSemester);
+              
+              // Nếu có matchedSemester, thử match với name và code
+              if (!matches && matchedSemester != null) {
+                final matchedSemesterName = matchedSemester.name.toLowerCase().trim();
+                final matchedSemesterCode = matchedSemester.code.toLowerCase().trim();
+                final normalizedMatchedName = matchedSemesterName.replaceAll(RegExp(r'[_\s-]+'), ' ').trim();
+                final normalizedMatchedCode = matchedSemesterCode.replaceAll(RegExp(r'[_\s-]+'), ' ').trim();
+                
+                matches = 
+                    normalizedCourseSemester == normalizedMatchedName ||
+                    normalizedCourseSemester.contains(normalizedMatchedName) ||
+                    normalizedMatchedName.contains(normalizedCourseSemester) ||
+                    normalizedCourseSemester.contains(normalizedMatchedCode) ||
+                    normalizedMatchedCode.contains(normalizedCourseSemester);
+              }
+              
+              return matches;
+            }).toList();
+          }
         } catch (e) {
           // Fallback: lấy tất cả courses và filter thủ công
           final allCourses = await courseController.getInstructorCourses();
@@ -684,10 +847,6 @@ final instructorQuizCompletionStatsProvider = FutureProvider.family<Map<String, 
           }).toList();
         }
       } else {
-        coursesForMetrics = await courseController.getInstructorCourses();
-      }
-
-      if (coursesForMetrics.isEmpty) {
         coursesForMetrics = await courseController.getInstructorCourses();
       }
 

@@ -50,6 +50,50 @@ String buildStudentSemesterKey(String semesterId, String semesterLabel) {
   return '$semesterId$studentSemesterKeySeparator$semesterLabel';
 }
 
+// Key class để truyền month và semester cho student tasks
+class StudentTaskMonthKey {
+  final DateTime month;
+  final String? semesterKey; // Semester key để filter courses
+
+  const StudentTaskMonthKey({
+    required this.month,
+    this.semesterKey,
+  });
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is StudentTaskMonthKey &&
+          runtimeType == other.runtimeType &&
+          month == other.month &&
+          semesterKey == other.semesterKey;
+
+  @override
+  int get hashCode => month.hashCode ^ (semesterKey?.hashCode ?? 0);
+}
+
+// Key class để truyền date và semester cho student tasks
+class StudentTaskDateKey {
+  final DateTime date;
+  final String? semesterKey; // Semester key để filter courses
+
+  const StudentTaskDateKey({
+    required this.date,
+    this.semesterKey,
+  });
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is StudentTaskDateKey &&
+          runtimeType == other.runtimeType &&
+          date == other.date &&
+          semesterKey == other.semesterKey;
+
+  @override
+  int get hashCode => date.hashCode ^ (semesterKey?.hashCode ?? 0);
+}
+
 final studentDashboardMetricsProvider =
     FutureProvider.family<StudentDashboardMetrics, String>(
   (ref, semesterKey) async {
@@ -68,10 +112,8 @@ final studentDashboardMetricsProvider =
       filterVariants,
     );
 
-    // Fallback: if no course matched, use all courses to avoid empty UI
-    if (coursesForMetrics.isEmpty) {
-      coursesForMetrics = allCourses;
-    }
+    // Không fallback - nếu không có courses match với semester thì trả về empty
+    // Để đảm bảo số liệu chính xác theo semester được chọn
 
     final List<Assignment> allAssignments = [];
     final Map<String, String> assignmentCourseMap = {};
@@ -362,8 +404,9 @@ final studentCompletedQuizzesItemProvider = FutureProvider<List<CompletedQuizIte
 
 // ========================================
 // PROVIDER: Student Tasks for Calendar (convert from Assignments)
+// Filter theo semester nếu có
 // ========================================
-final studentTasksForDateProvider = FutureProvider.family<List<TaskModel>, DateTime>((ref, date) async {
+final studentTasksForDateProvider = FutureProvider.family<List<TaskModel>, StudentTaskDateKey>((ref, key) async {
   final user = FirebaseAuth.instance.currentUser;
   if (user == null) {
     return [];
@@ -374,11 +417,19 @@ final studentTasksForDateProvider = FutureProvider.family<List<TaskModel>, DateT
     final allCourses = await CourseStudentRepository.getUserCourses(user.uid);
     if (allCourses.isEmpty) return [];
 
-    // Lấy tất cả assignments từ các courses
+    // Filter courses theo semester nếu có
+    List<CourseModel> coursesForTasks = allCourses;
+    if (key.semesterKey != null && key.semesterKey!.isNotEmpty) {
+      final semesterTokens = _extractSemesterTokens(key.semesterKey!);
+      final filterVariants = _buildNormalizedVariants(semesterTokens);
+      coursesForTasks = _filterCoursesBySemester(allCourses, filterVariants);
+    }
+
+    // Lấy tất cả assignments từ các courses đã filter
     final List<Assignment> allAssignments = [];
     final Map<String, CourseModel> assignmentCourseMap = {};
     
-    for (final course in allCourses) {
+    for (final course in coursesForTasks) {
       final assignments = await AssignmentRepository.getAssignmentsByCourse(course.id);
       allAssignments.addAll(assignments);
       for (final assignment in assignments) {
@@ -395,6 +446,7 @@ final studentTasksForDateProvider = FutureProvider.family<List<TaskModel>, DateT
         .toSet();
 
     // Filter assignments cho ngày được chọn và convert sang TaskModel
+    final date = key.date;
     final selectedDateKey = DateTime(date.year, date.month, date.day);
     final tasks = <TaskModel>[];
 
@@ -435,8 +487,9 @@ final studentTasksForDateProvider = FutureProvider.family<List<TaskModel>, DateT
 
 // ========================================
 // PROVIDER: Student Tasks for Month (convert from Assignments)
+// Filter theo semester nếu có
 // ========================================
-final studentTasksForMonthProvider = FutureProvider.family<List<TaskModel>, DateTime>((ref, month) async {
+final studentTasksForMonthProvider = FutureProvider.family<List<TaskModel>, StudentTaskMonthKey>((ref, key) async {
   final user = FirebaseAuth.instance.currentUser;
   if (user == null) {
     return [];
@@ -447,11 +500,19 @@ final studentTasksForMonthProvider = FutureProvider.family<List<TaskModel>, Date
     final allCourses = await CourseStudentRepository.getUserCourses(user.uid);
     if (allCourses.isEmpty) return [];
 
-    // Lấy tất cả assignments từ các courses
+    // Filter courses theo semester nếu có
+    List<CourseModel> coursesForTasks = allCourses;
+    if (key.semesterKey != null && key.semesterKey!.isNotEmpty) {
+      final semesterTokens = _extractSemesterTokens(key.semesterKey!);
+      final filterVariants = _buildNormalizedVariants(semesterTokens);
+      coursesForTasks = _filterCoursesBySemester(allCourses, filterVariants);
+    }
+
+    // Lấy tất cả assignments từ các courses đã filter
     final List<Assignment> allAssignments = [];
     final Map<String, CourseModel> assignmentCourseMap = {};
     
-    for (final course in allCourses) {
+    for (final course in coursesForTasks) {
       final assignments = await AssignmentRepository.getAssignmentsByCourse(course.id);
       allAssignments.addAll(assignments);
       for (final assignment in assignments) {
@@ -468,6 +529,7 @@ final studentTasksForMonthProvider = FutureProvider.family<List<TaskModel>, Date
         .toSet();
 
     // Filter assignments trong tháng được chọn và convert sang TaskModel
+    final month = key.month;
     final monthStart = DateTime(month.year, month.month, 1);
     final monthEnd = DateTime(month.year, month.month + 1, 0, 23, 59, 59);
     final tasks = <TaskModel>[];
