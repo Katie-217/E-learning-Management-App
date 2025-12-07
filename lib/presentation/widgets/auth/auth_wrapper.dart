@@ -165,75 +165,71 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
         }
       }
       
-      // Nếu không tìm thấy, chọn học kì đầu tiên
-      final activeSemester = currentSemester ?? semesters.first;
-      final activeSemesterName = activeSemester.name;
+      print('DEBUG: 🔄 Priority 2: Preloading ALL dashboard data for ALL semesters...');
       
-      print('DEBUG: 🔄 Priority 2: Preloading dashboard data for current semester: $activeSemesterName');
-      
-      // PRIORITY 2: Preload dashboard data cho học kì hiện tại trước
-      await Future.wait([
-        // KPI stats cho học kì hiện tại
-        ref.read(instructorKPIStatsProvider(activeSemesterName).future),
-        ref.read(instructorAssignmentSubmissionStatsProvider(activeSemesterName).future),
-        ref.read(instructorQuizCompletionStatsProvider(activeSemesterName).future),
-        // Tasks cho current month và today
-        ref.read(instructorTasksForMonthProvider(
-          InstructorTaskMonthKey(monthKey, activeSemesterName)
-        ).future),
-        ref.read(instructorTasksForDateProvider(
-          InstructorTaskKey(now, activeSemesterName)
-        ).future),
-      ], eagerError: false);
-      
-      print('DEBUG: ✅ Priority 2 completed: Dashboard data preloaded');
-      
-      // PRIORITY 3: Preload data cho các semesters khác và các tháng khác (song song, không block)
-      print('DEBUG: 🔄 Priority 3: Preloading data for other semesters and months...');
-      final backgroundPreloadFutures = <Future>[];
+      // PRIORITY 2: Preload TẤT CẢ data cho TẤT CẢ semesters (để user chọn bất kỳ gì cũng có data sẵn)
+      final allPreloadFutures = <Future>[];
       
       // Preload với 'All' semester
-      backgroundPreloadFutures.addAll([
+      allPreloadFutures.addAll([
         ref.read(instructorKPIStatsProvider('All').future),
         ref.read(instructorAssignmentSubmissionStatsProvider('All').future),
         ref.read(instructorQuizCompletionStatsProvider('All').future),
       ]);
       
-      // Preload tasks cho các tháng gần đây (3 tháng trước, 3 tháng sau)
+      // Preload tasks cho các tháng gần đây (3 tháng trước, hiện tại, 3 tháng sau)
       final monthsToPreload = <DateTime>[];
       for (int i = -3; i <= 3; i++) {
-        if (i == 0) continue; // Đã preload ở priority 2
         final month = DateTime(now.year, now.month + i, 1);
         monthsToPreload.add(month);
       }
       
-      // Preload với TẤT CẢ semesters (bao gồm cả active semester cho các tháng khác)
+      // Preload với TẤT CẢ semesters
       for (final semester in semesters) {
         final semesterName = semester.name;
         
-        // Preload stats cho các semesters khác
-        if (semesterName != activeSemesterName) {
-          backgroundPreloadFutures.addAll([
-            ref.read(instructorKPIStatsProvider(semesterName).future),
-            ref.read(instructorAssignmentSubmissionStatsProvider(semesterName).future),
-            ref.read(instructorQuizCompletionStatsProvider(semesterName).future),
-          ]);
-        }
+        // Preload stats cho mỗi semester
+        allPreloadFutures.addAll([
+          ref.read(instructorKPIStatsProvider(semesterName).future),
+          ref.read(instructorAssignmentSubmissionStatsProvider(semesterName).future),
+          ref.read(instructorQuizCompletionStatsProvider(semesterName).future),
+        ]);
         
-        // Preload tasks cho các tháng khác với mỗi semester
+        // Preload tasks cho các tháng gần đây với mỗi semester
         for (final month in monthsToPreload) {
-          backgroundPreloadFutures.add(
+          allPreloadFutures.add(
             ref.read(instructorTasksForMonthProvider(
               InstructorTaskMonthKey(month, semesterName)
             ).future)
           );
         }
         
-        // Preload tasks cho current month với các semesters khác
-        if (semesterName != activeSemesterName) {
+        // Preload tasks cho today với mỗi semester
+        allPreloadFutures.add(
+          ref.read(instructorTasksForDateProvider(
+            InstructorTaskKey(now, semesterName)
+          ).future)
+        );
+      }
+
+      // Preload tất cả song song và await để đảm bảo hoàn thành trước khi hiển thị dashboard
+      print('DEBUG: 🔄 Preloading ${allPreloadFutures.length} data sources for all semesters...');
+      await Future.wait(allPreloadFutures, eagerError: false);
+      
+      print('DEBUG: ✅ Priority 2 completed: ALL dashboard data preloaded for ALL semesters');
+      
+      // PRIORITY 3: Preload tasks cho các tháng xa hơn (background, không block)
+      print('DEBUG: 🔄 Priority 3: Preloading tasks for distant months (background)...');
+      final backgroundPreloadFutures = <Future>[];
+      
+      // Preload tasks cho các tháng xa hơn (4-6 tháng trước/sau) với tất cả semesters
+      for (int i = -6; i <= 6; i++) {
+        if (i >= -3 && i <= 3) continue; // Đã preload ở priority 2
+        final month = DateTime(now.year, now.month + i, 1);
+        for (final semester in semesters) {
           backgroundPreloadFutures.add(
             ref.read(instructorTasksForMonthProvider(
-              InstructorTaskMonthKey(monthKey, semesterName)
+              InstructorTaskMonthKey(month, semester.name)
             ).future)
           );
         }
@@ -241,7 +237,7 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
 
       // Chạy background preload song song, không await để không block UI
       Future.wait(backgroundPreloadFutures, eagerError: false).then((_) {
-        print('DEBUG: ✅ Priority 3 completed: All other data preloaded (${backgroundPreloadFutures.length} sources)');
+        print('DEBUG: ✅ Priority 3 completed: Distant months data preloaded (${backgroundPreloadFutures.length} sources)');
       }).catchError((e) {
         print('DEBUG: ⚠️ Error in background preload: $e');
       });
@@ -296,69 +292,74 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
       final activeSemester = currentSemester ?? semesters.first;
       final semesterKey = buildStudentSemesterKey(activeSemester.id, activeSemester.name);
       
-      print('DEBUG: 🔄 Priority 1: Preloading dashboard data for current semester: ${activeSemester.name} (key: $semesterKey)');
+      print('DEBUG: 🔄 Priority 1: Preloading ALL dashboard data for ALL semesters...');
       
-      // PRIORITY 1: Preload dashboard data trước (current semester)
+      // PRIORITY 1: Preload TẤT CẢ data cho TẤT CẢ semesters (để user chọn bất kỳ gì cũng có data sẵn)
       final prevMonthKey = DateTime(now.year, now.month - 1);
       final nextMonthKey = DateTime(now.year, now.month + 1);
       
-      await Future.wait([
-        // Dashboard metrics (quan trọng nhất)
-        ref.read(studentDashboardMetricsProvider(semesterKey).future),
-        // Recent submissions và completed quizzes (cho dashboard)
+      // Tạo danh sách tất cả futures cần preload
+      final allPreloadFutures = <Future>[];
+      
+      // Preload Recent submissions và completed quizzes (chung cho tất cả semesters)
+      allPreloadFutures.addAll([
         ref.read(studentRecentSubmissionsItemProvider.future),
         ref.read(studentCompletedQuizzesItemProvider.future),
-        // Tasks cho calendar (prev, current, next month)
-        ref.read(studentTasksForMonthProvider(
-          StudentTaskMonthKey(month: prevMonthKey, semesterKey: semesterKey)
-        ).future),
-        ref.read(studentTasksForMonthProvider(
-          StudentTaskMonthKey(month: monthKey, semesterKey: semesterKey)
-        ).future),
-        ref.read(studentTasksForMonthProvider(
-          StudentTaskMonthKey(month: nextMonthKey, semesterKey: semesterKey)
-        ).future),
-        ref.read(studentTasksForDateProvider(
-          StudentTaskDateKey(date: now, semesterKey: semesterKey)
-        ).future),
-      ], eagerError: false);
+      ]);
       
-      print('DEBUG: ✅ Priority 1 completed: Dashboard data preloaded');
-      
-      // PRIORITY 2: Preload data cho các semesters khác và các tháng khác (song song, không block)
-      print('DEBUG: 🔄 Priority 2: Preloading data for other semesters and months...');
-      final backgroundPreloadFutures = <Future>[];
-      
-      // Preload tasks cho các tháng xa hơn (2 tháng trước, 2 tháng sau)
-      for (int i = -2; i <= 2; i++) {
-        if (i == -1 || i == 0 || i == 1) continue; // Đã preload ở priority 1
-        final month = DateTime(now.year, now.month + i, 1);
-        backgroundPreloadFutures.add(
-          ref.read(studentTasksForMonthProvider(
-            StudentTaskMonthKey(month: month, semesterKey: semesterKey)
-          ).future)
-        );
-      }
-      
-      // Preload metrics cho các semesters khác
+      // Preload data cho TẤT CẢ semesters
       for (final semester in semesters) {
-        if (semester.id == activeSemester.id) continue; // Đã preload ở priority 1
-        final otherSemesterKey = buildStudentSemesterKey(semester.id, semester.name);
-        backgroundPreloadFutures.add(
-          ref.read(studentDashboardMetricsProvider(otherSemesterKey).future)
+        final semesterKeyForLoop = buildStudentSemesterKey(semester.id, semester.name);
+        
+        // Metrics cho mỗi semester
+        allPreloadFutures.add(
+          ref.read(studentDashboardMetricsProvider(semesterKeyForLoop).future)
         );
         
-        // Preload tasks cho current month với các semesters khác
-        backgroundPreloadFutures.add(
+        // Tasks cho các tháng (prev, current, next) với mỗi semester
+        allPreloadFutures.addAll([
           ref.read(studentTasksForMonthProvider(
-            StudentTaskMonthKey(month: monthKey, semesterKey: otherSemesterKey)
-          ).future)
-        );
+            StudentTaskMonthKey(month: prevMonthKey, semesterKey: semesterKeyForLoop)
+          ).future),
+          ref.read(studentTasksForMonthProvider(
+            StudentTaskMonthKey(month: monthKey, semesterKey: semesterKeyForLoop)
+          ).future),
+          ref.read(studentTasksForMonthProvider(
+            StudentTaskMonthKey(month: nextMonthKey, semesterKey: semesterKeyForLoop)
+          ).future),
+          ref.read(studentTasksForDateProvider(
+            StudentTaskDateKey(date: now, semesterKey: semesterKeyForLoop)
+          ).future),
+        ]);
+      }
+      
+      // Preload tất cả song song và await để đảm bảo hoàn thành trước khi hiển thị dashboard
+      print('DEBUG: 🔄 Preloading ${allPreloadFutures.length} data sources for all semesters...');
+      await Future.wait(allPreloadFutures, eagerError: false);
+      
+      print('DEBUG: ✅ Priority 1 completed: ALL dashboard data preloaded for ALL semesters');
+      
+      // PRIORITY 2: Preload tasks cho các tháng xa hơn (background, không block)
+      print('DEBUG: 🔄 Priority 2: Preloading tasks for distant months (background)...');
+      final backgroundPreloadFutures = <Future>[];
+      
+      // Preload tasks cho các tháng xa hơn (3 tháng trước, 3 tháng sau) với tất cả semesters
+      for (int i = -3; i <= 3; i++) {
+        if (i == -1 || i == 0 || i == 1) continue; // Đã preload ở priority 1
+        final month = DateTime(now.year, now.month + i, 1);
+        for (final semester in semesters) {
+          final semesterKeyForLoop = buildStudentSemesterKey(semester.id, semester.name);
+          backgroundPreloadFutures.add(
+            ref.read(studentTasksForMonthProvider(
+              StudentTaskMonthKey(month: month, semesterKey: semesterKeyForLoop)
+            ).future)
+          );
+        }
       }
       
       // Chạy background preload song song, không await để không block UI
       Future.wait(backgroundPreloadFutures, eagerError: false).then((_) {
-        print('DEBUG: ✅ Priority 2 completed: All other data preloaded');
+        print('DEBUG: ✅ Priority 2 completed: Distant months data preloaded (${backgroundPreloadFutures.length} sources)');
       }).catchError((e) {
         print('DEBUG: ⚠️ Error in background preload: $e');
       });
