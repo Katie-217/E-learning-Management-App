@@ -5,7 +5,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:elearning_management_app/domain/models/course_model.dart';
-import '../../../../screens/instructor/steam_tab/instructor_stream_tab.dart';
+import '../../Instructor_Course/instructor_stream_tab.dart';
 import '../../../../screens/instructor/classwork_tab/instructor_classwork_tab.dart';
 import '../../../../screens/instructor/people_tab/instructor_people_tab.dart';
 

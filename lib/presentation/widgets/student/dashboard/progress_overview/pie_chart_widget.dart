@@ -364,12 +364,14 @@ class _PieChartWidgetState extends State<PieChartWidget>
     final trendText = '${isPositive ? '+' : ''}${trendPercent.toStringAsFixed(0)}%';
     final label = trendLabel ?? 'vs last month';
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      mainAxisAlignment: MainAxisAlignment.center,
+    // Dùng Wrap để tránh tràn ngang trên màn hình hẹp
+    return Wrap(
+      alignment: WrapAlignment.center,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: 4,
+      runSpacing: 2,
       children: [
         Icon(trendIcon, size: 14, color: trendColor),
-        const SizedBox(width: 4),
         Text(
           '$trendText $label',
           style: TextStyle(
@@ -377,6 +379,9 @@ class _PieChartWidgetState extends State<PieChartWidget>
             color: trendColor,
             fontWeight: FontWeight.w500,
           ),
+          overflow: TextOverflow.ellipsis,
+          maxLines: 1,
+          softWrap: false,
         ),
       ],
     );

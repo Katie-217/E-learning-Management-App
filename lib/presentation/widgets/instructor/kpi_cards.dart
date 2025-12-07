@@ -13,63 +13,81 @@ class InstructorKPICards extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final crossCount = constraints.maxWidth > 1200
-            ? 5
-            : constraints.maxWidth > 900
-                ? 3
-                : constraints.maxWidth > 600
-                    ? 2
-                    : 1;
+        final screenWidth = MediaQuery.of(context).size.width;
+        final isNarrow = constraints.maxWidth < 600;
+        final spacing = screenWidth > 600 ? 12.0 : screenWidth > 400 ? 8.0 : 6.0;
+        
+        final cards = [
+          _InstructorKPICard(
+            title: 'Courses',
+            value: stats.coursesCount.toString(),
+            icon: Icons.menu_book_outlined,
+            bgStart: const Color(0xFF6366F1),
+            bgEnd: const Color(0xFF8B5CF6),
+            iconColor: const Color(0xFFACAFFF),
+          ),
+          _InstructorKPICard(
+            title: 'Groups',
+            value: stats.groupsCount.toString(),
+            icon: Icons.groups_outlined,
+            bgStart: const Color(0xFF10B981),
+            bgEnd: const Color(0xFF34D399),
+            iconColor: const Color(0xFF6EE7B7),
+          ),
+          _InstructorKPICard(
+            title: 'Students',
+            value: stats.studentsCount.toString(),
+            icon: Icons.people_outlined,
+            bgStart: const Color(0xFFF97316),
+            bgEnd: const Color(0xFFFFB347),
+            iconColor: const Color(0xFFFFE0B5),
+          ),
+          _InstructorKPICard(
+            title: 'Assignments',
+            value: stats.assignmentsCount.toString(),
+            icon: Icons.assignment_outlined,
+            bgStart: const Color(0xFFFF6B6B),
+            bgEnd: const Color(0xFFFF8E72),
+            iconColor: const Color(0xFFFFD6D6),
+          ),
+          _InstructorKPICard(
+            title: 'Quizzes',
+            value: stats.quizzesCount.toString(),
+            icon: Icons.quiz_outlined,
+            bgStart: const Color(0xFF0EA5E9),
+            bgEnd: const Color(0xFF38BDF8),
+            iconColor: const Color(0xFFBEE8FF),
+          ),
+        ];
 
-        return GridView.count(
-          crossAxisCount: crossCount,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          childAspectRatio: 1.2,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          children: [
-            _InstructorKPICard(
-              title: 'Courses',
-              value: stats.coursesCount.toString(),
-              icon: Icons.menu_book_outlined,
-              bgStart: const Color(0xFF6366F1),
-              bgEnd: const Color(0xFF8B5CF6),
-              iconColor: const Color(0xFFACAFFF),
-            ),
-            _InstructorKPICard(
-              title: 'Groups',
-              value: stats.groupsCount.toString(),
-              icon: Icons.groups_outlined,
-              bgStart: const Color(0xFF10B981),
-              bgEnd: const Color(0xFF34D399),
-              iconColor: const Color(0xFF6EE7B7),
-            ),
-            _InstructorKPICard(
-              title: 'Students',
-              value: stats.studentsCount.toString(),
-              icon: Icons.people_outlined,
-              bgStart: const Color(0xFFF97316),
-              bgEnd: const Color(0xFFFFB347),
-              iconColor: const Color(0xFFFFE0B5),
-            ),
-            _InstructorKPICard(
-              title: 'Assignments',
-              value: stats.assignmentsCount.toString(),
-              icon: Icons.assignment_outlined,
-              bgStart: const Color(0xFFFF6B6B),
-              bgEnd: const Color(0xFFFF8E72),
-              iconColor: const Color(0xFFFFD6D6),
-            ),
-            _InstructorKPICard(
-              title: 'Quizzes',
-              value: stats.quizzesCount.toString(),
-              icon: Icons.quiz_outlined,
-              bgStart: const Color(0xFF0EA5E9),
-              bgEnd: const Color(0xFF38BDF8),
-              iconColor: const Color(0xFFBEE8FF),
-            ),
-          ],
+        // Trên màn hình nhỏ, hiển thị dạng Column như bên học sinh
+        if (isNarrow) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: cards
+                .map((card) => Padding(
+                      padding: EdgeInsets.only(bottom: spacing),
+                      child: card,
+                    ))
+                .toList(),
+          );
+        }
+
+        // Trên màn hình lớn, dùng Row với Expanded giống bên học sinh
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: cards.asMap().entries.map((entry) {
+            final index = entry.key;
+            final card = entry.value;
+            return Expanded(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  right: index < cards.length - 1 ? spacing : 0,
+                ),
+                child: card,
+              ),
+            );
+          }).toList(),
         );
       },
     );
@@ -95,47 +113,82 @@ class _InstructorKPICard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final borderColor = bgStart.withValues(alpha: 0.3);
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [bgStart.withValues(alpha: 0.18), bgEnd.withValues(alpha: 0.18)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmall = screenWidth < 600;
+    final isXSmall = screenWidth < 400;
+    
+    // Responsive sizing - giống bên học sinh
+    final cardHeight = isXSmall
+        ? 150.0
+        : isSmall
+            ? 160.0
+            : 170.0;
+    final iconBox = isXSmall ? 32.0 : isSmall ? 36.0 : 40.0;
+    final titleSize = isXSmall ? 16.0 : isSmall ? 18.0 : 22.0;
+    final valueSize = isXSmall ? 26.0 : isSmall ? 28.0 : 30.0;
+    final padding = isXSmall ? 12.0 : isSmall ? 16.0 : 20.0;
+    final iconSpacing = isXSmall ? 8.0 : isSmall ? 10.0 : 12.0;
+    
+    final borderColor = bgStart.withOpacity(0.3);
+    return SizedBox(
+      height: cardHeight,
+      child: Container(
+        padding: EdgeInsets.all(padding),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [bgStart.withOpacity(0.18), bgEnd.withOpacity(0.18)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: borderColor),
         ),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: borderColor),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: bgStart.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: iconBox,
+                  height: iconBox,
+                  decoration: BoxDecoration(
+                    color: bgStart.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    icon,
+                    color: iconColor,
+                    size: iconBox * 0.6,
+                  ),
                 ),
-                child: Icon(icon, color: iconColor),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  title,
-                  style: TextStyle(color: Colors.grey[300], fontSize: 23),
+                SizedBox(width: iconSpacing),
+                Expanded(
+                  child: Text(
+                    title,
+                    maxLines: 2,
+                    softWrap: true,
+                    overflow: TextOverflow.visible,
+                    style: TextStyle(
+                      color: Colors.grey[300],
+                      fontSize: titleSize,
+                      height: 1.2,
+                    ),
+                  ),
                 ),
+              ],
+            ),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: valueSize,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
               ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            value,
-            style: const TextStyle(fontSize: 33, fontWeight: FontWeight.bold),
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }

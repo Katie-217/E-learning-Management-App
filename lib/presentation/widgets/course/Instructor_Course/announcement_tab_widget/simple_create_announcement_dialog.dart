@@ -9,14 +9,18 @@ import 'group_selector_widget.dart';
 import 'rich_text_editor_widget.dart';
 
 /// Provider to fetch groups for a course
-final courseGroupsProvider = FutureProvider.family<List<String>, String>((ref, courseId) async {
+final courseGroupsProvider = FutureProvider.family<List<Map<String, String>>, String>((ref, courseId) async {
   final snapshot = await FirebaseFirestore.instance
       .collection('courses')
       .doc(courseId)
       .collection('groups')
+      .orderBy('name')
       .get();
   
-  return snapshot.docs.map((doc) => doc.data()['name'] as String? ?? doc.id).toList();
+  return snapshot.docs.map((doc) => {
+    'id': doc.id,
+    'name': doc.data()['name'] as String? ?? 'Unnamed Group',
+  }).toList();
 });
 
 class SimpleCreateAnnouncementDialog extends ConsumerStatefulWidget {
@@ -281,60 +285,59 @@ class _SimpleCreateAnnouncementDialogState
                         const SizedBox(height: 20),
 
                         // Group Selector
-                        groupsAsync.when(
-                          loading: () => const Center(
-                            child: Padding(
-                              padding: EdgeInsets.all(16.0),
-                              child: CircularProgressIndicator(),
-                            ),
-                          ),
-                          error: (err, stack) => Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.red.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.red),
-                            ),
-                            child: Text(
-                              'Error loading groups: $err',
-                              style: const TextStyle(color: Colors.red),
-                            ),
-                          ),
-                          data: (groups) {
-                            if (groups.isEmpty) {
-                              return Container(
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: Colors.orange.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: Colors.orange),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.warning, color: Colors.orange[400]),
-                                    const SizedBox(width: 12),
-                                    const Expanded(
-                                      child: Text(
-                                        'No groups found in this course. Announcement will be visible to all students.',
-                                        style: TextStyle(color: Colors.orange),
+                      groupsAsync.when(
+                        loading: () => const Center(child: CircularProgressIndicator()),
+                        error: (err, stack) => Text('Lỗi: $err', style: const TextStyle(color: Colors.red)),
+                        data: (groupsData) {
+                          if (groupsData.isEmpty) {
+                            return const Text('Không có nhóm nào.', style: TextStyle(color: Colors.grey));
+                          }
+                          
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Gửi cho nhóm cụ thể (Để trống = Gửi tất cả)', 
+                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                              const SizedBox(height: 10),
+                              Wrap(
+                                spacing: 8.0,
+                                runSpacing: 8.0,
+                                children: groupsData.map((group) {
+                                  final groupId = group['id']!;
+                                  final groupName = group['name']!;
+                                  final isSelected = _targetGroupIds.contains(groupId);
+
+                                  return FilterChip(
+                                    label: Text(groupName),
+                                    selected: isSelected,
+                                    onSelected: (bool selected) {
+                                      setState(() {
+                                        if (selected) {
+                                          _targetGroupIds.add(groupId);
+                                        } else {
+                                          _targetGroupIds.remove(groupId);
+                                        }
+                                      });
+                                    },
+                                    backgroundColor: const Color(0xFF374151),
+                                    selectedColor: Colors.indigo,
+                                    checkmarkColor: Colors.white,
+                                    labelStyle: TextStyle(
+                                      color: isSelected ? Colors.white : Colors.grey[300],
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(20),
+                                      side: BorderSide(
+                                        color: isSelected ? Colors.indigo : Colors.grey[700]!,
                                       ),
                                     ),
-                                  ],
-                                ),
-                              );
-                            }
-                            
-                            return GroupSelectorWidget(
-                              availableGroups: groups,
-                              selectedGroups: _targetGroupIds,
-                              onSelectionChanged: (selected) {
-                                setState(() {
-                                  _targetGroupIds = selected;
-                                });
-                              },
-                            );
-                          },
-                        ),
+                                  );
+                                }).toList(),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
                         const SizedBox(height: 20),
 
                         // File Attachments Section

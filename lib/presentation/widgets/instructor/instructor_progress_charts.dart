@@ -1,30 +1,363 @@
 // ========================================
 // FILE: instructor_progress_charts.dart
-// MÔ TẢ: Progress charts cho instructor dashboard - CHỈ MOCK DATA
+// MÔ TẢ: Progress charts cho instructor dashboard - Load dữ liệu thật từ repositories
 // ========================================
 
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:elearning_management_app/presentation/widgets/student/dashboard/progress_overview/pie_chart_widget.dart';
+import 'package:elearning_management_app/application/controllers/instructor/instructor_kpi_provider.dart';
+import 'package:elearning_management_app/presentation/widgets/instructor/semester_switcher.dart';
 import 'dart:math' as math;
 import 'dart:async';
 
-// Assignment Submission Progress Chart
-class AssignmentSubmissionChart extends StatelessWidget {
-  const AssignmentSubmissionChart({super.key});
-
-  // Mock data - không động vào repository
-  Map<String, int> get _mockData => const {
-        'notSubmitted': 45,
-        'submitted': 120,
-        'late': 15,
-        'graded': 100,
-      };
+// Student Performance Chart - Gộp 2 chart cũ thành 1
+class StudentPerformanceChart extends ConsumerWidget {
+  final InstructorSemester? selectedSemester;
+  
+  const StudentPerformanceChart({
+    super.key,
+    this.selectedSemester,
+  });
 
   @override
-  Widget build(BuildContext context) {
-    final data = _mockData;
-    final total = data.values.reduce((a, b) => a + b);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final semesterName = selectedSemester?.name ?? 'All';
+    final assignmentStatsAsync = ref.watch(instructorAssignmentSubmissionStatsProvider(semesterName));
+    final quizStatsAsync = ref.watch(instructorQuizCompletionStatsProvider(semesterName));
+    
+    return assignmentStatsAsync.when(
+      data: (assignmentData) {
+        return quizStatsAsync.when(
+          data: (quizData) {
+            return _buildCombinedChart(assignmentData, quizData);
+          },
+          loading: () => Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: const Color(0xFF111827),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey[800]!),
+            ),
+            child: const Center(
+              child: SizedBox(
+                height: 26,
+                width: 26,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+          ),
+          error: (error, _) => Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: const Color(0xFF111827),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey[800]!),
+            ),
+            child: Text(
+              'Unable to load data: $error',
+              style: const TextStyle(color: Colors.redAccent, fontSize: 12),
+            ),
+          ),
+        );
+      },
+      loading: () => Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: const Color(0xFF111827),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[800]!),
+        ),
+        child: const Center(
+          child: SizedBox(
+            height: 26,
+            width: 26,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      ),
+      error: (error, _) => Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: const Color(0xFF111827),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[800]!),
+        ),
+        child: Text(
+          'Unable to load data: $error',
+          style: const TextStyle(color: Colors.redAccent, fontSize: 12),
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildCombinedChart(Map<String, int> assignmentData, Map<String, int> quizData) {
+    final assignmentTotal = assignmentData.values.reduce((a, b) => a + b);
+    final quizTotal = quizData.values.reduce((a, b) => a + b);
+    
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: const Color(0xFF111827),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[800]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Student Performance',
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 16,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 20),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isNarrow = constraints.maxWidth < 800;
+              return isNarrow
+                  ? Column(
+                      children: [
+                        _buildAssignmentsSection(assignmentData, assignmentTotal),
+                        const SizedBox(height: 24),
+                        _buildQuizzesSection(quizData, quizTotal),
+                      ],
+                    )
+                  : Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: _buildAssignmentsSection(assignmentData, assignmentTotal),
+                        ),
+                        const SizedBox(width: 24),
+                        Expanded(
+                          child: _buildQuizzesSection(quizData, quizTotal),
+                        ),
+                      ],
+                    );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildAssignmentsSection(Map<String, int> data, int total) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Assignments',
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 14,
+            color: Colors.white70,
+          ),
+        ),
+        const SizedBox(height: 12),
+        _buildBarChart(data, total, _getAssignmentColors()),
+      ],
+    );
+  }
+  
+  Widget _buildQuizzesSection(Map<String, int> data, int total) {
+    // Map quiz data to match required format: Passed, Completed, Failed
+    final quizDataMapped = {
+      'passed': data['passed'] ?? 0,
+      'completed': data['completed'] ?? 0,
+      'failed': data['failed'] ?? 0,
+    };
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Quizzes',
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 14,
+            color: Colors.white70,
+          ),
+        ),
+        const SizedBox(height: 12),
+        _buildBarChart(quizDataMapped, total, _getQuizColors()),
+      ],
+    );
+  }
+  
+  Widget _buildBarChart(Map<String, int> data, int total, Map<String, Color> colors) {
+    if (total == 0) {
+      return const SizedBox(
+        height: 200,
+        child: Center(
+          child: Text(
+            'No data available',
+            style: TextStyle(color: Colors.white70, fontSize: 12),
+          ),
+        ),
+      );
+    }
+    
+    final entries = data.entries.toList();
+    final maxValue = data.values.reduce((a, b) => a > b ? a : b).toDouble();
+    
+    return SizedBox(
+      height: 200,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: entries.map((entry) {
+          final percentage = maxValue > 0 ? (entry.value / maxValue) : 0.0;
+          final color = colors[entry.key] ?? Colors.grey;
+          
+          return Row(
+            children: [
+              SizedBox(
+                width: 80,
+                child: Text(
+                  _getLabel(entry.key),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Colors.white70,
+                  ),
+                  textAlign: TextAlign.right,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Stack(
+                  children: [
+                    Container(
+                      height: 24,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[800],
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    FractionallySizedBox(
+                      widthFactor: percentage,
+                      child: Container(
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: color,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              SizedBox(
+                width: 40,
+                child: Text(
+                  '${entry.value}',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: color,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  textAlign: TextAlign.right,
+                ),
+              ),
+            ],
+          );
+        }).toList(),
+      ),
+    );
+  }
+  
+  Map<String, Color> _getAssignmentColors() {
+    return {
+      'submitted': const Color(0xFF60A5FA),
+      'late': const Color(0xFFFFB347),
+      'notSubmitted': const Color(0xFFFF6B6B),
+      'graded': const Color(0xFF34D399),
+    };
+  }
+  
+  Map<String, Color> _getQuizColors() {
+    return {
+      'passed': const Color(0xFF34D399),
+      'completed': const Color(0xFF0EA5E9),
+      'failed': const Color(0xFFFF6B6B),
+    };
+  }
+  
+  String _getLabel(String key) {
+    switch (key) {
+      case 'submitted':
+        return 'Submitted';
+      case 'late':
+        return 'Late';
+      case 'notSubmitted':
+        return 'Missing';
+      case 'graded':
+        return 'Graded';
+      case 'passed':
+        return 'Passed';
+      case 'completed':
+        return 'Completed';
+      case 'failed':
+        return 'Failed';
+      default:
+        return key;
+    }
+  }
+}
+
+// Assignment Submission Progress Chart (kept for backward compatibility)
+class AssignmentSubmissionChart extends ConsumerWidget {
+  final InstructorSemester? selectedSemester;
+  
+  const AssignmentSubmissionChart({
+    super.key,
+    this.selectedSemester,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final semesterName = selectedSemester?.name ?? 'All';
+    final statsAsync = ref.watch(instructorAssignmentSubmissionStatsProvider(semesterName));
+    
+    return statsAsync.when(
+      data: (data) {
+        final total = data.values.reduce((a, b) => a + b);
+        return _buildChart(data, total);
+      },
+      loading: () => Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: const Color(0xFF111827),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[800]!),
+        ),
+        child: const Center(
+          child: SizedBox(
+            height: 26,
+            width: 26,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      ),
+      error: (error, _) => Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: const Color(0xFF111827),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[800]!),
+        ),
+        child: Text(
+          'Unable to load data: $error',
+          style: const TextStyle(color: Colors.redAccent, fontSize: 12),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChart(Map<String, int> data, int total) {
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -134,21 +467,55 @@ class AssignmentSubmissionChart extends StatelessWidget {
 }
 
 // Quiz Completion Progress Chart
-class QuizCompletionChart extends StatelessWidget {
-  const QuizCompletionChart({super.key});
-
-  // Mock data - không động vào repository
-  Map<String, int> get _mockData => const {
-        'notStarted': 30,
-        'completed': 80,
-        'passed': 65,
-        'failed': 15,
-      };
+class QuizCompletionChart extends ConsumerWidget {
+  final InstructorSemester? selectedSemester;
+  
+  const QuizCompletionChart({
+    super.key,
+    this.selectedSemester,
+  });
 
   @override
-  Widget build(BuildContext context) {
-    final data = _mockData;
-    final total = data.values.reduce((a, b) => a + b);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final semesterName = selectedSemester?.name ?? 'All';
+    final statsAsync = ref.watch(instructorQuizCompletionStatsProvider(semesterName));
+    
+    return statsAsync.when(
+      data: (data) {
+        final total = data.values.reduce((a, b) => a + b);
+        return _buildChart(data, total);
+      },
+      loading: () => Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: const Color(0xFF111827),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[800]!),
+        ),
+        child: const Center(
+          child: SizedBox(
+            height: 26,
+            width: 26,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      ),
+      error: (error, _) => Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: const Color(0xFF111827),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[800]!),
+        ),
+        child: Text(
+          'Unable to load data: $error',
+          style: const TextStyle(color: Colors.redAccent, fontSize: 12),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChart(Map<String, int> data, int total) {
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -217,7 +584,6 @@ class QuizCompletionChart extends StatelessWidget {
     return SizedBox(
       height: 220,
       child: _QuizPieChartPainter(
-        notStarted: data['notStarted']!.toDouble(),
         completed: data['completed']!.toDouble(),
         passed: data['passed']!.toDouble(),
         failed: data['failed']!.toDouble(),
@@ -229,12 +595,6 @@ class QuizCompletionChart extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _LegendItem(
-          color: const Color(0xFF9CA3AF), // Gray
-          label: 'Not Started',
-          value: data['notStarted']!,
-        ),
-        const SizedBox(height: 12),
         _LegendItem(
           color: const Color(0xFF0EA5E9), // Blue
           label: 'Completed',
@@ -761,13 +1121,11 @@ class _AssignmentPieChartCustomPainter extends CustomPainter {
 }
 
 class _QuizPieChartPainter extends StatefulWidget {
-  final double notStarted;
   final double completed;
   final double passed;
   final double failed;
 
   const _QuizPieChartPainter({
-    required this.notStarted,
     required this.completed,
     required this.passed,
     required this.failed,
@@ -805,11 +1163,10 @@ class _QuizPieChartPainterState extends State<_QuizPieChartPainter> {
     angle = (angle + math.pi / 2 + 2 * math.pi) % (2 * math.pi);
 
     final total =
-        widget.notStarted + widget.completed + widget.passed + widget.failed;
+        widget.completed + widget.passed + widget.failed;
     if (total <= 0) return null;
 
     final segments = [
-      ('notStarted', widget.notStarted),
       ('completed', widget.completed),
       ('passed', widget.passed),
       ('failed', widget.failed),
@@ -832,15 +1189,10 @@ class _QuizPieChartPainterState extends State<_QuizPieChartPainter> {
     }
 
     final total =
-        widget.notStarted + widget.completed + widget.passed + widget.failed;
+        widget.completed + widget.passed + widget.failed;
     if (total <= 0) return const SizedBox.shrink();
 
     final Map<String, Map<String, dynamic>> segmentData = {
-      'notStarted': {
-        'value': widget.notStarted,
-        'label': 'Not Started',
-        'color': const Color(0xFF9CA3AF),
-      },
       'completed': {
         'value': widget.completed,
         'label': 'Completed',
@@ -1002,7 +1354,6 @@ class _QuizPieChartPainterState extends State<_QuizPieChartPainter> {
               key: _key,
               size: const Size(220, 220),
               painter: _QuizPieChartCustomPainter(
-                notStarted: widget.notStarted,
                 completed: widget.completed,
                 passed: widget.passed,
                 failed: widget.failed,
@@ -1019,14 +1370,12 @@ class _QuizPieChartPainterState extends State<_QuizPieChartPainter> {
 }
 
 class _QuizPieChartCustomPainter extends CustomPainter {
-  final double notStarted;
   final double completed;
   final double passed;
   final double failed;
   final String? hoveredSegment;
 
   _QuizPieChartCustomPainter({
-    required this.notStarted,
     required this.completed,
     required this.passed,
     required this.failed,
@@ -1038,19 +1387,17 @@ class _QuizPieChartCustomPainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final baseRadius = math.min(size.width, size.height) / 2 - 15;
     final innerRadius = baseRadius * 0.6; // Donut hole
-    final total = notStarted + completed + passed + failed;
+    final total = completed + passed + failed;
 
     if (total <= 0) return;
 
     final colors = [
-      const Color(0xFF9CA3AF), // Not Started - Gray
       const Color(0xFF0EA5E9), // Completed - Blue
       const Color(0xFF34D399), // Passed - Green
       const Color(0xFFFF6B6B), // Failed - Red
     ];
 
     final segments = [
-      ('notStarted', notStarted),
       ('completed', completed),
       ('passed', passed),
       ('failed', failed),
@@ -1172,8 +1519,7 @@ class _QuizPieChartCustomPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _QuizPieChartCustomPainter oldDelegate) {
-    return oldDelegate.notStarted != notStarted ||
-        oldDelegate.completed != completed ||
+    return oldDelegate.completed != completed ||
         oldDelegate.passed != passed ||
         oldDelegate.failed != failed ||
         oldDelegate.hoveredSegment != hoveredSegment;

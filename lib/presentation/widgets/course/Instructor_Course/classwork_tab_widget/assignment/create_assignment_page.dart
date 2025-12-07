@@ -698,21 +698,21 @@ class _CreateAssignmentPageState extends ConsumerState<CreateAssignmentPage> {
                       onRemove: () async {
                         final file = _uploadedFiles[index];
 
-                        // If file has Firebase URL, delete from Storage
-                        if (file.filePath.startsWith('https://')) {
-                          try {
-                            await FileUploadService.deleteFileFromFirebase(
-                                file.filePath);
-                          } catch (e) {
-                            print('Error deleting file from Firebase: $e');
-                          }
-                        }
-
-                        // Remove from UI
+                        // Remove from UI immediately for better UX
                         setState(() {
                           _uploadProgress.remove(file.fileName);
                           _uploadedFiles.removeAt(index);
                         });
+
+                        // Delete from Firebase in background (don't await)
+                        if (file.filePath.startsWith('https://')) {
+                          FileUploadService.deleteFileFromFirebase(
+                                  file.filePath)
+                              .catchError((e) {
+                            print('⚠️ Error deleting file from Firebase: $e');
+                            // File removed from UI anyway, so just log the error
+                          });
+                        }
                       },
                       onTap: () async {
                         // Only allow preview if file is fully uploaded

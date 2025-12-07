@@ -416,16 +416,21 @@ class _CreateMaterialPageState extends ConsumerState<CreateMaterialPage> {
                       file: file,
                       onRemove: () async {
                         final file = _uploadedFiles[index];
-                        // Dùng controller để delete file
-                        try {
-                          await MaterialController.deleteFile(file.filePath);
-                        } catch (e) {
-                          print('Error deleting file: $e');
-                        }
+
+                        // Remove from UI immediately for better UX
                         setState(() {
                           _uploadProgress.remove(file.fileName);
                           _uploadedFiles.removeAt(index);
                         });
+
+                        // Delete from Firebase in background (don't await)
+                        if (file.filePath.startsWith('https://')) {
+                          MaterialController.deleteFile(file.filePath)
+                              .catchError((e) {
+                            print('⚠️ Error deleting file: $e');
+                            // File removed from UI anyway, so just log the error
+                          });
+                        }
                       },
                       onTap: () async {
                         final fileName = _uploadedFiles[index].fileName;

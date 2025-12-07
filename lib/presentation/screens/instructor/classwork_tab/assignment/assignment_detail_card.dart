@@ -76,7 +76,7 @@ class _AssignmentDetailCardState extends ConsumerState<AssignmentDetailCard>
   }
 
   String _formatDateTime(DateTime dateTime) {
-    return DateFormat('MMM dd, yyyy â€¢ h:mm a').format(dateTime);
+    return DateFormat('MMM dd, yyyy • h:mm a').format(dateTime);
   }
 
   // Get total students from assigned groups
@@ -420,12 +420,14 @@ class _AssignmentDetailCardState extends ConsumerState<AssignmentDetailCard>
                   break;
 
                 case 'delete':
-                  // Call delete management
+                  // Call delete management (don't navigate back since we're in a list)
                   await AssignmentManagement.handleDelete(
                     context: context,
                     ref: ref,
                     assignment: widget.assignment,
                     courseId: widget.courseId,
+                    shouldNavigateBack:
+                        false, // Don't pop - we're in a list/card view
                     onSuccess: () {
                       // Card will be removed automatically by stream
                     },

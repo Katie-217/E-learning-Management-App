@@ -60,7 +60,9 @@ class CourseModel {
       id: doc.id,
       code: data['code'] ?? '',
       name: data['name'] ?? '',
-      instructor: data['teacherName'] ?? data['instructor'] ?? '',
+      // FIXED: Prioritize teacherName (contains actual name) over instructor (contains ID)
+      instructor:
+          data['teacherName'] ?? data['instructor'] ?? 'Unknown Instructor',
       semester: data['semester'] ?? '',
       sessions: sessionsCount,
       description: data['description'] ?? '',

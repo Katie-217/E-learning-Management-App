@@ -128,6 +128,7 @@ class MaterialManagement {
     required MaterialModel material,
     required String courseId,
     VoidCallback? onSuccess,
+    bool shouldNavigateBack = true, // Control whether to pop after delete
   }) async {
     // Show confirmation dialog
     final confirmed = await showDeleteConfirmation(context, material);
@@ -136,17 +137,8 @@ class MaterialManagement {
 
     if (!context.mounted) return;
 
-    // Show loading indicator
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(
-        child: CircularProgressIndicator(color: Colors.red),
-      ),
-    );
-
     try {
-      // Delete material via controller
+      // Delete material via controller (no loading dialog)
       await ref.read(materialControllerProvider.notifier).deleteMaterial(
             materialId: material.id,
             courseId: courseId,
@@ -154,9 +146,6 @@ class MaterialManagement {
           );
 
       if (!context.mounted) return;
-
-      // Close loading dialog
-      Navigator.pop(context);
 
       // Show success snackbar
       ScaffoldMessenger.of(context).showSnackBar(
@@ -180,13 +169,15 @@ class MaterialManagement {
         ),
       );
 
+      // Navigate back only if specified and we can pop safely
+      if (context.mounted && shouldNavigateBack && Navigator.canPop(context)) {
+        Navigator.pop(context); // Close detail page
+      }
+
       // Trigger refresh callback
       onSuccess?.call();
     } catch (e) {
       if (!context.mounted) return;
-
-      // Close loading dialog
-      Navigator.pop(context);
 
       // Show error snackbar
       ScaffoldMessenger.of(context).showSnackBar(

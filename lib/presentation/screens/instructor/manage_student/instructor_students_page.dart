@@ -233,21 +233,42 @@ class _InstructorStudentsPageState extends State<InstructorStudentsPage> {
 
   // Filter Bar with Cascading Dropdowns
   Widget _buildFilterBar() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1F2937),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey[700]!),
-      ),
-      child: Row(
-        children: [
-          Expanded(child: _buildCourseDropdown()),
-          const SizedBox(width: 12),
-          Expanded(child: _buildGroupDropdown()),
-        ],
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final screenWidth = MediaQuery.of(context).size.width;
+        final isSmall = screenWidth < 600;
+        final padding = isSmall 
+            ? const EdgeInsets.all(12)
+            : const EdgeInsets.all(16);
+        final spacing = isSmall ? 8.0 : 12.0;
+        
+        return Container(
+          padding: padding,
+          margin: EdgeInsets.only(bottom: isSmall ? 12 : 16),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1F2937),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey[700]!),
+          ),
+          child: isSmall
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _buildCourseDropdown(),
+                    SizedBox(height: spacing),
+                    _buildGroupDropdown(),
+                  ],
+                )
+              : Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: _buildCourseDropdown()),
+                    SizedBox(width: spacing),
+                    Expanded(child: _buildGroupDropdown()),
+                  ],
+                ),
+        );
+      },
     );
   }
 
@@ -264,15 +285,17 @@ class _InstructorStudentsPageState extends State<InstructorStudentsPage> {
 
     final dropdownItems = [allCoursesOption, ..._courses];
 
-    return DropdownMenu<CourseModel>(
-      controller:
-          _courseFilterController, // Add controller to show selected value
-      enableFilter: true,
-      enableSearch: true,
-      menuHeight: 150, // Max 3 items visible
-      requestFocusOnTap: true,
-      width: 400, // Fixed width for proper display
-      label: const Text('Filter by Course'),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return DropdownMenu<CourseModel>(
+          controller:
+              _courseFilterController, // Add controller to show selected value
+          enableFilter: true,
+          enableSearch: true,
+          menuHeight: 150, // Max 3 items visible
+          requestFocusOnTap: true,
+          width: null, // Flexible width to match parent
+          label: const Text('Filter by Course'),
       hintText: 'Select course',
       leadingIcon: const Icon(Icons.school, size: 20),
       textStyle: const TextStyle(color: Colors.white, fontSize: 14),
@@ -323,6 +346,8 @@ class _InstructorStudentsPageState extends State<InstructorStudentsPage> {
           ),
         );
       }).toList(),
+        );
+      },
     );
   }
 
@@ -346,17 +371,19 @@ class _InstructorStudentsPageState extends State<InstructorStudentsPage> {
     // Wrap in IgnorePointer to block clicks when disabled
     return IgnorePointer(
       ignoring: !isEnabled,
-      child: DropdownMenu<GroupModel>(
-        key: ValueKey(_selectedCourse?.id ??
-            'no-course'), // Force rebuild when course changes
-        controller:
-            _groupFilterController, // Add controller to show selected value
-        enableFilter: true,
-        enableSearch: true,
-        menuHeight: 150, // Max 3 items visible
-        requestFocusOnTap: true,
-        width: 400, // Fixed width for proper display
-        label: const Text('Filter by Group'),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return DropdownMenu<GroupModel>(
+            key: ValueKey(_selectedCourse?.id ??
+                'no-course'), // Force rebuild when course changes
+            controller:
+                _groupFilterController, // Add controller to show selected value
+            enableFilter: true,
+            enableSearch: true,
+            menuHeight: 150, // Max 3 items visible
+            requestFocusOnTap: true,
+            width: null, // Flexible width to match parent
+            label: const Text('Filter by Group'),
         hintText: isEnabled ? 'Select group' : 'Select course first',
         textStyle: TextStyle(
           color: isEnabled ? Colors.white : Colors.white38,
@@ -421,8 +448,10 @@ class _InstructorStudentsPageState extends State<InstructorStudentsPage> {
               color: group.id.isEmpty ? Colors.grey : Colors.green[400],
               size: 16,
             ),
+        );
+      }).toList(),
           );
-        }).toList(),
+        },
       ),
     );
   }
@@ -496,115 +525,208 @@ class _InstructorStudentsPageState extends State<InstructorStudentsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Header
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final screenWidth = MediaQuery.of(context).size.width;
+        final isSmall = screenWidth < 600;
+        final titleSize = isSmall ? 22.0 : 28.0;
+        final buttonPadding = isSmall 
+            ? const EdgeInsets.symmetric(horizontal: 12, vertical: 6)
+            : const EdgeInsets.symmetric(horizontal: 16, vertical: 8);
+        final iconSize = isSmall ? 16.0 : 18.0;
+        final buttonSpacing = isSmall ? 8.0 : 12.0;
+        
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'My Students',
-              style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white),
-            ),
-            Row(
-              children: [
-                ElevatedButton.icon(
-                  onPressed: () => _navigateToCreateStudent(),
-                  icon: const Icon(Icons.add, size: 18),
-                  label: const Text('Create'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.indigo[600],
-                    foregroundColor: Colors.white,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8)),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                ElevatedButton.icon(
-                  onPressed: () => _navigateToImportCSV(),
-                  icon: const Icon(Icons.upload_file, size: 18),
-                  label: const Text('CSV'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green[600],
-                    foregroundColor: Colors.white,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8)),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        Text(
-          'Manage and monitor your students',
-          style: TextStyle(color: Colors.grey[400], fontSize: 16),
-        ),
-        const SizedBox(height: 24),
-
-        // Filter Bar
-        _buildFilterBar(),
-
-        // Search bar
-        TextField(
-          controller: _searchController,
-          onChanged: (query) {
-            setState(() {
-              searchQuery = query;
-              _applyFilter();
-            });
-          },
-          style: const TextStyle(color: Colors.white),
-          decoration: InputDecoration(
-            hintText: 'Search by name or email...',
-            hintStyle: TextStyle(color: Colors.grey[400]),
-            prefixIcon: Icon(Icons.search, color: Colors.grey[400]),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: Colors.grey[700]!),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Colors.blue),
-            ),
-            filled: true,
-            fillColor: const Color(0xFF1F2937),
-            suffixIcon: searchQuery.isNotEmpty
-                ? IconButton(
-                    icon: const Icon(Icons.clear, color: Colors.white),
-                    onPressed: () {
-                      _searchController.clear();
-                      setState(() {
-                        searchQuery = '';
-                        _applyFilter();
-                      });
-                    },
+            // Header
+            isSmall
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'My Students',
+                        style: TextStyle(
+                          fontSize: titleSize,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      SizedBox(height: buttonSpacing),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () => _navigateToCreateStudent(),
+                              icon: Icon(Icons.add, size: iconSize),
+                              label: const Text('Create'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.indigo[600],
+                                foregroundColor: Colors.white,
+                                padding: buttonPadding,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: buttonSpacing),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () => _navigateToImportCSV(),
+                              icon: Icon(Icons.upload_file, size: iconSize),
+                              label: const Text('CSV'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green[600],
+                                foregroundColor: Colors.white,
+                                padding: buttonPadding,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   )
-                : null,
-          ),
-        ),
-        const SizedBox(height: 16),
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'My Students',
+                        style: TextStyle(
+                          fontSize: titleSize,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      Row(
+                        children: [
+                          ElevatedButton.icon(
+                            onPressed: () => _navigateToCreateStudent(),
+                            icon: Icon(Icons.add, size: iconSize),
+                            label: const Text('Create'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.indigo[600],
+                              foregroundColor: Colors.white,
+                              padding: buttonPadding,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: buttonSpacing),
+                          ElevatedButton.icon(
+                            onPressed: () => _navigateToImportCSV(),
+                            icon: Icon(Icons.upload_file, size: iconSize),
+                            label: const Text('CSV'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green[600],
+                              foregroundColor: Colors.white,
+                              padding: buttonPadding,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+            SizedBox(height: isSmall ? 4 : 6),
+            Text(
+              'Manage and monitor your students',
+              style: TextStyle(
+                color: Colors.grey[400], 
+                fontSize: isSmall ? 14 : 16,
+              ),
+            ),
+            SizedBox(height: isSmall ? 16 : 24),
 
-        // Results count
-        Text(
-          'Results: ${filteredStudents.length} students',
-          style:
-              TextStyle(color: Colors.indigo[400], fontWeight: FontWeight.w500),
-        ),
-        const SizedBox(height: 16),
+            // Filter Bar
+            _buildFilterBar(),
 
-        // List
-        Expanded(child: _buildStudentsContent()),
-      ],
+            // Search bar
+            TextField(
+              controller: _searchController,
+              onChanged: (query) {
+                setState(() {
+                  searchQuery = query;
+                  _applyFilter();
+                });
+              },
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: isSmall ? 14 : 16,
+              ),
+              decoration: InputDecoration(
+                hintText: isSmall 
+                    ? 'Search...' 
+                    : 'Search by name or email...',
+                hintStyle: TextStyle(
+                  color: Colors.grey[400],
+                  fontSize: isSmall ? 14 : 16,
+                ),
+                prefixIcon: Icon(
+                  Icons.search, 
+                  color: Colors.grey[400],
+                  size: isSmall ? 20 : 24,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: Colors.grey[700]!),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: Colors.blue),
+                ),
+                filled: true,
+                fillColor: const Color(0xFF1F2937),
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: isSmall ? 12 : 16,
+                  vertical: isSmall ? 12 : 16,
+                ),
+                isDense: isSmall,
+                suffixIcon: searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: Icon(
+                          Icons.clear, 
+                          color: Colors.white,
+                          size: isSmall ? 20 : 24,
+                        ),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() {
+                            searchQuery = '';
+                            _applyFilter();
+                          });
+                        },
+                      )
+                    : null,
+              ),
+            ),
+            SizedBox(height: isSmall ? 12 : 16),
+
+            // Results count
+            Text(
+              'Results: ${filteredStudents.length} students',
+              style: TextStyle(
+                color: Colors.indigo[400], 
+                fontWeight: FontWeight.w500,
+                fontSize: isSmall ? 14 : 16,
+              ),
+            ),
+            SizedBox(height: isSmall ? 12 : 16),
+
+            // List
+            Expanded(child: _buildStudentsContent()),
+          ],
+        );
+      },
     );
   }
 

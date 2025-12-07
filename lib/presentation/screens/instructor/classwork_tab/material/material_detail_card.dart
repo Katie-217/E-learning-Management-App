@@ -245,12 +245,14 @@ class _MaterialDetailCardState extends ConsumerState<MaterialDetailCard>
                           break;
 
                         case 'delete':
-                          // Call delete management
+                          // Call delete management (don't navigate back since we're in a list)
                           await MaterialManagement.handleDelete(
                             context: context,
                             ref: ref,
                             material: widget.material,
                             courseId: widget.courseId,
+                            shouldNavigateBack:
+                                false, // Don't pop - we're in a list/card view
                             onSuccess: () {
                               // Card will be removed automatically by stream
                             },

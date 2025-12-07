@@ -16,11 +16,18 @@ class InstructorCourseDetailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Get current user info
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final instructorId = currentUser?.uid ?? '';
+    final instructorName = currentUser?.displayName ?? 'Instructor';
+
     return Scaffold(
       backgroundColor: const Color(0xFF0F1720),
       body: InstructorCourseDetailContent(
         courseId: courseId,
         onBack: () => Navigator.pop(context),
+        instructorId: instructorId,
+        instructorName: instructorName,
       ),
     );
   }
@@ -29,11 +36,15 @@ class InstructorCourseDetailPage extends StatelessWidget {
 class InstructorCourseDetailContent extends ConsumerStatefulWidget {
   final String courseId;
   final VoidCallback? onBack;
+  final String instructorId;
+  final String instructorName;
 
   const InstructorCourseDetailContent({
     super.key,
     required this.courseId,
     this.onBack,
+    required this.instructorId,
+    required this.instructorName,
   });
 
   @override
@@ -63,73 +74,98 @@ class _InstructorCourseDetailContentState
   Widget build(BuildContext context) {
     // Lấy thông tin khóa học từ Provider
     final courseAsyncValue = ref.watch(courseDetailProvider(widget.courseId));
-    
+
     // ✅ 2. Lấy thông tin Giảng viên đang đăng nhập (Current User)
     // Chúng ta dùng cái này vì CourseModel không lưu instructorId
     final currentUser = FirebaseAuth.instance.currentUser;
     final String currentUserId = currentUser?.uid ?? '';
     final String currentUserName = currentUser?.displayName ?? 'Instructor';
 
-    return courseAsyncValue.when(
-      loading: () => const Center(
-        child: CircularProgressIndicator(color: Colors.indigo),
-      ),
-      error: (error, stack) => Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, color: Colors.red, size: 48),
-            const SizedBox(height: 16),
-            Text(
-              'Error loading course',
-              style: TextStyle(color: Colors.red[300], fontSize: 18),
-            ),
-            const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32.0),
-              child: Text(
-                error.toString().replaceAll('Exception:', '').trim(),
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.grey),
-              ),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: () {
-                ref.refresh(courseDetailProvider(widget.courseId));
-              },
-              child: const Text('Retry'),
-            )
-          ],
-        ),
-      ),
-      data: (course) {
-        if (course == null) {
-          return const Center(
-            child: Text(
-              'Course not found',
-              style: TextStyle(color: Colors.white),
-            ),
-          );
-        }
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final screenWidth = MediaQuery.of(context).size.width;
+        final isSmall = screenWidth < 600;
 
-        return Column(
-          children: [
-            CourseDetailHeader(
-              course: course,
-              onBack: widget.onBack,
-            ),
-            Expanded(
-              child: InstructorCourseTabsWidget(
-                tabController: _tabController,
-                course: course,
-                instructorId: currentUserId,
-                instructorName: course.instructor.isNotEmpty 
-                    ? course.instructor 
-                    : currentUserName,
+        return courseAsyncValue.when(
+          loading: () => Center(
+            child: CircularProgressIndicator(color: Colors.indigo),
+          ),
+          error: (error, stack) => Center(
+            child: Padding(
+              padding: EdgeInsets.all(isSmall ? 16 : 32),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.error_outline,
+                    color: Colors.red,
+                    size: isSmall ? 40 : 48,
+                  ),
+                  SizedBox(height: isSmall ? 12 : 16),
+                  Text(
+                    'Error loading course',
+                    style: TextStyle(
+                      color: Colors.red[300],
+                      fontSize: isSmall ? 16 : 18,
+                    ),
+                  ),
+                  SizedBox(height: isSmall ? 6 : 8),
+                  Padding(
+                    padding:
+                        EdgeInsets.symmetric(horizontal: isSmall ? 16.0 : 32.0),
+                    child: Text(
+                      error.toString().replaceAll('Exception:', '').trim(),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.grey,
+                        fontSize: isSmall ? 12 : 14,
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: isSmall ? 16 : 24),
+                  ElevatedButton(
+                    onPressed: () {
+                      ref.refresh(courseDetailProvider(widget.courseId));
+                    },
+                    child: Text(
+                      'Retry',
+                      style: TextStyle(fontSize: isSmall ? 14 : 16),
+                    ),
+                  )
+                ],
               ),
             ),
-          ],
+          ),
+          data: (course) {
+            if (course == null) {
+              return Center(
+                child: Text(
+                  'Course not found',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: isSmall ? 16 : 18,
+                  ),
+                ),
+              );
+            }
+
+            return Column(
+              children: [
+                CourseDetailHeader(
+                  course: course,
+                  onBack: widget.onBack,
+                ),
+                Expanded(
+                  child: InstructorCourseTabsWidget(
+                    tabController: _tabController,
+                    course: course,
+                    instructorId: widget.instructorId,
+                    instructorName: widget.instructorName,
+                  ),
+                ),
+              ],
+            );
+          },
         );
       },
     );

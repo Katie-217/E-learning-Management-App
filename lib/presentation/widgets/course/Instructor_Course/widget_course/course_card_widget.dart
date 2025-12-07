@@ -1,11 +1,47 @@
 import 'package:flutter/material.dart';
 import 'package:elearning_management_app/domain/models/course_model.dart';
+import 'package:elearning_management_app/data/repositories/course/enrollment_repository.dart';
 
-class CourseCard extends StatelessWidget {
+class CourseCard extends StatefulWidget {
   final CourseModel course;
   final VoidCallback? onTap;
 
   const CourseCard({super.key, required this.course, this.onTap});
+
+  @override
+  State<CourseCard> createState() => _CourseCardState();
+}
+
+class _CourseCardState extends State<CourseCard> {
+  final EnrollmentRepository _enrollmentRepo = EnrollmentRepository();
+  int? _studentCount;
+  bool _isLoadingCount = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStudentCount();
+  }
+
+  Future<void> _loadStudentCount() async {
+    try {
+      final count =
+          await _enrollmentRepo.countStudentsInCourse(widget.course.id);
+      if (mounted) {
+        setState(() {
+          _studentCount = count;
+          _isLoadingCount = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _studentCount = 0;
+          _isLoadingCount = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +56,7 @@ class CourseCard extends StatelessWidget {
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
-        onTap: onTap,
+        onTap: widget.onTap,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -40,11 +76,11 @@ class CourseCard extends StatelessWidget {
                   Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        _chip(course.code),
-                        _statusChip(course.status),
+                        _chip(widget.course.code),
+                        _statusChip(widget.course.status),
                       ]),
                   const Spacer(),
-                  Text(course.name,
+                  Text(widget.course.name,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -66,7 +102,7 @@ class CourseCard extends StatelessWidget {
                           size: 16, color: Colors.grey),
                       const SizedBox(width: 6),
                       Expanded(
-                          child: Text(course.instructor,
+                          child: Text(widget.course.instructor,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
                                   color: Colors.grey, fontSize: 13))),
@@ -79,22 +115,24 @@ class CourseCard extends StatelessWidget {
                           size: 16, color: Colors.grey),
                       const SizedBox(width: 6),
                       Expanded(
-                          child: Text(course.semester,
+                          child: Text(widget.course.semester,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
                                   color: Colors.grey, fontSize: 13))),
                     ]),
                     const SizedBox(height: 8),
 
-                    // Sessions Count
+                    // Sessions Count & Student Count
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('${course.sessions} sessions',
+                        Text('${widget.course.sessions} sessions',
                             style: const TextStyle(
                                 color: Colors.grey, fontSize: 12)),
-                        // TODO: Add enrollment count from EnrollmentRepository
-                        Text('Students: Loading...',
+                        Text(
+                            _isLoadingCount
+                                ? 'Students: ...'
+                                : 'Students: $_studentCount',
                             style: const TextStyle(
                                 color: Colors.grey, fontSize: 12)),
                       ],

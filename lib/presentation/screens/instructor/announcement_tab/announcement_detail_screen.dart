@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:elearning_management_app/domain/models/comment_model.dart';
 import 'package:elearning_management_app/application/controllers/announcement/announcement_provider.dart';
 import 'package:elearning_management_app/data/repositories/auth/auth_repository.dart';
+import '../../../widgets/course/Instructor_Course/classwork_tab_widget/assignment/file_preview_overlay.dart';
+import '../../../widgets/course/Instructor_Course/classwork_tab_widget/assignment/upload_file_assignment.dart';
 
 class AnnouncementDetailScreen extends ConsumerStatefulWidget {
   final String announcementId;
@@ -27,11 +30,11 @@ class AnnouncementDetailScreen extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<AnnouncementDetailScreen> createState() => 
+  ConsumerState<AnnouncementDetailScreen> createState() =>
       _AnnouncementDetailScreenState();
 }
 
-class _AnnouncementDetailScreenState 
+class _AnnouncementDetailScreenState
     extends ConsumerState<AnnouncementDetailScreen> {
   final _commentController = TextEditingController();
   bool _isSendingComment = false;
@@ -50,13 +53,13 @@ class _AnnouncementDetailScreenState
     super.dispose();
   }
 
-    /// 🎯 Track that student viewed this announcement
+  /// ðŸŽ¯ Track that student viewed this announcement
   Future<void> _trackView() async {
     try {
-      // Cách 1: Lấy từ StreamProvider (nhanh, đồng bộ)
+      // CÃ¡ch 1: Láº¥y tá»« StreamProvider (nhanh, Ä‘á»“ng bá»™)
       var userModel = ref.read(currentUserProvider).value;
 
-      // Cách 2: Nếu Stream chưa có dữ liệu, gọi trực tiếp Future từ Repository (chậm hơn chút nhưng chắc chắn)
+      // CÃ¡ch 2: Náº¿u Stream chÆ°a cÃ³ dá»¯ liá»‡u, gá»i trá»±c tiáº¿p Future tá»« Repository (cháº­m hÆ¡n chÃºt nhÆ°ng cháº¯c cháº¯n)
       if (userModel == null) {
         userModel = await ref.read(authRepositoryProvider).currentUserModel;
       }
@@ -64,38 +67,84 @@ class _AnnouncementDetailScreenState
       if (userModel == null) return;
 
       await ref.read(announcementControllerProvider.notifier).markAsViewed(
-        announcementId: widget.announcementId,
-        courseId: widget.courseId,
-        currentUser: userModel,
-      );
+            announcementId: widget.announcementId,
+            courseId: widget.courseId,
+            currentUser: userModel,
+          );
     } catch (e) {
       debugPrint('Error tracking view: $e');
     }
   }
 
-// 2. Sửa hàm _handleDownload
+// 2. Sá»­a hÃ m _handleDownload
   Future<void> _handleDownload(String url, String fileName) async {
     try {
       var userModel = ref.read(currentUserProvider).value;
       if (userModel == null) {
         userModel = await ref.read(authRepositoryProvider).currentUserModel;
       }
-      
+
       if (userModel == null) {
         _showSnackBar('You must be logged in to download', isError: true);
         return;
       }
-      // 1. Track download action in Firestore
-      await ref.read(announcementControllerProvider.notifier).markAsDownloaded(
-        announcementId: widget.announcementId,
-        courseId: widget.courseId,
-        currentUser: userModel,
-      );
 
-      // 2. Open/download file
+      // Get file info
+      final extension = _getFileExtension(fileName);
+      final fileSize = widget.attachments.firstWhere(
+        (file) => file['name'] == fileName,
+        orElse: () => {'sizeInBytes': 0},
+      )['sizeInBytes'] as int;
+
+      // Check if file supports preview
+      if (_supportsPreview(extension)) {
+        // Create UploadedFileModel for preview
+        final fileModel = UploadedFileModel(
+          fileName: fileName,
+          filePath: url, // Firebase URL
+          fileSizeBytes: fileSize,
+          fileExtension: extension,
+          fileBytes: null, // Not needed for uploaded files
+          platformFile: PlatformFile(
+            name: fileName,
+            size: fileSize,
+            path: url,
+          ),
+        );
+
+        // Show preview overlay
+        await FilePreviewOverlay.show(
+          context,
+          [fileModel], // Single file
+          initialIndex: 0,
+        );
+
+        // Track download after preview (user saw the file)
+        await ref
+            .read(announcementControllerProvider.notifier)
+            .markAsDownloaded(
+              announcementId: widget.announcementId,
+              courseId: widget.courseId,
+              currentUser: userModel,
+            );
+
+        return;
+      }
+
+      // For non-previewable files, download directly
+      await ref.read(announcementControllerProvider.notifier).markAsDownloaded(
+            announcementId: widget.announcementId,
+            courseId: widget.courseId,
+            currentUser: userModel,
+          );
+
+      // Open/download file
       final uri = Uri.parse(url);
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
+        if (mounted) {
+          _showSnackBar('Download started successfully');
+        }
       } else {
         if (mounted) {
           _showSnackBar('Cannot open file', isError: true);
@@ -108,7 +157,229 @@ class _AnnouncementDetailScreenState
     }
   }
 
-Future<void> _sendComment() async {
+// 3. Thêm helper method để check file có support preview không
+  bool _supportsPreview(String extension) {
+    // Các định dạng được hỗ trợ preview bởi FilePreviewOverlay
+    final supportedExtensions = [
+      // Images
+      '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp',
+      // Documents
+      '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
+      // Text & Code
+      '.txt', '.md', '.json', '.xml', '.csv', '.html', '.css', '.js',
+      '.dart', '.java', '.py', '.cpp', '.c', '.h', '.cs', '.php',
+    ];
+    return supportedExtensions.contains(extension.toLowerCase());
+  }
+
+// ========================================
+// ALTERNATIVE: Nếu muốn preview nhiều files cùng lúc
+// ========================================
+
+// Method này cho phép user swipe qua lại giữa các attachments
+  Future<void> _handleDownloadWithGallery(String url, String fileName) async {
+    try {
+      var userModel = ref.read(currentUserProvider).value;
+      if (userModel == null) {
+        userModel = await ref.read(authRepositoryProvider).currentUserModel;
+      }
+
+      if (userModel == null) {
+        _showSnackBar('You must be logged in to download', isError: true);
+        return;
+      }
+
+      // Convert all attachments to UploadedFileModel
+      final fileModels = widget.attachments.map((attachment) {
+        final name = attachment['name'] as String;
+        final fileUrl = attachment['url'] as String;
+        final size = attachment['sizeInBytes'] as int;
+        final ext = _getFileExtension(name);
+
+        return UploadedFileModel(
+          fileName: name,
+          filePath: fileUrl,
+          fileSizeBytes: size,
+          fileExtension: ext,
+          fileBytes: null,
+          platformFile: PlatformFile(
+            name: name,
+            size: size,
+            path: fileUrl,
+          ),
+        );
+      }).toList();
+
+      // Find initial index (file user clicked)
+      final initialIndex = fileModels.indexWhere(
+        (file) => file.fileName == fileName,
+      );
+
+      // Show preview overlay with gallery mode
+      await FilePreviewOverlay.show(
+        context,
+        fileModels,
+        initialIndex: initialIndex >= 0 ? initialIndex : 0,
+      );
+
+      // Track download
+      await ref.read(announcementControllerProvider.notifier).markAsDownloaded(
+            announcementId: widget.announcementId,
+            courseId: widget.courseId,
+            currentUser: userModel,
+          );
+    } catch (e) {
+      if (mounted) {
+        _showSnackBar('Error: $e', isError: true);
+      }
+    }
+  }
+
+// ========================================
+// EXAMPLE: Sử dụng trong build method
+// ========================================
+
+// Tìm phần render attachments trong build method và update như sau:
+
+  Widget _buildAttachmentsList() {
+    if (widget.attachments.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 24),
+        const Divider(color: Colors.grey),
+        const SizedBox(height: 20),
+        Row(
+          children: [
+            Icon(Icons.attach_file, color: Colors.indigo[400], size: 22),
+            const SizedBox(width: 8),
+            const Text(
+              "Attachments",
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        ...widget.attachments.map((file) {
+          final fileName = file['name'] ?? 'Unknown file';
+          final fileSize = _formatFileSize(file['sizeInBytes'] ?? 0);
+          final extension = _getFileExtension(fileName);
+          final fileColor = _getFileColor(extension);
+          final fileIcon = _getFileIcon(extension);
+          final supportsPreview = _supportsPreview(extension);
+
+          return Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1F2937),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.grey[800]!),
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(10),
+                // ✅ SỬ DỤNG METHOD MỚI
+                onTap: () => _handleDownload(
+                  file['url'] ?? '',
+                  fileName,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: fileColor.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          fileIcon,
+                          color: fileColor,
+                          size: 28,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              fileName,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                Text(
+                                  '$fileSize • ${extension.toUpperCase()}',
+                                  style: TextStyle(
+                                    color: Colors.grey[400],
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                // Badge cho previewable files
+                                if (supportsPreview) ...[
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.green.withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(4),
+                                      border: Border.all(
+                                        color: Colors.green.withOpacity(0.5),
+                                      ),
+                                    ),
+                                    child: const Text(
+                                      'PREVIEW',
+                                      style: TextStyle(
+                                        color: Colors.green,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Icon(
+                        supportsPreview
+                            ? Icons.visibility
+                            : Icons.download_rounded,
+                        color: Colors.indigo[400],
+                        size: 24,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ],
+    );
+  }
+
+  Future<void> _sendComment() async {
     final text = _commentController.text.trim();
     if (text.isEmpty || _isSendingComment) return;
 
@@ -116,28 +387,28 @@ Future<void> _sendComment() async {
 
     try {
       var userModel = ref.read(currentUserProvider).value;
-      
+
       if (userModel == null) {
         userModel = await ref.read(authRepositoryProvider).currentUserModel;
       }
 
-      // Kiểm tra kỹ nếu vẫn không có user
+      // Kiá»ƒm tra ká»¹ náº¿u váº«n khÃ´ng cÃ³ user
       if (userModel == null) {
         _showSnackBar('You must be logged in to comment', isError: true);
-        setState(() => _isSendingComment = false); // Dừng loading
+        setState(() => _isSendingComment = false); // Dá»«ng loading
         return;
       }
 
       _commentController.clear();
       FocusScope.of(context).unfocus();
 
-      // Gọi controller với userModel chắc chắn đã có dữ liệu
+      // Gá»i controller vá»›i userModel cháº¯c cháº¯n Ä‘Ã£ cÃ³ dá»¯ liá»‡u
       await ref.read(announcementControllerProvider.notifier).sendComment(
-        announcementId: widget.announcementId,
-        courseId: widget.courseId,
-        content: text,
-        currentUser: userModel,
-      );
+            announcementId: widget.announcementId,
+            courseId: widget.courseId,
+            content: text,
+            currentUser: userModel,
+          );
 
       if (mounted) {
         _showSnackBar('Comment posted successfully');
@@ -268,8 +539,8 @@ Future<void> _sendComment() async {
                           radius: 24,
                           backgroundColor: Colors.indigo,
                           child: Text(
-                            widget.authorName.isNotEmpty 
-                                ? widget.authorName[0].toUpperCase() 
+                            widget.authorName.isNotEmpty
+                                ? widget.authorName[0].toUpperCase()
                                 : '?',
                             style: const TextStyle(
                               color: Colors.white,
@@ -305,9 +576,9 @@ Future<void> _sendComment() async {
                       ],
                     ),
                   ),
-                  
+
                   const SizedBox(height: 24),
-                  
+
                   // Title
                   Text(
                     widget.title,
@@ -318,9 +589,9 @@ Future<void> _sendComment() async {
                       height: 1.3,
                     ),
                   ),
-                  
+
                   const SizedBox(height: 16),
-                  
+
                   // Content (Markdown support)
                   Container(
                     padding: const EdgeInsets.all(16),
@@ -364,10 +635,10 @@ Future<void> _sendComment() async {
                     const SizedBox(height: 24),
                     const Divider(color: Colors.grey),
                     const SizedBox(height: 20),
-                    
                     Row(
                       children: [
-                        Icon(Icons.attach_file, color: Colors.indigo[400], size: 22),
+                        Icon(Icons.attach_file,
+                            color: Colors.indigo[400], size: 22),
                         const SizedBox(width: 8),
                         const Text(
                           "Attachments",
@@ -379,12 +650,11 @@ Future<void> _sendComment() async {
                         ),
                       ],
                     ),
-                    
                     const SizedBox(height: 12),
-                    
                     ...widget.attachments.map((file) {
                       final fileName = file['name'] ?? 'Unknown file';
-                      final fileSize = _formatFileSize(file['sizeInBytes'] ?? 0);
+                      final fileSize =
+                          _formatFileSize(file['sizeInBytes'] ?? 0);
                       final extension = _getFileExtension(fileName);
                       final fileColor = _getFileColor(extension);
                       final fileIcon = _getFileIcon(extension);
@@ -423,7 +693,8 @@ Future<void> _sendComment() async {
                                   const SizedBox(width: 14),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           fileName,
@@ -464,11 +735,12 @@ Future<void> _sendComment() async {
                   const SizedBox(height: 24),
                   const Divider(color: Colors.grey),
                   const SizedBox(height: 20),
-                  
+
                   // COMMENTS SECTION
                   const Row(
                     children: [
-                      Icon(Icons.comment_outlined, color: Colors.white, size: 22),
+                      Icon(Icons.comment_outlined,
+                          color: Colors.white, size: 22),
                       SizedBox(width: 8),
                       Text(
                         "Class Comments",
@@ -480,7 +752,7 @@ Future<void> _sendComment() async {
                       ),
                     ],
                   ),
-                  
+
                   const SizedBox(height: 16),
 
                   commentsAsync.when(
@@ -527,7 +799,7 @@ Future<void> _sendComment() async {
                           ),
                         );
                       }
-                      
+
                       return ListView.separated(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
@@ -631,8 +903,8 @@ class _CommentItem extends StatelessWidget {
             radius: 20,
             backgroundColor: Colors.grey[700],
             child: Text(
-              comment.authorName.isNotEmpty 
-                  ? comment.authorName[0].toUpperCase() 
+              comment.authorName.isNotEmpty
+                  ? comment.authorName[0].toUpperCase()
                   : "?",
               style: const TextStyle(
                 color: Colors.white,
