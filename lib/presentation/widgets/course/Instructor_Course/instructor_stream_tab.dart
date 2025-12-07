@@ -3,10 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:elearning_management_app/domain/models/course_model.dart';
 import 'package:elearning_management_app/application/controllers/announcement/announcement_provider.dart';
-import '../../../screens/instructor/announcement_tab/announcement_detail_screen.dart';
 import 'package:elearning_management_app/presentation/widgets/course/Instructor_Course/announcement_tab_widget/announcement_tracking_screen.dart';
 import '../../../widgets/course/Instructor_Course/announcement_tab_widget/simple_create_announcement_dialog.dart';
 import 'package:timeago/timeago.dart' as timeago;
+import '../Instructor_Course/announcement_tab_widget/announcement_attachment_display_widget.dart';
+import '../Instructor_Course/announcement_tab_widget/announcement_detail_screen_with_attachments.dart';
 
 /// ============================================
 /// HYBRID VERSION: Simple Layout + Advanced Features
@@ -138,7 +139,6 @@ class InstructorStreamTab extends ConsumerWidget {
           content: announcement['content'] ?? '',
           authorName: announcement['authorName'] ?? 'Unknown',
           createdAt: _parseDateTime(announcement['createdAt']),
-          attachments: List<Map<String, dynamic>>.from(announcement['attachments'] ?? []),
         ),
       ),
     );
@@ -282,6 +282,9 @@ class _InstructorAnnouncementComposer extends ConsumerWidget {
 // ========================================
 // ENHANCED POST ITEM (Simple layout + New features)
 // ========================================
+// ========================================
+// ENHANCED POST ITEM (Đã cập nhật hiển thị file preview)
+// ========================================
 class _EnhancedPostItem extends ConsumerWidget {
   final String courseId;
   final Map<String, dynamic> announcementData;
@@ -291,6 +294,7 @@ class _EnhancedPostItem extends ConsumerWidget {
   final VoidCallback onViewTracking;
 
   const _EnhancedPostItem({
+    super.key, // Thêm super.key cho chuẩn
     required this.courseId,
     required this.announcementData,
     required this.onTap,
@@ -305,6 +309,7 @@ class _EnhancedPostItem extends ConsumerWidget {
     final content = announcementData['content'] ?? '';
     final authorName = announcementData['authorName'] ?? 'Instructor';
     final createdAt = _parseDateTime(announcementData['createdAt']);
+    // Lấy danh sách attachments
     final attachments = List<Map<String, dynamic>>.from(announcementData['attachments'] ?? []);
     final targetGroupIds = List<String>.from(announcementData['targetGroupIds'] ?? []);
     final viewCount = announcementData['viewCount'] ?? 0;
@@ -327,7 +332,7 @@ class _EnhancedPostItem extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // ========================================
-              // HEADER (Simple design from old version)
+              // HEADER
               // ========================================
               Row(
                 children: [
@@ -368,9 +373,7 @@ class _EnhancedPostItem extends ConsumerWidget {
                     ),
                   ),
 
-                  // ========================================
-                  // MORE OPTIONS MENU (Enhanced with tracking)
-                  // ========================================
+                  // Option Menu
                   PopupMenuButton<String>(
                     icon: const Icon(Icons.more_vert, color: Colors.grey),
                     color: const Color(0xFF374151),
@@ -402,9 +405,9 @@ class _EnhancedPostItem extends ConsumerWidget {
                         value: 'edit',
                         child: Row(
                           children: [
-                            Icon(Icons.edit, size: 18, color: Colors.white),
-                            SizedBox(width: 8),
-                            Text('Edit', style: TextStyle(color: Colors.white)),
+                            const Icon(Icons.edit, size: 18, color: Colors.white),
+                            const SizedBox(width: 8),
+                            const Text('Edit', style: TextStyle(color: Colors.white)),
                           ],
                         ),
                       ),
@@ -427,7 +430,7 @@ class _EnhancedPostItem extends ConsumerWidget {
               const SizedBox(height: 12),
 
               // ========================================
-              // CONTENT (Simple design from old version)
+              // CONTENT
               // ========================================
               Text(
                 title,
@@ -446,32 +449,20 @@ class _EnhancedPostItem extends ConsumerWidget {
               ),
 
               // ========================================
-              // NEW FEATURES (Attachments & Groups)
+              // UPDATED: ATTACHMENTS PREVIEW SECTION
               // ========================================
-              if (attachments.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.indigo.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.attach_file, size: 14, color: Colors.indigo[300]),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${attachments.length} file${attachments.length > 1 ? 's' : ''} attached',
-                        style: TextStyle(color: Colors.indigo[300], fontSize: 12),
-                      ),
-                    ],
-                  ),
+              if (attachments.isNotEmpty)
+                // Sử dụng widget AnnouncementAttachmentDisplayWidget tại đây
+                // Lưu ý: Widget này đã có sẵn padding top bên trong nó
+                AnnouncementAttachmentDisplayWidget(
+                  attachments: attachments,
                 ),
-              ],
 
+              // ========================================
+              // TARGET GROUPS
+              // ========================================
               if (targetGroupIds.isNotEmpty) ...[
-                const SizedBox(height: 8),
+                const SizedBox(height: 12), // Tăng khoảng cách một chút nếu có attachments bên trên
                 Wrap(
                   spacing: 6,
                   runSpacing: 6,
@@ -510,13 +501,12 @@ class _EnhancedPostItem extends ConsumerWidget {
               ],
 
               // ========================================
-              // FOOTER (Enhanced with view count)
+              // FOOTER
               // ========================================
               const SizedBox(height: 12),
               Divider(color: Colors.grey[800]),
               Row(
                 children: [
-                  // View count (NEW)
                   Icon(Icons.visibility, size: 16, color: Colors.grey[500]),
                   const SizedBox(width: 4),
                   Text(
@@ -524,7 +514,6 @@ class _EnhancedPostItem extends ConsumerWidget {
                     style: TextStyle(color: Colors.grey[500], fontSize: 12),
                   ),
                   const SizedBox(width: 16),
-                  // Comments (Keep from old version)
                   TextButton.icon(
                     onPressed: onTap,
                     icon: const Icon(Icons.comment_outlined, size: 18, color: Colors.grey),
