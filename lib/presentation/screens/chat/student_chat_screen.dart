@@ -40,44 +40,56 @@ class _StudentChatScreenState extends ConsumerState<StudentChatScreen> {
             studentConversationWithInstructorProvider(instructor.uid)
           );
 
-          return Row(
-            children: [
-              // --- LEFT SIDEBAR (Conversation list) ---
-              Container(
-                width: 350, // Fixed width for sidebar
-                decoration: BoxDecoration(
-                  color: _bgCard,
-                  border: Border(right: BorderSide(color: Colors.grey[800]!)),
-                ),
-                child: Column(
-                  children: [
-                    _buildSidebarHeader(),
-                    Expanded(
-                      child: _buildContactItem(instructor, isActive: true),
-                    ),
-                  ],
-                ),
-              ),
+          return LayoutBuilder(
+            builder: (BuildContext context, BoxConstraints constraints) {
+              final bool showSidebar = constraints.maxWidth > 600;
 
-              // --- RIGHT MAIN CHAT ---
-              Expanded(
-                child: conversationAsync.when(
-                  data: (conversationId) {
-                    if (conversationId == null) {
-                      return _buildStartChatView(instructor);
-                    }
-                    return ChatDetailScreen(
-                      conversationId: conversationId,
-                      otherUser: instructor,
-                    );
-                  },
-                  loading: () => const Center(
-                    child: CircularProgressIndicator(color: Colors.indigo),
-                  ),
-                  error: (error, stack) => _buildErrorView(error, instructor),
+              final Widget chatWidget = conversationAsync.when(
+                data: (conversationId) {
+                  if (conversationId == null) {
+                    return _buildStartChatView(instructor);
+                  }
+                  return ChatDetailScreen(
+                    conversationId: conversationId,
+                    otherUser: instructor,
+                  );
+                },
+                loading: () => const Center(
+                  child: CircularProgressIndicator(color: Colors.indigo),
                 ),
-              ),
-            ],
+                error: (error, stack) => _buildErrorView(error, instructor),
+              );
+
+              if (!showSidebar) {
+                return chatWidget;
+              }
+
+              return Row(
+                children: [
+                  // --- LEFT SIDEBAR (Conversation list) ---
+                  Container(
+                    width: 350, // Fixed width for sidebar
+                    decoration: BoxDecoration(
+                      color: _bgCard,
+                      border: Border(right: BorderSide(color: Colors.grey[800]!)),
+                    ),
+                    child: Column(
+                      children: [
+                        _buildSidebarHeader(),
+                        Expanded(
+                          child: _buildContactItem(instructor, isActive: true),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // --- RIGHT MAIN CHAT ---
+                  Expanded(
+                    child: chatWidget,
+                  ),
+                ],
+              );
+            },
           );
         },
         loading: () => const Center(child: CircularProgressIndicator(color: Colors.indigo)),
@@ -121,55 +133,51 @@ class _StudentChatScreenState extends ConsumerState<StudentChatScreen> {
   }
 
   Widget _buildContactItem(UserModel instructor, {required bool isActive}) {
-    // Simulate list item interface like Card in Forum but compact
-    return ListView(
+    return Padding(
       padding: const EdgeInsets.all(12),
-      children: [
-        Container(
-          decoration: BoxDecoration(
-            color: isActive ? Colors.indigo.withOpacity(0.1) : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
-            border: isActive ? Border.all(color: Colors.indigo.withOpacity(0.3)) : null,
+      child: Container(
+        decoration: BoxDecoration(
+          color: isActive ? Colors.indigo.withOpacity(0.1) : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          border: isActive ? Border.all(color: Colors.indigo.withOpacity(0.3)) : null,
+        ),
+        child: ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          leading: CircleAvatar(
+            radius: 24,
+            backgroundColor: _bgInput,
+            backgroundImage: instructor.photoUrl != null && instructor.photoUrl!.isNotEmpty
+                ? NetworkImage(instructor.photoUrl!)
+                : null,
+            child: (instructor.photoUrl == null || instructor.photoUrl!.isEmpty)
+                ? Text(
+                    instructor.displayName.isNotEmpty ? instructor.displayName[0].toUpperCase() : 'IN',
+                    style: const TextStyle(fontSize: 32, color: Colors.white),
+                  )
+                : null,
           ),
-          child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            leading: CircleAvatar(
-              radius: 24,
-              backgroundColor: _bgInput,
-              backgroundImage: instructor.photoUrl != null && instructor.photoUrl!.isNotEmpty
-                  ? NetworkImage(instructor.photoUrl!)
-                  : null,
-              child: (instructor.photoUrl == null || instructor.photoUrl!.isEmpty)
-                  ? Text(
-        // FIX HERE
-        instructor.displayName.isNotEmpty ? instructor.displayName[0].toUpperCase() : 'IN',
-        style: const TextStyle(fontSize: 32, color: Colors.white),
-      )
-                  : null,
+          title: Text(
+            instructor.displayName,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+              fontSize: 15,
             ),
-            title: Text(
-              instructor.displayName,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-                fontSize: 15,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          subtitle: Row(
+            children: [
+              Icon(Icons.school, size: 12, color: Colors.grey[500]),
+              const SizedBox(width: 4),
+              Text(
+                'Instructor',
+                style: TextStyle(color: Colors.grey[500], fontSize: 13),
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            subtitle: Row(
-              children: [
-                Icon(Icons.school, size: 12, color: Colors.grey[500]),
-                const SizedBox(width: 4),
-                Text(
-                  'Instructor',
-                  style: TextStyle(color: Colors.grey[500], fontSize: 13),
-                ),
-              ],
-            ),
+            ],
           ),
         ),
-      ],
+      ),
     );
   }
 
@@ -210,11 +218,11 @@ class _StudentChatScreenState extends ConsumerState<StudentChatScreen> {
                   : null,
               child: (instructor.photoUrl == null || instructor.photoUrl!.isEmpty)
                   ? Text(
-        instructor.displayName.isNotEmpty 
-            ? instructor.displayName[0].toUpperCase() 
-            : 'IN', // ✅ Fallback if name is empty
-        style: const TextStyle(fontSize: 32, color: Colors.white),
-      )
+                      instructor.displayName.isNotEmpty 
+                          ? instructor.displayName[0].toUpperCase() 
+                          : 'IN', // ✅ Fallback if name is empty
+                      style: const TextStyle(fontSize: 32, color: Colors.white),
+                    )
                   : null,
             ),
           ),
@@ -270,7 +278,7 @@ class _StudentChatScreenState extends ConsumerState<StudentChatScreen> {
     return const Center(child: Text('Error loading instructor', style: TextStyle(color: Colors.red)));
   }
 
-Future<void> _startConversation(UserModel instructor) async {
+  Future<void> _startConversation(UserModel instructor) async {
     // 1. Get Current User ID from Provider
     // Note: .value may be null if not loaded yet, so use .asData?.value or check null
     final currentUserId = ref.read(currentUserIdProvider).value;
@@ -338,7 +346,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
   static const Color _bgCard = Color(0xFF1F2937);
   static const Color _bgInput = Color(0xFF111827);
 
- @override
+  @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -347,6 +355,9 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
         // Call repo directly or through controller if controller supports
         // Here call repo through provider for simplicity since controller markAsRead function above is not complete with ID logic
         ref.read(chatRepositoryProvider).markConversationAsRead(widget.conversationId, myId);
+      }
+      if (_scrollController.hasClients) {
+        _scrollController.jumpTo(0);
       }
     });
   }
@@ -380,23 +391,22 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
           ),
           child: Row(
             children: [
-          // --- In ChatDetailScreen ---
-          CircleAvatar(
-            radius: 20,
-            backgroundImage: widget.otherUser.photoUrl != null && widget.otherUser.photoUrl!.isNotEmpty
-                ? NetworkImage(widget.otherUser.photoUrl!)
-                : null,
-            backgroundColor: Colors.indigo,
-            child: (widget.otherUser.photoUrl == null || widget.otherUser.photoUrl!.isEmpty)
-                // FIX HERE: Check isNotEmpty before taking [0]
-                ?  Text(
-          widget.otherUser.displayName.isNotEmpty 
-              ? widget.otherUser.displayName[0].toUpperCase() 
-              : '?',  // ✅ MUST ADD THIS LINE
-          style: const TextStyle(color: Colors.white),
-        )
-                : null,
-          ),
+              // --- In ChatDetailScreen ---
+              CircleAvatar(
+                radius: 20,
+                backgroundImage: widget.otherUser.photoUrl != null && widget.otherUser.photoUrl!.isNotEmpty
+                    ? NetworkImage(widget.otherUser.photoUrl!)
+                    : null,
+                backgroundColor: Colors.indigo,
+                child: (widget.otherUser.photoUrl == null || widget.otherUser.photoUrl!.isEmpty)
+                    ?  Text(
+                        widget.otherUser.displayName.isNotEmpty 
+                            ? widget.otherUser.displayName[0].toUpperCase() 
+                            : '?',  // ✅ MUST ADD THIS LINE
+                        style: const TextStyle(color: Colors.white),
+                      )
+                    : null,
+              ),
               const SizedBox(width: 16),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -421,6 +431,16 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
             color: const Color(0xFF111827), // Chat area background darker than sidebar
             child: messagesAsync.when(
               data: (messages) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (_scrollController.hasClients) {
+                    _scrollController.animateTo(
+                      0,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeOut,
+                    );
+                  }
+                });
+
                 if (messages.isEmpty) {
                   return Center(
                     child: Column(
@@ -441,6 +461,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                   controller: _scrollController,
                   reverse: true,
                   padding: const EdgeInsets.all(24),
+                  physics: const BouncingScrollPhysics(),
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
                     // Safe index check
@@ -480,7 +501,6 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
           ),
           child: Row(
             children: [
-
               
               // Input Field
               Expanded(
@@ -602,7 +622,6 @@ class MessageBubble extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           if (!isMe) ...[
-// --- In MessageBubble ---
             if (showAvatar)
               CircleAvatar(
                 radius: 14,
@@ -611,13 +630,12 @@ class MessageBubble extends StatelessWidget {
                     : null,
                 backgroundColor: Colors.indigo,
                 child: (otherUser.photoUrl == null || otherUser.photoUrl!.isEmpty)
-                    // FIX HERE: Add check isNotEmpty
                     ? Text(
-          otherUser.displayName.isNotEmpty 
-              ? otherUser.displayName[0].toUpperCase() 
-              : '?',  // ✅ MUST ADD THIS LINE
-          style: const TextStyle(fontSize: 10, color: Colors.white)
-        )
+                        otherUser.displayName.isNotEmpty 
+                            ? otherUser.displayName[0].toUpperCase() 
+                            : '?',  // ✅ MUST ADD THIS LINE
+                        style: const TextStyle(fontSize: 10, color: Colors.white)
+                      )
                     : null,
               )
             else
@@ -640,6 +658,13 @@ class MessageBubble extends StatelessWidget {
                   bottomLeft: Radius.circular(isMe ? 18 : 4),
                   bottomRight: Radius.circular(isMe ? 4 : 18),
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
