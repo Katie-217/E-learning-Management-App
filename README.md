@@ -1,183 +1,43 @@
 # E-Learning Management System
 
-A comprehensive e-learning platform built with Flutter and Firebase (Auth, Firestore, Storage). The legacy Node.js backend has been deprecated and replaced by a Firebase-only architecture. See `docs/CHANGE_ARCHITECTURE.md` for rationale and details.
+A comprehensive e-learning platform built with Flutter and Firebase, supporting both Instructor and Student roles with full course management, assignment submission, and grading features.
 
-## 📁 Project Structure
+---
 
-```
-Final-pro/
-│
-├── lib/                           # Flutter app source code
-│   ├── main.dart                  # App entry point
-│   ├── core/                      # Core functionality
-│   │   ├── config/                # App configuration & constants
-│   │   │   ├── app_constants.dart
-│   │   │   ├── app_theme.dart
-│   │   │   └── users-role.dart    # User role definitions
-│   │   ├── services/              # Core services
-│   │   │   ├── api_service.dart
-│   │   │   ├── cache_service.dart
-│   │   │   └── firestore_service.dart
-│   │   ├── providers/             # State management
-│   │   │   ├── course_provider.dart
-│   │   │   └── semester_provider.dart
-│   │   ├── routing/               # Navigation
-│   │   │   └── app_router.dart
-│   │   ├── utils/                  # Utilities
-│   │   │   ├── format_utils.dart
-│   │   │   ├── responsive_helper.dart
-│   │   │   └── validators.dart
-│   │   └── widgets/               # Core widgets
-│   │       ├── course_card.dart
-│   │       ├── semester_switcher.dart
-│   │       └── skeleton_loader.dart
-│   │
-│   ├── data/                      # Data layer
-│   │   └── models/                # Data models
-│   │       ├── course_model.dart
-│   │       ├── assignment_model.dart
-│   │       └── quiz_model.dart
-│   │
-│   ├── features/                  # Feature-based architecture
-│   │   ├── auth/                  # Authentication
-│   │   │   ├── presentation/
-│   │   │   │   ├── pages/
-│   │   │   │   │   ├── auth_overlay_screen.dart
-│   │   │   │   │   ├── login_page.dart
-│   │   │   │   │   └── login_form.dart
-│   │   │   │   ├── controllers/
-│   │   │   │   │   └── login_controller.dart
-│   │   │   │   └── widgets/
-│   │   │   │       ├── auth_form_widgets.dart
-│   │   │   │       └── login_form.dart
-│   │   │   ├── providers/
-│   │   │   │   └── auth_provider.dart
-│   │   │   └── repositories/
-│   │   │       ├── auth_repository.dart
-│   │   │       └── google_auth_repository.dart
-│   │   │
-│   │   ├── student/               # Student features
-│   │   │   └── presentation/
-│   │   │       ├── pages/
-│   │   │       │   └── student_dashboard_page.dart
-│   │   │       └── widgets/
-│   │   │           └── circular_progress_widget.dart
-│   │   │
-│   │   ├── instructor/            # Instructor features
-│   │   │   └── presentation/
-│   │   │       └── pages/
-│   │   │           └── instructor_dashboard.dart
-│   │   │
-│   │   ├── groups/                # Group management
-│   │   │   ├── presentation/
-│   │   │   │   ├── pages/
-│   │   │   │   │   ├── group_page.dart
-│   │   │   │   │   └── manage_group_page.dart
-│   │   │   │   └── widgets/
-│   │   │   │       └── group_card.dart
-│   │   │   ├── providers/
-│   │   │   │   └── group_provider.dart
-│   │   │   └── repositories/
-│   │   │       └── group_repository.dart
-│   │   │
-│   │   ├── assignments/           # Assignment management
-│   │   │   └── presentation/
-│   │   │       └── pages/
-│   │   │           └── assignments_page.dart
-│   │   │
-│   │   ├── notifications/         # Notification system
-│   │   │   └── presentation/
-│   │   │       └── pages/
-│   │   │           └── notification_page.dart
-│   │   │
-│   │   └── settings/              # Settings & profile
-│   │       └── presentation/
-│   │           └── pages/
-│   │               ├── profile_page.dart
-│   │               └── profile_view.dart
-│   │
-│   ├── firebase_options.dart      # Firebase configuration
-│   └── debug_firebase.dart        # Firebase debugging
-│
-├── backend/                       # Legacy Node.js backend (DEPRECATED - not used)
-│
-├── assets/                        # Static assets
-│   ├── icons/
-│   │   ├── background-roler.png
-│   │   └── logo-google.png
-│   └── svg/
-│       ├── student_icon.svg
-│       └── teacher_icon.svg
-│
-├── docs/                          # Documentation
-│   └── diagrams/
-│
-├── android/                       # Android configuration
-├── ios/                          # iOS configuration
-├── macos/                        # macOS configuration
-├── windows/                      # Windows configuration
-├── web/                          # Web configuration
-│
-├── pubspec.yaml                  # Flutter dependencies
-├── pubspec.lock
-└── README.md                     # This file
-```
+## 📋 Table of Contents
 
-## 🛠 Technology Stack
+1. [Project Building Instructions](#project-building-instructions)
+2. [Project Running Instructions](#project-running-instructions)
+3. [Deployment URL](#deployment-url)
+4. [Test Account Credentials](#test-account-credentials)
+5. [Notes for Teachers/Evaluators](#notes-for-teachersevaluators)
+6. [Optional Features](#optional-features)
 
-### Frontend (Flutter)
-- **Framework**: Flutter 3.x
-- **State Management**: Riverpod
-- **Local Storage**: Hive
-- **Authentication**: Firebase Auth
-- **Database**: Firebase Firestore
-- **UI**: Material Design 3
-- **Architecture**: Feature-based architecture
+---
 
-### Backend
-- Replaced by Firebase (Firestore, Auth, Storage). No self-hosted server required.
-
-## ✨ Features
-
-### 🔐 Authentication & Authorization
-- Firebase Authentication
-- Role-based access control (Teacher/Student)
-- Secure token verification
-- Google Sign-In integration
-
-### 👨‍🏫 Instructor Features
-- Course management dashboard
-- Assignment creation and grading
-- Student enrollment management
-- Analytics and reporting
-- Class management
-- Group management
-
-### 👨‍🎓 Student Features
-- Interactive dashboard
-- Course enrollment
-- Assignment submission
-- Grade viewing
-- Progress tracking
-- Notification system
-
-### 🔧 Common Features
-- Profile management
-- Real-time notifications
-- Responsive design
-- Dark/Light theme support
-- File upload/download
-- Cross-platform support (Web, Android, iOS, Windows, macOS)
-
-## 🚀 Getting Started
+## 🏗️ Project Building Instructions
 
 ### Prerequisites
-- Flutter SDK (3.x or higher)
-- Firebase project setup
-- Android Studio / VS Code
-- Git
 
-### Installation
+Before building the project, ensure you have the following installed:
+
+- **Flutter SDK** (version 3.5.0 or higher)
+  - Download from: https://flutter.dev/docs/get-started/install
+  - Verify installation: `flutter --version`
+  
+- **Node.js and npm** (for Firebase CLI)
+  - Download from: https://nodejs.org/
+  - Verify installation: `node --version` and `npm --version`
+
+- **Firebase CLI** (for deployment)
+  ```bash
+  npm install -g firebase-tools
+  ```
+
+- **Git** (for cloning repository)
+  - Download from: https://git-scm.com/downloads
+
+### Step-by-Step Build Instructions
 
 1. **Clone the repository**
    ```bash
@@ -185,124 +45,411 @@ Final-pro/
    cd Final-pro
    ```
 
-2. **App Setup (Firebase-only)**
+2. **Install Flutter dependencies**
    ```bash
    flutter pub get
-   # Configure Firebase for your project
-   flutter run
    ```
 
-### Firebase Configuration
+3. **Build for Web (Production)**
+   ```bash
+   flutter build web --release --base-href /
+   ```
+   
+   The build output will be in the `build/web` directory.
 
-1. Create a Firebase project
-2. Enable Authentication and Firestore
-3. Download `google-services.json` for Android
-4. Add Firebase configuration to your Flutter app
-5. (Optional) Set up Firebase Storage rules for uploads
+4. **Build for Android**
+   ```bash
+   flutter build apk --release
+   ```
 
-### Environment Variables
+5. **Build for Windows**
+   ```bash
+   flutter build windows --release
+   ```
 
-Create a `.env` file in the backend directory:
-```
-PORT=4000
-FIREBASE_SERVICE_ACCOUNT=./serviceAccountKey.json
-```
+6. **Build for macOS**
+   ```bash
+   flutter build macos --release
+   ```
 
-## 🏗 Build Instructions
+7. **Build for iOS** (macOS only)
+   ```bash
+   flutter build ios --release
+   ```
 
-### Flutter App
+### Using Automated Build Scripts
+
+**Windows:**
 ```bash
-# Web build
-flutter build web --release
-
-# Android APK
-flutter build apk --release
-
-# Windows executable
-flutter build windows --release
-
-# macOS app
-flutter build macos --release
-
-# iOS app
-flutter build ios --release
+build-only.bat
 ```
 
-> Note: REST API endpoints listed previously were for the deprecated Node.js backend. Data access is now performed directly via Firebase SDK in the Flutter app (see `docs/CHANGE_ARCHITECTURE.md`).
-
-## 🧪 Testing
-
-### Test Accounts
-- **Teacher**: teacher@example.com / password123
-- **Student**: student@example.com / password123
-
-### Manual Testing
-1. Register/Login with test accounts
-2. Test course creation and enrollment
-3. Test assignment creation and submission
-4. Test grading functionality
-5. Test notification system
-6. Test responsive design on different screen sizes
-
-## 🚀 Deployment
-
-### Frontend Deployment
-- **Web**: Deploy to Firebase Hosting or any web hosting service
-- **Mobile**: Upload APK to Google Play Store / App Store
-- **Desktop**: Distribute executable files
-
-### Backend Deployment
-Not applicable. The app uses Firebase services directly (Firestore, Auth, Storage). Consider Firebase Hosting for web.
-
-## 🏗 Architecture
-
-### Frontend Architecture
-- **Feature-based structure**: Each feature is self-contained
-- **Clean Architecture**: Separation of concerns
-- **State Management**: Riverpod for reactive state
-- **Local Storage**: Hive for offline support
-- **Responsive Design**: Adaptive UI for all screen sizes
-
-### Backend Architecture
-- Firebase as Backend: Firestore (real-time DB), Firebase Auth, Firebase Storage
-- Access control via Firebase Security Rules
-
-## 📱 Supported Platforms
-
-- ✅ **Web** (Chrome, Firefox, Safari, Edge)
-- ✅ **Android** (API 21+)
-- ✅ **iOS** (iOS 11+)
-- ✅ **Windows** (Windows 10+)
-- ✅ **macOS** (macOS 10.14+)
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🆘 Support
-
-For support and questions:
-- Create an issue in the repository
-- Contact the development team
-- Check the documentation in `/docs` folder
-
-## 📊 Project Status
-
-- ✅ **Core Features**: Completed
-- ✅ **Authentication**: Completed
-- ✅ **Dashboard**: Completed
-- 🔄 **Advanced Features**: In Development
-- 🔄 **Testing**: In Progress
-- 🔄 **Documentation**: In Progress
+**Linux/Mac:**
+```bash
+chmod +x build-only.sh
+./build-only.sh
+```
 
 ---
 
-**Made with ❤️ by the E-Learning Development Team**
+## 🚀 Project Running Instructions
+
+### Running Locally (Development Mode)
+
+1. **Ensure dependencies are installed**
+   ```bash
+   flutter pub get
+   ```
+
+2. **Run on Web**
+   ```bash
+   flutter run -d chrome
+   ```
+   Or specify a different browser:
+   ```bash
+   flutter run -d edge
+   flutter run -d firefox
+   ```
+
+3. **Run on Android**
+   ```bash
+   flutter run -d android
+   ```
+   (Requires Android emulator or connected device)
+
+4. **Run on Windows**
+   ```bash
+   flutter run -d windows
+   ```
+
+5. **Run on macOS**
+   ```bash
+   flutter run -d macos
+   ```
+
+### Running Production Build Locally
+
+After building with `flutter build web --release`:
+
+1. Navigate to build directory:
+   ```bash
+   cd build/web
+   ```
+
+2. Start a local server:
+   ```bash
+   # Using Python
+   python -m http.server 8000
+   
+   # Or using Node.js
+   npx serve -s . -l 8000
+   ```
+
+3. Open browser and navigate to:
+   ```
+   http://localhost:8000
+   ```
+
+---
+
+## 🌐 Deployment URL
+
+The application is deployed and accessible at:
+
+**Primary URL:**
+```
+https://e-learning-management-79797.web.app
+```
+
+**Alternative URL:**
+```
+https://e-learning-management-79797.firebaseapp.com
+```
+
+### Deployment Information
+
+- **Hosting Service:** Firebase Hosting
+- **Deployment Method:** Automated via `deploy.bat` script
+- **Last Updated:** See Firebase Console for deployment history
+
+### How to Deploy Updates
+
+**Windows:**
+```bash
+deploy.bat
+```
+
+**Linux/Mac:**
+```bash
+chmod +x deploy.sh
+./deploy.sh
+```
+
+The deployment script will:
+1. Clean previous builds
+2. Install dependencies
+3. Build the web app for production
+4. Deploy to Firebase Hosting
+
+---
+
+## 🔐 Test Account Credentials
+
+The following accounts have been pre-configured with real data in firebase for evaluation purposes:
+
+### Instructor Account
+- **UserName:** `admin`
+- **Password:** `admin`
+- **Role:** Instructor
+- **Display Name:** Admin Instructor
+
+**Features available:**
+- Create and manage courses with detailed course pages
+- Create assignments, quizzes, and course materials
+- Manage student enrollments and student accounts
+- Grade student submissions with feedback
+- View analytics and reports with visual charts
+- Manage groups and forums
+- CSV import for bulk student/semester/course data
+- Announcement management
+- Calendar and semester management
+- Chat and messaging with students
+
+### Student Account
+- **Email:** `student4@gmail.com`
+- **Password:** `123456`
+- **Role:** Student
+- **Display Name:** Nguyen Van An
+
+**Features available:**
+- View enrolled courses with detailed course pages
+- Submit assignments with file upload
+- View grades and feedback from instructors
+- Participate in course forums and discussions
+- Chat with instructors and classmates
+- View notifications and announcements
+- Track progress and view course analytics
+- View course materials and resources
+---
+
+## 📝 Notes for Teachers/Evaluators
+
+### Initial Setup and Configuration
+
+1. **Firebase Configuration:**
+   - The project uses Firebase for backend services (Authentication, Firestore, Storage)
+   - Firebase configuration is already set up in `lib/firebase_options.dart`
+   - No additional server setup is required
+
+2. **First Run:**
+   - The test accounts are already configured in Firebase with real data
+   - Use the provided credentials to login (see Test Account Credentials section)
+   - No additional account creation needed for evaluation
+
+3. **Data Setup:**
+   - The app uses Firebase Firestore as the database
+   - Test accounts already have real data pre-loaded in Firebase
+   - The Instructor account has courses, assignments, and student enrollments
+   - The Student account is enrolled in courses with assignments and grades
+   - CSV import functionality is available for bulk data import (students, semesters, courses, groups)
+
+### Testing the Application
+
+1. **Login Testing:**
+   - Use the provided test accounts above
+   - Test both Instructor and Student roles
+   - Verify role-based access control
+
+2. **Core Features to Test:**
+   - **Instructor Dashboard:** 
+     - Course creation and management
+     - Assignment and quiz creation
+     - Material management and tracking
+     - Student enrollment and management
+     - Grading and feedback system
+     - Analytics and reporting
+     - CSV import functionality
+     - Forum and group management
+     - Chat with students
+   - **Student Dashboard:**
+     - Course enrollment and viewing
+     - Assignment submission with file upload
+     - Quiz taking and results viewing
+     - Grade and feedback viewing
+     - Course materials access
+     - Forum participation
+     - Chat with instructors and classmates
+     - Progress tracking
+   - **Authentication:** Login with username/email, logout, session management
+   - **File Management:** Upload/download assignments, materials, forum attachments
+   - **Notifications:** Real-time notification system for assignments, grades, announcements
+   - **Forums:** Course-based discussion forums with file sharing
+   - **Chat:** Real-time messaging between instructors and students
+
+3. **Responsive Design:**
+   - Test on different screen sizes (desktop, tablet, mobile)
+   - The app is responsive and adapts to different viewport sizes
+
+4. **Browser Compatibility:**
+   - Tested on: Chrome, Firefox, Safari, Edge
+   - Recommended: Chrome or Edge for best performance
+
+### Known Issues and Limitations
+
+1. **Initial Load Time:**
+   - The web app may take 3-8 seconds to load initially due to Flutter web compilation
+   - Subsequent loads are faster due to browser caching
+   - A loading indicator is displayed during initialization
+
+2. **Firebase Quotas:**
+   - The app uses Firebase free tier
+   - Some features may be rate-limited on the free tier
+   - For production use, consider upgrading Firebase plan
+
+3. **Offline Functionality:**
+   - Limited offline support
+   - Data syncs when connection is restored
+
+### Troubleshooting
+
+**If the app doesn't load:**
+1. Clear browser cache (Ctrl+Shift+Delete)
+2. Try hard refresh (Ctrl+Shift+R)
+3. Check browser console for errors (F12)
+4. Verify Firebase project is active
+
+**If login fails:**
+1. Verify Firebase Authentication is enabled
+2. Check Firestore Security Rules
+3. Ensure test accounts exist in Firebase
+
+**If build fails:**
+1. Run `flutter clean`
+2. Run `flutter pub get`
+3. Verify Flutter SDK version: `flutter --version`
+4. Check for dependency conflicts
+
+### Project Structure
+
+```
+Final-pro/
+├── lib/                    # Main application code
+│   ├── main.dart          # Application entry point
+│   ├── core/              # Core functionality
+│   ├── data/              # Data layer (repositories, models)
+│   ├── domain/            # Domain models
+│   ├── presentation/      # UI layer (screens, widgets)
+│   └── application/       # Application logic (controllers, providers)
+├── web/                   # Web-specific files
+├── android/               # Android configuration
+├── ios/                   # iOS configuration
+├── windows/               # Windows configuration
+├── macos/                 # macOS configuration
+├── pubspec.yaml          # Dependencies
+└── firebase.json         # Firebase configuration
+```
+
+### Technology Stack
+
+- **Frontend:** Flutter 3.5.0+
+- **State Management:** Riverpod
+- **Backend:** Firebase (Firestore, Auth, Storage)
+- **Architecture:** Clean Architecture with Feature-based structure
+- **UI:** Material Design 3
+
+---
+
+## ⭐ Optional Features
+
+The following optional features have been implemented and are available in the application:
+
+### 1. **Real-time Notifications System**
+   - Push notifications for new assignments, grades, and announcements
+   - Notification center with read/unread status
+   - Real-time updates using Firebase Firestore listeners
+   - Notification history and management
+
+### 2. **Advanced File Management**
+   - Support for multiple file types (PDF, DOCX, images, etc.)
+   - File preview functionality
+   - Google Docs Viewer integration for Office documents
+   - File upload progress tracking
+
+### 3. **Forum and Discussion Groups**
+   - Course-based discussion forums
+   - Forum topics and threads management
+   - Group messaging and chat system
+   - Real-time chat between instructors and students
+   - File sharing in forums and chat
+   - Instructor forum group management
+
+### 4. **Advanced Analytics and Reporting**
+   - Student progress tracking
+   - Grade analytics and statistics
+   - Course performance metrics
+   - Visual charts and graphs using fl_chart
+
+### 5. **CSV Import/Export**
+   - Bulk student enrollment via CSV
+   - Semester data import via CSV
+   - Course data import via CSV
+   - Group data import via CSV
+   - Comprehensive CSV import interface
+
+### 6. **Responsive Design**
+   - Fully responsive UI for all screen sizes
+   - Mobile-first approach
+   - Adaptive layouts for desktop, tablet, and mobile
+
+### 7. **Dark/Light Theme Support**
+   - Theme switching capability
+   - System theme detection
+   - Customizable color schemes
+
+### 8. **Multi-platform Support**
+   - Web (deployed)
+   - Android (buildable)
+   - iOS (buildable)
+   - Windows (buildable)
+   - macOS (buildable)
+
+### 9. **Google Sign-In Integration**
+   - OAuth authentication via Google
+   - Seamless login experience
+   - Account linking
+
+### 10. **Advanced Assignment Features**
+   - Assignment deadlines and reminders
+   - Late submission handling
+   - File upload with progress tracking
+   - Assignment detail pages with submission tracking
+   - Feedback and comments system
+   - Assignment material tracking for instructors
+
+### 11. **Course Material Management**
+   - Upload and manage course materials
+   - Material tracking and analytics
+   - Support for multiple file types
+   - Material detail pages with preview
+
+### 12. **Quiz System**
+   - Create quizzes with question bank
+   - Question editor with multiple question types
+   - Quiz taking interface for students
+   - Quiz results and analytics
+   - Quiz detail management
+
+### 13. **Semester Management**
+   - Create and manage semesters
+   - Semester-based course filtering
+   - Semester switcher widget
+   - CSV import for semester data
+
+### 14. **Announcement System**
+   - Create and manage course announcements
+   - Announcement detail pages
+   - Announcement tracking
+   - Real-time announcement updates
+
+---
+

@@ -37,6 +37,7 @@ class _InstructorSemesterSwitcherState
     extends State<InstructorSemesterSwitcher> {
   late final List<InstructorSemester> _semesters;
   late InstructorSemester _selectedSemester;
+  final GlobalKey _dropdownKey = GlobalKey();
 
   static final List<InstructorSemester> _defaultSemesters = [
     InstructorSemester(
@@ -65,12 +66,37 @@ class _InstructorSemesterSwitcherState
   @override
   void initState() {
     super.initState();
-    _semesters = (widget.semesters?.isNotEmpty == true)
+    // Ưu tiên dùng data thật từ widget, chỉ dùng default khi widget.semesters là null hoặc empty
+    // Nhưng nếu widget.semesters là empty list (đang load), vẫn dùng default tạm thời
+    _semesters = (widget.semesters != null && widget.semesters!.isNotEmpty)
         ? widget.semesters!
         : _defaultSemesters;
     _selectedSemester = widget.initialSemester ??
         _semesters.reduce((a, b) =>
             a.startDate.isAfter(b.startDate) ? a : b); // latest by startDate
+  }
+
+  @override
+  void didUpdateWidget(InstructorSemesterSwitcher oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Update semesters khi widget.semesters thay đổi (khi data thật được load)
+    if (widget.semesters != oldWidget.semesters) {
+      // Luôn ưu tiên dùng data thật từ widget khi có
+      // Nếu widget.semesters là empty list, giữ nguyên _semesters hiện tại (không revert về default)
+      if (widget.semesters != null && widget.semesters!.isNotEmpty) {
+        setState(() {
+          _semesters = widget.semesters!;
+          // Update selected semester nếu initialSemester thay đổi
+          if (widget.initialSemester != null) {
+            _selectedSemester = widget.initialSemester!;
+          } else if (!_semesters.any((s) => s.id == _selectedSemester.id)) {
+            // Nếu selected semester không còn trong list, chọn semester mới nhất
+            _selectedSemester = _semesters.reduce((a, b) =>
+                a.startDate.isAfter(b.startDate) ? a : b);
+          }
+        });
+      }
+    }
   }
 
   void _onSelect(InstructorSemester semester) {
@@ -116,59 +142,93 @@ class _InstructorSemesterSwitcherState
     final fontSize = isSmall ? 11.0 : 13.0;
     final iconSize = isSmall ? 16.0 : 18.0;
     
-    return DropdownButtonHideUnderline(
-      child: DropdownButton<InstructorSemester>(
-        dropdownColor: const Color(0xFF1F2937),
-        value: _selectedSemester,
-        isExpanded: true, // Allow dropdown to expand to fill available space
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: fontSize,
-          fontWeight: FontWeight.w500,
-        ),
-        icon: Icon(Icons.expand_more, color: Colors.white70, size: iconSize),
-        iconSize: iconSize + 2,
-        // Đảm bảo menu hiển thị bên dưới, không đè lên
-        menuMaxHeight: 300, // Giới hạn chiều cao menu
-        onChanged: (value) {
-          if (value != null) {
-            _onSelect(value);
-          }
-        },
-        items: _semesters
-            .map(
-              (semester) => DropdownMenuItem(
-                value: semester,
-                child: Text(
-                  '${semester.code} • ${semester.name}',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: fontSize,
+    return Builder(
+      builder: (BuildContext buttonContext) {
+        return InkWell(
+          onTap: () => _showDropdownMenu(buttonContext, isSmall, fontSize),
+          borderRadius: BorderRadius.circular(4),
+          child: Container(
+            key: _dropdownKey,
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Expanded(
+                  child: Text(
+                    '${_selectedSemester.code} • ${_selectedSemester.name}',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: fontSize,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
                   ),
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
                 ),
-              ),
-            )
-            .toList(),
-        selectedItemBuilder: (context) {
-          return _semesters.map((semester) {
-            return Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                '${semester.code} • ${semester.name}',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: fontSize,
-                  fontWeight: FontWeight.w500,
-                ),
-                overflow: TextOverflow.ellipsis,
-                maxLines: 1,
-              ),
-            );
-          }).toList();
-        },
-      ),
+                Icon(Icons.expand_more, color: Colors.white70, size: iconSize),
+              ],
+            ),
+          ),
+        );
+      },
     );
+  }
+
+  void _showDropdownMenu(BuildContext context, bool isSmall, double fontSize) {
+    final RenderBox? button = _dropdownKey.currentContext?.findRenderObject() as RenderBox?;
+    if (button == null || !button.attached) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _showDropdownMenu(context, isSmall, fontSize);
+        }
+      });
+      return;
+    }
+
+    final RenderBox? overlay = Overlay.of(context).context.findRenderObject() as RenderBox?;
+    if (overlay == null) return;
+
+    final Offset buttonPosition = button.localToGlobal(Offset.zero, ancestor: overlay);
+    final Size buttonSize = button.size;
+
+    showMenu<InstructorSemester>(
+      context: context,
+      position: RelativeRect.fromLTRB(
+        buttonPosition.dx, // Align với left edge của button
+        buttonPosition.dy + buttonSize.height + 15, // Ngay bên dưới button, không có khoảng cách
+        buttonPosition.dx + buttonSize.width,
+        buttonPosition.dy + buttonSize.height,
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+      ),
+      color: const Color(0xFF1F2937),
+      elevation: 8,
+      items: _semesters.map((semester) {
+        final isSelected = semester.id == _selectedSemester.id;
+        return PopupMenuItem<InstructorSemester>(
+          value: semester,
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+            decoration: BoxDecoration(
+              color: isSelected ? Colors.white.withOpacity(0.1) : Colors.transparent,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              '${semester.code} • ${semester.name}',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: fontSize,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    ).then((value) {
+      if (value != null) {
+        _onSelect(value);
+      }
+    });
   }
 }
