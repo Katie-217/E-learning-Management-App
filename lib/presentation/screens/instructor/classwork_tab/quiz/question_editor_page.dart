@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-// Import Question model from question_bank_page
-import 'question_bank_page.dart';
+import 'package:elearning_management_app/domain/models/question_model.dart';
+import 'package:elearning_management_app/data/repositories/question/question_repository.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 // Model cho một câu hỏi trong Bulk Editor
 class QuestionFormData {
@@ -59,11 +59,13 @@ class QuestionFormData {
 
 class QuestionEditorPage extends ConsumerStatefulWidget {
   final String courseId;
-  final Question? question; // null = create mode, not null = edit mode
+  final String courseCode;
+  final QuestionModel? question; // null = create mode, not null = edit mode
 
   const QuestionEditorPage({
     super.key,
     required this.courseId,
+    required this.courseCode,
     this.question,
   });
 
@@ -99,12 +101,15 @@ class _QuestionEditorPageState extends ConsumerState<QuestionEditorPage> {
     super.dispose();
   }
 
-  QuestionFormData _loadExistingQuestion(Question question) {
+  QuestionFormData _loadExistingQuestion(QuestionModel question) {
     return QuestionFormData(
-      questionText: question.text,
-      difficulty: question.difficulty,
-      answers: question.options.length >= 4 ? question.options : null,
-      correctAnswerIndex: question.correctAnswerIndex,
+      questionText: question.question,
+      difficulty: question.difficulty.name,
+      answers: question.options.length >= 4
+          ? question.options.map((opt) => opt.text).toList()
+          : null,
+      correctAnswerIndex: question.options
+          .indexWhere((opt) => opt.id == question.correctAnswer),
     );
   }
 
@@ -186,8 +191,48 @@ class _QuestionEditorPageState extends ConsumerState<QuestionEditorPage> {
     });
 
     try {
-      // TODO: Implement actual Firestore save
-      await Future.delayed(const Duration(seconds: 1)); // Simulate save
+      // Get current user ID
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) {
+        throw Exception('No authenticated user');
+      }
+
+      // Save all questions to Firestore
+      for (final questionData in _questions) {
+        // Create options list
+        final options = List<AnswerOption>.generate(
+          4,
+          (index) => AnswerOption(
+            id: String.fromCharCode(65 + index), // A, B, C, D
+            text: questionData.answerControllers[index].text.trim(),
+            isCorrect: index == questionData.correctAnswerIndex,
+          ),
+        );
+
+        // Create QuestionModel
+        final question = QuestionModel(
+          id: '', // Will be auto-generated
+          courseId: widget.courseId,
+          courseCode: widget.courseCode,
+          question: questionData.questionController.text.trim(),
+          type: QuestionType.multipleChoice,
+          options: options,
+          correctAnswer: String.fromCharCode(
+              65 + questionData.correctAnswerIndex), // A, B, C, or D
+          difficulty: QuestionDifficulty.values.firstWhere(
+            (d) => d.name == questionData.difficulty,
+            orElse: () => QuestionDifficulty.medium,
+          ),
+          tags: [],
+          authorId: currentUser.uid,
+          createdAt: DateTime.now(),
+          isActive: true,
+          usageCount: 0,
+        );
+
+        // Save to Firestore
+        await QuestionRepository.addQuestion(question);
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

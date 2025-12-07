@@ -133,7 +133,7 @@ class FileUploadService {
           .child(fileName);
 
       // Determine content type
-      final contentType = _getContentType(file.fileExtension);
+      final contentType = getContentType(file.fileExtension);
 
       // Upload based on platform
       UploadTask uploadTask;
@@ -193,7 +193,7 @@ class FileUploadService {
           .child(fileName);
 
       // Determine content type
-      final contentType = _getContentType(file.fileExtension);
+      final contentType = getContentType(file.fileExtension);
 
       // Create upload task
       UploadTask uploadTask;
@@ -274,7 +274,7 @@ class FileUploadService {
   }
 
   /// Helper: Get content type from file extension
-  static String _getContentType(String extension) {
+  static String getContentType(String extension) {
     switch (extension.toLowerCase()) {
       case '.pdf':
         return 'application/pdf';

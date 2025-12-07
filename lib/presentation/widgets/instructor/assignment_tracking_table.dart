@@ -61,7 +61,8 @@ class AssignmentTrackingTable extends StatefulWidget {
   const AssignmentTrackingTable({super.key});
 
   @override
-  State<AssignmentTrackingTable> createState() => _AssignmentTrackingTableState();
+  State<AssignmentTrackingTable> createState() =>
+      _AssignmentTrackingTableState();
 }
 
 class _AssignmentTrackingTableState extends State<AssignmentTrackingTable> {
@@ -161,7 +162,9 @@ class _AssignmentTrackingTableState extends State<AssignmentTrackingTable> {
       // Search filter
       if (_searchQuery.isNotEmpty) {
         _filteredData = _filteredData.where((data) {
-          return data.studentName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          return data.studentName
+                  .toLowerCase()
+                  .contains(_searchQuery.toLowerCase()) ||
               data.group.toLowerCase().contains(_searchQuery.toLowerCase());
         }).toList();
       }
@@ -237,7 +240,7 @@ class _AssignmentTrackingTableState extends State<AssignmentTrackingTable> {
     try {
       // Create CSV data
       final List<List<dynamic>> csvData = [];
-      
+
       // Header row
       csvData.add([
         'Student Name',
@@ -255,7 +258,7 @@ class _AssignmentTrackingTableState extends State<AssignmentTrackingTable> {
           data.group,
           data.status.label,
           data.submissionTime != null
-              ? '${data.submissionTime!.day}/${data.submissionTime!.month}/${data.submissionTime!.year} ${data.submissionTime!.hour}:${data.submissionTime!.minute.toString().padLeft(2, '0')}'
+              ? '${data.submissionTime!.toLocal().day}/${data.submissionTime!.toLocal().month}/${data.submissionTime!.toLocal().year} ${data.submissionTime!.toLocal().hour}:${data.submissionTime!.toLocal().minute.toString().padLeft(2, '0')}'
               : '',
           data.attempts,
           data.latestGrade?.toStringAsFixed(1) ?? '',
@@ -267,7 +270,8 @@ class _AssignmentTrackingTableState extends State<AssignmentTrackingTable> {
       final csvString = converter.convert(csvData);
 
       // Save file
-      final fileName = 'assignment_tracking_${DateTime.now().millisecondsSinceEpoch}.csv';
+      final fileName =
+          'assignment_tracking_${DateTime.now().millisecondsSinceEpoch}.csv';
       final result = await FilePicker.platform.saveFile(
         dialogTitle: 'Save Assignment Tracking CSV',
         fileName: fileName,
@@ -332,7 +336,8 @@ class _AssignmentTrackingTableState extends State<AssignmentTrackingTable> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF6366F1),
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
@@ -499,7 +504,8 @@ class _AssignmentTrackingTableState extends State<AssignmentTrackingTable> {
                     child: SingleChildScrollView(
                       child: DataTable(
                         headingRowHeight: 0,
-                        dataRowColor: MaterialStateProperty.resolveWith((states) {
+                        dataRowColor:
+                            MaterialStateProperty.resolveWith((states) {
                           if (states.contains(MaterialState.selected)) {
                             return const Color(0xFF1F2937);
                           }
@@ -515,64 +521,64 @@ class _AssignmentTrackingTableState extends State<AssignmentTrackingTable> {
                         ],
                         rows: _filteredData.map((data) {
                           return DataRow(
-                      cells: [
-                        DataCell(Text(
-                          data.studentName,
-                          style: const TextStyle(color: Colors.white),
-                        )),
-                        DataCell(Text(
-                          data.group,
-                          style: const TextStyle(color: Colors.white70),
-                        )),
-                        DataCell(
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: data.status.color.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(4),
-                              border: Border.all(
-                                color: data.status.color,
-                                width: 1,
+                            cells: [
+                              DataCell(Text(
+                                data.studentName,
+                                style: const TextStyle(color: Colors.white),
+                              )),
+                              DataCell(Text(
+                                data.group,
+                                style: const TextStyle(color: Colors.white70),
+                              )),
+                              DataCell(
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: data.status.color.withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(4),
+                                    border: Border.all(
+                                      color: data.status.color,
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    data.status.label,
+                                    style: TextStyle(
+                                      color: data.status.color,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
                               ),
-                            ),
-                            child: Text(
-                              data.status.label,
-                              style: TextStyle(
-                                color: data.status.color,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ),
-                        DataCell(Text(
-                          data.submissionTime != null
-                              ? '${data.submissionTime!.day}/${data.submissionTime!.month}/${data.submissionTime!.year} ${data.submissionTime!.hour}:${data.submissionTime!.minute.toString().padLeft(2, '0')}'
-                              : '-',
-                          style: const TextStyle(color: Colors.white70),
-                        )),
-                        DataCell(Text(
-                          data.attempts.toString(),
-                          style: const TextStyle(color: Colors.white70),
-                        )),
-                        DataCell(Text(
-                          data.latestGrade != null
-                              ? data.latestGrade!.toStringAsFixed(1)
-                              : '-',
-                          style: TextStyle(
-                            color: data.latestGrade != null
-                                ? _getGradeColor(data.latestGrade!)
-                                : Colors.white70,
-                            fontWeight: data.latestGrade != null
-                                ? FontWeight.w600
-                                : FontWeight.normal,
-                          ),
-                        )),
-                      ],
-                    );
+                              DataCell(Text(
+                                data.submissionTime != null
+                                    ? '${data.submissionTime!.toLocal().day}/${data.submissionTime!.toLocal().month}/${data.submissionTime!.toLocal().year} ${data.submissionTime!.toLocal().hour}:${data.submissionTime!.toLocal().minute.toString().padLeft(2, '0')}'
+                                    : '-',
+                                style: const TextStyle(color: Colors.white70),
+                              )),
+                              DataCell(Text(
+                                data.attempts.toString(),
+                                style: const TextStyle(color: Colors.white70),
+                              )),
+                              DataCell(Text(
+                                data.latestGrade != null
+                                    ? data.latestGrade!.toStringAsFixed(1)
+                                    : '-',
+                                style: TextStyle(
+                                  color: data.latestGrade != null
+                                      ? _getGradeColor(data.latestGrade!)
+                                      : Colors.white70,
+                                  fontWeight: data.latestGrade != null
+                                      ? FontWeight.w600
+                                      : FontWeight.normal,
+                                ),
+                              )),
+                            ],
+                          );
                         }).toList(),
                       ),
                     ),
@@ -621,4 +627,3 @@ class _AssignmentTrackingTableState extends State<AssignmentTrackingTable> {
     }
   }
 }
-

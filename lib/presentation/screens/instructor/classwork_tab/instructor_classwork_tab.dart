@@ -13,6 +13,8 @@ import 'package:elearning_management_app/presentation/screens/instructor/classwo
 import 'package:elearning_management_app/presentation/screens/instructor/classwork_tab/material/material_detail_card.dart';
 import 'package:elearning_management_app/presentation/screens/instructor/classwork_tab/quiz/question_bank_page.dart';
 import 'package:elearning_management_app/presentation/screens/instructor/classwork_tab/quiz/create_quiz.dart';
+import 'package:elearning_management_app/presentation/screens/instructor/classwork_tab/quiz/quiz_detail_card.dart';
+import 'package:elearning_management_app/application/controllers/quiz/quiz_provider.dart';
 
 // StreamProvider for real-time assignment updates
 final assignmentStreamProvider =
@@ -416,9 +418,13 @@ class _InstructorClassworkTabState
                   ref.watch(assignmentStreamProvider(widget.course.id));
               final materialsAsync =
                   ref.watch(materialStreamProvider(widget.course.id));
+              final quizzesAsync =
+                  ref.watch(quizStreamProvider(widget.course.id));
 
-              // Wait for both streams to load
-              if (assignmentsAsync.isLoading || materialsAsync.isLoading) {
+              // Wait for all streams to load
+              if (assignmentsAsync.isLoading ||
+                  materialsAsync.isLoading ||
+                  quizzesAsync.isLoading) {
                 return const Center(
                   child: CircularProgressIndicator(
                     valueColor: AlwaysStoppedAnimation<Color>(Colors.indigo),
@@ -427,10 +433,14 @@ class _InstructorClassworkTabState
               }
 
               // Handle errors
-              if (assignmentsAsync.hasError || materialsAsync.hasError) {
+              if (assignmentsAsync.hasError ||
+                  materialsAsync.hasError ||
+                  quizzesAsync.hasError) {
                 final error = assignmentsAsync.hasError
                     ? assignmentsAsync.error
-                    : materialsAsync.error;
+                    : materialsAsync.hasError
+                        ? materialsAsync.error
+                        : quizzesAsync.error;
                 return Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -453,9 +463,10 @@ class _InstructorClassworkTabState
                 );
               }
 
-              // Get data from both streams
+              // Get data from all streams
               final assignments = assignmentsAsync.value ?? [];
               final materials = materialsAsync.value ?? [];
+              final quizzes = quizzesAsync.value ?? [];
 
               // Apply group filter to assignments
               var filteredAssignments = _selectedGroupId == null
@@ -463,6 +474,14 @@ class _InstructorClassworkTabState
                   : assignments
                       .where((assignment) =>
                           assignment.groupIds.contains(_selectedGroupId))
+                      .toList();
+
+              // Apply group filter to quizzes
+              var filteredQuizzes = _selectedGroupId == null
+                  ? quizzes
+                  : quizzes
+                      .where((quiz) =>
+                          quiz.groupIds?.contains(_selectedGroupId) ?? false)
                       .toList();
 
               // Apply search filter to assignments
@@ -482,17 +501,25 @@ class _InstructorClassworkTabState
                     .toList();
               }
 
+              // Apply search filter to quizzes
+              if (_searchQuery.isNotEmpty) {
+                filteredQuizzes = filteredQuizzes
+                    .where((quiz) =>
+                        quiz.title.toLowerCase().contains(_searchQuery))
+                    .toList();
+              }
+
               // Apply category filter
               if (_selectedCategory != null) {
                 if (_selectedCategory == 'assignment') {
                   filteredMaterials = []; // Hide materials
+                  filteredQuizzes = []; // Hide quizzes
                 } else if (_selectedCategory == 'material') {
                   filteredAssignments = []; // Hide assignments
-                }
-                // For 'quiz', hide both for now (not implemented yet)
-                else if (_selectedCategory == 'quiz') {
-                  filteredAssignments = [];
-                  filteredMaterials = [];
+                  filteredQuizzes = []; // Hide quizzes
+                } else if (_selectedCategory == 'quiz') {
+                  filteredAssignments = []; // Hide assignments
+                  filteredMaterials = []; // Hide materials
                 }
               }
 
@@ -517,10 +544,25 @@ class _InstructorClassworkTabState
                 });
               }
 
+              // Add quizzes with type marker
+              for (var quiz in filteredQuizzes) {
+                mergedItems.add({
+                  'type': 'quiz',
+                  'data': quiz,
+                  'createdAt': quiz.createdAt ?? DateTime.now(),
+                });
+              }
+
               // Sort merged list by createdAt (newest first)
               mergedItems.sort((a, b) {
-                final aTime = a['createdAt'] as DateTime;
-                final bTime = b['createdAt'] as DateTime;
+                final aTime = a['createdAt'] as DateTime?;
+                final bTime = b['createdAt'] as DateTime?;
+
+                // Handle null cases
+                if (aTime == null && bTime == null) return 0;
+                if (aTime == null) return 1; // null goes to end
+                if (bTime == null) return -1; // null goes to end
+
                 return bTime.compareTo(aTime); // Descending order
               });
 
@@ -568,6 +610,7 @@ class _InstructorClassworkTabState
                       child: AssignmentDetailCard(
                         assignment: assignment,
                         courseId: widget.course.id,
+                        course: widget.course,
                         type: 'Assignment',
                         icon: Icons.assignment_outlined,
                         color: Colors.blue,
@@ -587,6 +630,22 @@ class _InstructorClassworkTabState
                       child: MaterialDetailCard(
                         material: material,
                         courseId: widget.course.id,
+                      ),
+                    );
+                  } else if (type == 'quiz') {
+                    final quiz = item['data'];
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: QuizDetailCard(
+                        quiz: quiz,
+                        courseId: widget.course.id,
+                        onReviewWork: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Review page coming soon'),
+                            ),
+                          );
+                        },
                       ),
                     );
                   }
@@ -946,7 +1005,10 @@ class _InstructorClassworkTabState
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => QuestionBankPage(courseId: widget.course.id),
+            builder: (context) => QuestionBankPage(
+              courseId: widget.course.id,
+              courseCode: widget.course.code,
+            ),
           ),
         );
         break;

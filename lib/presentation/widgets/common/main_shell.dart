@@ -1,10 +1,13 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'sidebar_model.dart';
 import 'user_menu_dropdown.dart';
 import '../../screens/student/dashboard/student_dashboard_page.dart';
 import '../../screens/student/course/course_page.dart';
+import '../../../application/controllers/notification/notification_controller.dart';
+import '../student/dashboard/app_bar/notification/notification_menu.dart';
+import '../student/dashboard/app_bar/notification/notification_detail_dialog.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
@@ -14,17 +17,20 @@ class MainShell extends StatefulWidget {
 }
 
 class _MainShellState extends State<MainShell> {
-  // LUÔN mặc định là 'dashboard' - đây là trang ưu tiên khi đã đăng nhập
+  // LUÃ”N máº·c Ä‘á»‹nh lÃ  'dashboard' - Ä‘Ã¢y lÃ  trang Æ°u tiÃªn khi Ä‘Ã£ Ä‘Äƒng nháº­p
   String activeKey = 'dashboard';
   String _userName = 'User';
   String? _userPhotoUrl;
   String _userEmail = '';
+  final NotificationController _notificationController =
+      NotificationController();
 
   @override
   void initState() {
     super.initState();
     activeKey = 'dashboard';
     _loadUserData();
+    _notificationController.init();
   }
 
   @override
@@ -34,11 +40,17 @@ class _MainShellState extends State<MainShell> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           setState(() {
-            activeKey = 'dashboard'; 
+            activeKey = 'dashboard';
           });
         }
       });
     }
+  }
+
+  @override
+  void dispose() {
+    _notificationController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadUserData() async {
@@ -115,7 +127,7 @@ class _MainShellState extends State<MainShell> {
         activeKey = key;
       });
     } else {
-      // Nếu key không hợp lệ, reset về dashboard
+      // Náº¿u key khÃ´ng há»£p lá»‡, reset vá» dashboard
       setState(() {
         activeKey = 'dashboard';
       });
@@ -123,7 +135,6 @@ class _MainShellState extends State<MainShell> {
   }
 
   Widget _buildCurrentPage() {
-
     switch (activeKey) {
       case 'dashboard':
         return const StudentDashboardPage(showSidebar: false);
@@ -187,8 +198,82 @@ class _MainShellState extends State<MainShell> {
               ),
             ),
           ),
-          IconButton(
-              onPressed: () {}, icon: const Icon(Icons.notifications_none)),
+          ListenableBuilder(
+            listenable: _notificationController,
+            builder: (context, child) {
+              return Stack(
+                children: [
+                  PopupMenuButton(
+                    offset: const Offset(0, 50),
+                    color: Colors.transparent,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    icon: const Icon(Icons.notifications_none),
+                    itemBuilder: (context) {
+                      return [
+                        PopupMenuItem(
+                          enabled: false,
+                          padding: EdgeInsets.zero,
+                          child: NotificationMenu(
+                            notifications:
+                                _notificationController.notifications,
+                            onMarkAllRead: () async {
+                              await _notificationController.markAllAsRead();
+                              Navigator.pop(context);
+                            },
+                            onNotificationTap: (notification) async {
+                              await _notificationController
+                                  .markAsRead(notification.id);
+                              Navigator.pop(context);
+
+                              if (context.mounted) {
+                                NotificationDetailDialog.show(
+                                  context,
+                                  notification,
+                                  () {
+                                    print(
+                                        'Navigate to: ${notification.relatedType} - ${notification.relatedId}');
+                                  },
+                                );
+                              }
+                            },
+                          ),
+                        ),
+                      ];
+                    },
+                  ),
+                  if (_notificationController.unreadCount > 0)
+                    Positioned(
+                      right: 8,
+                      top: 8,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 18,
+                          minHeight: 18,
+                        ),
+                        child: Text(
+                          _notificationController.unreadCount > 9
+                              ? '9+'
+                              : '${_notificationController.unreadCount}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
           Padding(
             padding: const EdgeInsets.only(right: 12),
             child: UserMenuDropdown(
@@ -196,8 +281,8 @@ class _MainShellState extends State<MainShell> {
               userPhotoUrl: _userPhotoUrl,
               userEmail: _userEmail,
               onReturnFromProfile: () {
-                // Khi quay lại từ profile, set activeKey về dashboard
-                // Chỉ thực hiện nếu activeKey không phải là dashboard
+                // Khi quay láº¡i tá»« profile, set activeKey vá» dashboard
+                // Chá»‰ thá»±c hiá»‡n náº¿u activeKey khÃ´ng pháº£i lÃ  dashboard
                 if (activeKey != 'dashboard') {
                   setState(() {
                     activeKey = 'dashboard';

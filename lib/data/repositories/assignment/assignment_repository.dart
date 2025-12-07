@@ -335,6 +335,29 @@ class AssignmentRepository {
   }
 
   // ========================================
+  // HÀM: listenToAssignment - REAL-TIME (Single Assignment)
+  // MÔ TẢ: Stream để theo dõi 1 assignment real-time (for detail page)
+  // ========================================
+  static Stream<Assignment?> listenToAssignment(String assignmentId) {
+    return _firestore
+        .collection(_assignmentCollectionName)
+        .doc(assignmentId)
+        .snapshots()
+        .map((snapshot) {
+      if (!snapshot.exists) {
+        print('DEBUG: ⚠️ Assignment not found: $assignmentId');
+        return null;
+      }
+      try {
+        return Assignment.fromFirestore(snapshot);
+      } catch (e) {
+        print('DEBUG: ❌ Error parsing assignment: $e');
+        return null;
+      }
+    });
+  }
+
+  // ========================================
   // HÀM: bulkDeleteAssignments - CLEANUP
   // MÔ TẢ: Xóa hàng loạt assignments (khi xóa course/semester)
   // ========================================

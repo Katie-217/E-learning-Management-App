@@ -2,15 +2,18 @@
 import 'package:flutter/material.dart';
 import 'package:elearning_management_app/domain/models/material_model.dart';
 import 'package:elearning_management_app/core/theme/app_colors.dart';
+import 'package:elearning_management_app/presentation/widgets/student/course/material/material_detail.dart';
 
 class MaterialCard extends StatelessWidget {
   final MaterialModel material;
   final VoidCallback? onTap;
+  final bool enableNavigation;
 
   const MaterialCard({
     super.key,
     required this.material,
     this.onTap,
+    this.enableNavigation = true, // ✅ Changed to true by default
   });
 
   IconData _getIcon() {
@@ -55,13 +58,30 @@ class MaterialCard extends StatelessWidget {
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
 
+  void _handleTap(BuildContext context) {
+    // Priority 1: Custom onTap callback
+    if (onTap != null) {
+      onTap!();
+    }
+    // Priority 2: Navigate to detail page (if enableNavigation is true)
+    else if (enableNavigation) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => StudentMaterialDetail(
+            material: material,
+          ),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final iconColor = _getIconColor();
     final iconBg = iconColor.withOpacity(0.12);
 
     return InkWell(
-      onTap: onTap,
+      onTap: () => _handleTap(context),
       borderRadius: BorderRadius.circular(12),
       child: Container(
         padding: const EdgeInsets.all(16),

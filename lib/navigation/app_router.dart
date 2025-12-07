@@ -16,6 +16,7 @@ import '../presentation/screens/instructor/instructor_courses/instructor_course_
 import '../presentation/screens/assignment/assignments_page.dart';
 import '../presentation/screens/instructor/manage_student/instructor_student_create.dart';
 import '../presentation/screens/admin/admin_cleanup_screen.dart';
+import '../presentation/screens/student/notifications/notifications_page.dart';
 
 class AppRouter {
   AppRouter._();
@@ -113,6 +114,12 @@ class AppRouter {
         path: '/instructor/assignments',
         name: 'instructor-assignments',
         builder: (context, state) => const AssignmentsPage(),
+      ),
+      // Student routes
+      GoRoute(
+        path: '/notifications',
+        name: 'notifications',
+        builder: (context, state) => const NotificationsPage(),
       ),
       // Admin routes
       GoRoute(

@@ -284,7 +284,7 @@ class SubmissionController extends StateNotifier<SubmissionState> {
       print('DEBUG: ↩️ Unsubmitting assignment: $assignmentId');
 
       final updatedSubmission = state.currentSubmission!.copyWith(
-        status: SubmissionStatus.draft,
+        status: SubmissionStatus.missing,
         lastModified: DateTime.now(),
       );
 
@@ -414,8 +414,8 @@ final isAssignmentSubmittedProvider = Provider<bool>((ref) {
   final submission = ref.watch(currentSubmissionProvider);
   return submission != null &&
       (submission.status == SubmissionStatus.submitted ||
-          submission.status == SubmissionStatus.graded ||
-          submission.status == SubmissionStatus.returned);
+          submission.status == SubmissionStatus.late ||
+          submission.status == SubmissionStatus.graded);
 });
 
 // Provider để get submission status display
@@ -431,11 +431,11 @@ final submissionStatusDisplayProvider = Provider<Map<String, dynamic>>((ref) {
     };
   }
 
-  if (submission != null && submission.status == SubmissionStatus.draft) {
+  if (submission != null && submission.status == SubmissionStatus.missing) {
     return {
-      'text': 'Draft',
+      'text': 'Not Submitted',
       'color': 'warning',
-      'icon': 'edit',
+      'icon': 'hourglass_empty',
     };
   }
 

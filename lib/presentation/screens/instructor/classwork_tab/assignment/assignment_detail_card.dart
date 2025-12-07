@@ -1,30 +1,33 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:elearning_management_app/domain/models/assignment_model.dart';
 import 'package:elearning_management_app/domain/models/course_model.dart';
+import 'package:elearning_management_app/domain/models/submission_model.dart';
 import 'package:elearning_management_app/data/repositories/course/enrollment_repository.dart';
+import 'package:elearning_management_app/data/repositories/submission/submission_repository.dart';
 import 'package:elearning_management_app/presentation/widgets/course/Instructor_Course/classwork_tab_widget/assignment/file_preview_overlay.dart';
 import 'package:elearning_management_app/presentation/widgets/course/Instructor_Course/classwork_tab_widget/assignment/upload_file_assignment.dart';
 import 'package:elearning_management_app/presentation/widgets/course/Instructor_Course/classwork_tab_widget/assignment/add_link_assignments.dart';
 import 'package:elearning_management_app/presentation/screens/instructor/classwork_tab/assignment/assignment_detail_page.dart';
 import 'package:elearning_management_app/presentation/screens/instructor/classwork_tab/assignment/manage_assignment.dart';
 import 'package:elearning_management_app/presentation/widgets/course/Instructor_Course/classwork_tab_widget/assignment/create_assignment_page.dart';
-import 'package:elearning_management_app/presentation/screens/instructor/classwork_tab/assignment/assignment_tracking_page.dart';
 
 class AssignmentDetailCard extends ConsumerStatefulWidget {
   final Assignment assignment;
   final String courseId; // NEW: Need courseId for edit/delete operations
+  final CourseModel course; // Course model for navigation
   final String type;
   final IconData icon;
   final Color color;
-  final VoidCallback? onReviewWork; // Keep this for now
+  final VoidCallback? onReviewWork; // Callback to switch to Grade tab
 
   const AssignmentDetailCard({
     super.key,
     required this.assignment,
     required this.courseId,
+    required this.course,
     this.type = 'Assignment',
     this.icon = Icons.assignment_outlined,
     this.color = Colors.blue,
@@ -73,7 +76,7 @@ class _AssignmentDetailCardState extends ConsumerState<AssignmentDetailCard>
   }
 
   String _formatDateTime(DateTime dateTime) {
-    return DateFormat('MMM dd, yyyy • h:mm a').format(dateTime);
+    return DateFormat('MMM dd, yyyy â€¢ h:mm a').format(dateTime);
   }
 
   // Get total students from assigned groups
@@ -96,9 +99,27 @@ class _AssignmentDetailCardState extends ConsumerState<AssignmentDetailCard>
 
   // Get submission count
   Future<int> _getSubmissionCount() async {
-    // TODO: Implement logic to count submissions from Firestore
-    // Query submissions collection where assignmentId == widget.assignment.id
-    return 0; // Placeholder
+    try {
+      // Count submissions for this assignment (including late submissions)
+      // Status: submitted, late, graded (all count as "turned in")
+      final submissions =
+          await SubmissionRepository.getSubmissionsForAssignment(
+        widget.assignment.id,
+      );
+
+      // Count submissions with status: submitted, late, or graded
+      // Exclude drafts and returned
+      final turnedInCount = submissions.where((submission) {
+        return submission.status == SubmissionStatus.submitted ||
+            submission.status == SubmissionStatus.late ||
+            submission.status == SubmissionStatus.graded;
+      }).length;
+
+      return turnedInCount;
+    } catch (e) {
+      print('Error getting submission count: $e');
+      return 0;
+    }
   }
 
   // Get only link attachments
@@ -213,37 +234,123 @@ class _AssignmentDetailCardState extends ConsumerState<AssignmentDetailCard>
                 ),
                 const SizedBox(height: 6),
 
-                // Type Badge & Date Info
+                // Type Badge
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: widget.color.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    widget.type,
+                    style: TextStyle(
+                      color: widget.color,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 6),
+
+                // Posted & Edited Info
                 Wrap(
                   spacing: 8,
                   runSpacing: 4,
                   children: [
-                    // Type Badge
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: widget.color.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        widget.type,
-                        style: TextStyle(
-                          color: widget.color,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
+                    // Posted Info
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.schedule, size: 11, color: Colors.grey[500]),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            'Posted ${_formatDateTime(widget.assignment.createdAt)}',
+                            style: TextStyle(
+                              color: Colors.grey[400],
+                              fontSize: 11,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
-                      ),
+                      ],
                     ),
 
-                    // Posted Info
-                    Text(
-                      'Posted ${_formatDateTime(widget.assignment.createdAt)}',
-                      style: TextStyle(
-                        color: Colors.grey[400],
-                        fontSize: 11,
+                    // Edited Info
+                    if (widget.assignment.updatedAt != null &&
+                        widget.assignment.updatedAt !=
+                            widget.assignment.createdAt)
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.edit_note,
+                              size: 11, color: Colors.grey[500]),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              'Edited ${_formatDateTime(widget.assignment.updatedAt!)}',
+                              style: TextStyle(
+                                color: Colors.grey[400],
+                                fontSize: 11,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
                       ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+
+                // Due & Late Deadline Info
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: [
+                    // Due Date
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.calendar_today,
+                            size: 11, color: Colors.green[400]),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            'Due ${_formatDateTime(widget.assignment.deadline)}',
+                            style: TextStyle(
+                              color: Colors.green[400],
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ),
+
+                    // Late Deadline (if applicable)
+                    if (widget.assignment.allowLateSubmissions &&
+                        widget.assignment.lateDeadline != null)
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.access_time,
+                              size: 11, color: Colors.yellow[700]),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              'Late ${_formatDateTime(widget.assignment.lateDeadline!)}',
+                              style: TextStyle(
+                                color: Colors.yellow[700],
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
                   ],
                 ),
               ],
@@ -267,18 +374,6 @@ class _AssignmentDetailCardState extends ConsumerState<AssignmentDetailCard>
                         size: 18, color: Colors.blue[400]),
                     const SizedBox(width: 8),
                     const Text('Edit', style: TextStyle(color: Colors.white)),
-                  ],
-                ),
-              ),
-              PopupMenuItem(
-                value: 'duplicate',
-                child: Row(
-                  children: [
-                    Icon(Icons.copy_outlined,
-                        size: 18, color: Colors.green[400]),
-                    const SizedBox(width: 8),
-                    const Text('Duplicate',
-                        style: TextStyle(color: Colors.white)),
                   ],
                 ),
               ),
@@ -322,15 +417,6 @@ class _AssignmentDetailCardState extends ConsumerState<AssignmentDetailCard>
                   if (result == true && mounted) {
                     setState(() {}); // Trigger rebuild
                   }
-                  break;
-
-                case 'duplicate':
-                  // TODO: Implement duplicate
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Duplicate feature coming soon'),
-                    ),
-                  );
                   break;
 
                 case 'delete':
@@ -401,7 +487,7 @@ class _AssignmentDetailCardState extends ConsumerState<AssignmentDetailCard>
                 );
                 return LinkPreviewCard(
                   metadata: metadata,
-                  // onRemove: null → Không hiển thị nút X (view mode)
+                  // onRemove: null â†’ KhÃ´ng hiá»ƒn thá»‹ nÃºt X (view mode)
                 );
               }).toList(),
               const SizedBox(height: 16),
@@ -434,66 +520,6 @@ class _AssignmentDetailCardState extends ConsumerState<AssignmentDetailCard>
               }).toList(),
               const SizedBox(height: 16),
             ],
-
-            // Due Date Highlight (Responsive with Late Deadline)
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.orange.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.orange.withOpacity(0.3)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Regular Deadline
-                  Row(
-                    children: [
-                      Icon(Icons.schedule, size: 18, color: Colors.orange[400]),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Due: ${DateFormat('MMM dd, yyyy • h:mm a').format(widget.assignment.deadline)}',
-                          style: TextStyle(
-                            color: Colors.orange[300],
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 2,
-                        ),
-                      ),
-                    ],
-                  ),
-                  // Late Deadline (if exists)
-                  if (widget.assignment.allowLateSubmissions &&
-                      widget.assignment.lateDeadline != null) ...[
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Icon(Icons.warning_amber_rounded,
-                            size: 18, color: Colors.red[400]),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Late Deadline: ${DateFormat('MMM dd, yyyy • h:mm a').format(widget.assignment.lateDeadline!)}',
-                            style: TextStyle(
-                              color: Colors.red[300],
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 2,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 16),
 
             // Action Buttons
             _buildActionButtons(),
@@ -712,7 +738,7 @@ class _AssignmentDetailCardState extends ConsumerState<AssignmentDetailCard>
                 MaterialPageRoute(
                   builder: (context) => AssignmentDetailPage(
                     assignment: widget.assignment,
-                    courseId: widget.assignment.courseId,
+                    course: widget.course,
                   ),
                 ),
               );
@@ -733,20 +759,10 @@ class _AssignmentDetailCardState extends ConsumerState<AssignmentDetailCard>
           ),
         ),
         const SizedBox(width: 12),
-        // Review Work Button (Primary)
+        // Review Work Button (Primary) - Navigate to Grade tab
         Expanded(
           child: ElevatedButton.icon(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => AssignmentTrackingPage(
-                    assignment: widget.assignment,
-                    courseId: widget.courseId,
-                  ),
-                ),
-              );
-            },
+            onPressed: widget.onReviewWork,
             style: ElevatedButton.styleFrom(
               backgroundColor: widget.color,
               foregroundColor: Colors.white,

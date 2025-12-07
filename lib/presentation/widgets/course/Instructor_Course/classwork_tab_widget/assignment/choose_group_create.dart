@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 class ChooseGroupCreate extends StatefulWidget {
   final List<String> availableGroups;
@@ -33,7 +33,15 @@ class _ChooseGroupCreateState extends State<ChooseGroupCreate> {
   void initState() {
     super.initState();
     _filteredGroups = List.from(widget.availableGroups);
-    _tempSelectedGroups = List.from(widget.selectedGroups);
+
+    // âœ… FIX: If "All Groups" is in selectedGroups, ensure ALL groups are selected
+    // This handles Edit mode where parent passes ['All Groups', 'Group1', 'Group2', ...]
+    if (widget.selectedGroups.contains('All Groups')) {
+      // When "All Groups" is selected, include all available groups
+      _tempSelectedGroups = List.from(widget.availableGroups);
+    } else {
+      _tempSelectedGroups = List.from(widget.selectedGroups);
+    }
 
     _searchController.addListener(_filterGroups);
   }

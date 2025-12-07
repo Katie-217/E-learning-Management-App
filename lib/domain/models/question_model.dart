@@ -6,6 +6,7 @@
 class QuestionModel {
   final String id;
   final String courseId;
+  final String courseCode; // Mã môn học (IT001, CS101)
   final String question;
   final QuestionType type;
   final List<AnswerOption> options; // Cho multiple choice
@@ -22,6 +23,7 @@ class QuestionModel {
   const QuestionModel({
     required this.id,
     required this.courseId,
+    required this.courseCode,
     required this.question,
     required this.type,
     required this.options,
@@ -44,6 +46,7 @@ class QuestionModel {
     return QuestionModel(
       id: map['id'] ?? '',
       courseId: map['courseId'] ?? '',
+      courseCode: map['courseCode'] ?? '',
       question: map['question'] ?? '',
       type: _parseQuestionType(map['type'] ?? 'multiple_choice'),
       options: (map['options'] as List<dynamic>?)
@@ -71,6 +74,7 @@ class QuestionModel {
     return {
       'id': id,
       'courseId': courseId,
+      'courseCode': courseCode,
       'question': question,
       'type': type.name,
       'options': options.map((option) => option.toMap()).toList(),
@@ -93,6 +97,7 @@ class QuestionModel {
   QuestionModel copyWith({
     String? id,
     String? courseId,
+    String? courseCode,
     String? question,
     QuestionType? type,
     List<AnswerOption>? options,
@@ -109,6 +114,7 @@ class QuestionModel {
     return QuestionModel(
       id: id ?? this.id,
       courseId: courseId ?? this.courseId,
+      courseCode: courseCode ?? this.courseCode,
       question: question ?? this.question,
       type: type ?? this.type,
       options: options ?? this.options,

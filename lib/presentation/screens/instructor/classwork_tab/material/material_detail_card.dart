@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -12,6 +12,7 @@ import 'package:elearning_management_app/presentation/widgets/course/Instructor_
 import 'package:elearning_management_app/presentation/widgets/course/Instructor_Course/classwork_tab_widget/material/create_material_page.dart';
 import 'package:elearning_management_app/presentation/screens/instructor/classwork_tab/material/material_detail_page.dart';
 import 'package:elearning_management_app/presentation/screens/instructor/classwork_tab/material/manage_material.dart';
+import 'package:elearning_management_app/presentation/screens/instructor/classwork_tab/material/material_tracking_page.dart';
 
 class MaterialDetailCard extends ConsumerStatefulWidget {
   final model.MaterialModel material;
@@ -67,14 +68,14 @@ class _MaterialDetailCardState extends ConsumerState<MaterialDetailCard>
     return DateFormat('MMM dd, yyyy • h:mm a').format(dateTime);
   }
 
-  // Icon và màu mặc định cho Material
+  // Icon vÃ  mÃ u máº·c Ä‘á»‹nh cho Material
   IconData _getMaterialIcon() {
-    // Material luôn dùng icon description (file document)
+    // Material luÃ´n dÃ¹ng icon description (file document)
     return Icons.description_outlined;
   }
 
   Color _getMaterialColor() {
-    // Luôn màu đỏ để phân biệt với Assignment (màu xanh/indigo)
+    // LuÃ´n mÃ u Ä‘á» Ä‘á»ƒ phÃ¢n biá»‡t vá»›i Assignment (mÃ u xanh/indigo)
     return Colors.red;
   }
 
@@ -129,44 +130,52 @@ class _MaterialDetailCardState extends ConsumerState<MaterialDetailCard>
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                           ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 4),
-                        Row(
+                        Wrap(
+                          spacing: 12,
+                          runSpacing: 4,
                           children: [
-                            Icon(Icons.account_circle,
-                                size: 14, color: Colors.grey[500]),
-                            const SizedBox(width: 4),
-                            Text(
-                              widget.material.authorName ?? 'Unknown',
-                              style: TextStyle(
-                                  color: Colors.grey[400], fontSize: 12),
+                            Row(
+                              children: [
+                                Icon(Icons.access_time,
+                                    size: 14, color: Colors.grey[500]),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    'Posted ${_formatDateTime(widget.material.createdAt)}',
+                                    style: TextStyle(
+                                        color: Colors.grey[400], fontSize: 12),
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: 12),
-                            Icon(Icons.access_time,
-                                size: 14, color: Colors.grey[500]),
-                            const SizedBox(width: 4),
-                            Text(
-                              'Posted ${_formatDateTime(widget.material.createdAt)}',
-                              style: TextStyle(
-                                  color: Colors.grey[400], fontSize: 12),
-                            ),
+                            if (widget.material.updatedAt != null &&
+                                widget.material.updatedAt!
+                                    .isAfter(widget.material.createdAt))
+                              Row(
+                                children: [
+                                  Icon(Icons.edit,
+                                      size: 14, color: Colors.grey[500]),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      'Edited ${_formatDateTime(widget.material.updatedAt!)}',
+                                      style: TextStyle(
+                                          color: Colors.grey[400],
+                                          fontSize: 12),
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
+                                    ),
+                                  ),
+                                ],
+                              ),
                           ],
                         ),
-                        if (widget.material.updatedAt != null) ...[
-                          const SizedBox(height: 2),
-                          Row(
-                            children: [
-                              Icon(Icons.edit_outlined,
-                                  size: 14, color: Colors.grey[500]),
-                              const SizedBox(width: 4),
-                              Text(
-                                'Edited ${_formatDateTime(widget.material.updatedAt!)}',
-                                style: TextStyle(
-                                    color: Colors.grey[500], fontSize: 11),
-                              ),
-                            ],
-                          ),
-                        ],
                       ],
                     ),
                   ),
@@ -280,7 +289,7 @@ class _MaterialDetailCardState extends ConsumerState<MaterialDetailCard>
                         const SizedBox(height: 16),
                       ],
 
-                      // Link section (với LinkPreviewCard như Assignment)
+                      // Link section (vá»›i LinkPreviewCard nhÆ° Assignment)
                       if (hasUrl) ...[
                         Row(
                           children: [
@@ -309,19 +318,19 @@ class _MaterialDetailCardState extends ConsumerState<MaterialDetailCard>
                                   domain: widget.material.linkMetadata!.domain,
                                 )
                               : LinkMetadata(
-                                  // Fallback nếu không có linkMetadata (material cũ)
+                                  // Fallback náº¿u khÃ´ng cÃ³ linkMetadata (material cÅ©)
                                   url: widget.material.url!,
                                   title: widget.material.title,
                                   imageUrl: null,
                                   description: widget.material.description,
                                   domain: Uri.parse(widget.material.url!).host,
                                 ),
-                          // onRemove: null → Không hiển thị nút X (view mode)
+                          // onRemove: null â†’ KhÃ´ng hiá»ƒn thá»‹ nÃºt X (view mode)
                         ),
                         const SizedBox(height: 16),
                       ],
 
-                      // Attachment section (với thumbnail đẹp như Assignment)
+                      // Attachment section (vá»›i thumbnail Ä‘áº¹p nhÆ° Assignment)
                       if (hasAttachment) ...[
                         Row(
                           children: [
@@ -375,11 +384,16 @@ class _MaterialDetailCardState extends ConsumerState<MaterialDetailCard>
                           Expanded(
                             child: OutlinedButton.icon(
                               onPressed: () {
-                                // TODO: Navigate to progress tracking
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                      content: Text(
-                                          'Progress monitoring coming soon!')),
+                                // Navigate to Material Tracking Page
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => MaterialTrackingPage(
+                                      materialId: widget.material.id,
+                                      materialTitle: widget.material.title,
+                                      courseId: widget.courseId,
+                                    ),
+                                  ),
                                 );
                               },
                               icon: const Icon(Icons.analytics_outlined,
@@ -412,7 +426,7 @@ class _MaterialDetailCardState extends ConsumerState<MaterialDetailCard>
     return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
   }
 
-  // Build attachment card với thumbnail đẹp như Assignment
+  // Build attachment card vá»›i thumbnail Ä‘áº¹p nhÆ° Assignment
   Widget _buildAttachmentCard(model.AttachmentModel attachment) {
     final uploadedFile = UploadedFileModel(
       fileName: attachment.name,
@@ -443,7 +457,7 @@ class _MaterialDetailCardState extends ConsumerState<MaterialDetailCard>
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Left: Thumbnail với màu sắc theo loại file
+            // Left: Thumbnail vá»›i mÃ u sáº¯c theo loáº¡i file
             _buildFileThumbnail(uploadedFile),
 
             // Right: File Info
@@ -493,7 +507,7 @@ class _MaterialDetailCardState extends ConsumerState<MaterialDetailCard>
     );
   }
 
-  // Build file thumbnail với icon và màu sắc
+  // Build file thumbnail vá»›i icon vÃ  mÃ u sáº¯c
   Widget _buildFileThumbnail(UploadedFileModel file) {
     final icon = FileUploadService.getFileIcon(file.fileExtension);
     final color = FileUploadService.getFileColor(file.fileExtension);

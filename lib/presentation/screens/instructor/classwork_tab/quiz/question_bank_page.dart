@@ -1,28 +1,19 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:elearning_management_app/domain/models/question_model.dart';
+import 'package:elearning_management_app/application/providers/question_provider.dart';
+import 'package:elearning_management_app/data/repositories/question/question_repository.dart';
 import 'question_editor_page.dart';
-
-// Mock data model - sẽ được thay thế bằng model thật sau
-class Question {
-  final String id;
-  final String text;
-  final String difficulty; // 'easy', 'medium', 'hard'
-  final List<String> options;
-  final int correctAnswerIndex;
-
-  Question({
-    required this.id,
-    required this.text,
-    required this.difficulty,
-    required this.options,
-    required this.correctAnswerIndex,
-  });
-}
 
 class QuestionBankPage extends ConsumerStatefulWidget {
   final String courseId;
+  final String courseCode; // âœ… MÃ£ mÃ´n há»c (IT001, CS101)
 
-  const QuestionBankPage({super.key, required this.courseId});
+  const QuestionBankPage({
+    super.key,
+    required this.courseId,
+    required this.courseCode,
+  });
 
   @override
   ConsumerState<QuestionBankPage> createState() => _QuestionBankPageState();
@@ -33,70 +24,10 @@ class _QuestionBankPageState extends ConsumerState<QuestionBankPage> {
   String _selectedDifficulty = 'all'; // 'all', 'easy', 'medium', 'hard'
   String _searchQuery = '';
 
-  // Mock data - sẽ được thay thế bằng provider/repository sau
-  List<Question> _mockQuestions = [
-    Question(
-      id: '1',
-      text: 'What is Flutter?',
-      difficulty: 'easy',
-      options: [
-        'A mobile app framework',
-        'A programming language',
-        'A database',
-        'An operating system'
-      ],
-      correctAnswerIndex: 0,
-    ),
-    Question(
-      id: '2',
-      text: 'Which widget is used for scrolling in Flutter?',
-      difficulty: 'medium',
-      options: ['Container', 'ListView', 'Text', 'Image'],
-      correctAnswerIndex: 1,
-    ),
-    Question(
-      id: '3',
-      text: 'What is the purpose of StatefulWidget?',
-      difficulty: 'hard',
-      options: [
-        'To create static UI',
-        'To manage mutable state',
-        'To handle routing',
-        'To connect to database'
-      ],
-      correctAnswerIndex: 1,
-    ),
-  ];
-
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
-  }
-
-  List<Question> get _filteredQuestions {
-    return _mockQuestions.where((question) {
-      // Filter by difficulty
-      if (_selectedDifficulty != 'all' &&
-          question.difficulty != _selectedDifficulty) {
-        return false;
-      }
-
-      // Filter by search query
-      if (_searchQuery.isNotEmpty &&
-          !question.text.toLowerCase().contains(_searchQuery.toLowerCase())) {
-        return false;
-      }
-
-      return true;
-    }).toList();
-  }
-
-  int _getQuestionCount(String difficulty) {
-    if (difficulty == 'all') {
-      return _mockQuestions.length;
-    }
-    return _mockQuestions.where((q) => q.difficulty == difficulty).length;
   }
 
   Color _getDifficultyColor(String difficulty) {
@@ -125,10 +56,10 @@ class _QuestionBankPageState extends ConsumerState<QuestionBankPage> {
     }
   }
 
-  void _deleteQuestion(String questionId) {
+  void _deleteQuestion(QuestionModel question) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         backgroundColor: const Color(0xFF1F2937),
         title: const Text('Delete Question',
             style: TextStyle(color: Colors.white)),
@@ -138,18 +69,32 @@ class _QuestionBankPageState extends ConsumerState<QuestionBankPage> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () {
-              setState(() {
-                _mockQuestions.removeWhere((q) => q.id == questionId);
-              });
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Question deleted')),
-              );
+            onPressed: () async {
+              Navigator.pop(dialogContext);
+              try {
+                await QuestionRepository.deleteQuestion(question.id);
+                if (mounted && context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Question deleted successfully'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (mounted && context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('Delete'),
@@ -163,19 +108,36 @@ class _QuestionBankPageState extends ConsumerState<QuestionBankPage> {
   Widget build(BuildContext context) {
     final isDesktop = MediaQuery.of(context).size.width >= 800;
 
+    // âœ… Watch questions stream by courseCode
+    final questionsAsync = ref.watch(questionStreamProvider(widget.courseCode));
+    final questionCounts = ref.watch(questionCountProvider(widget.courseCode));
+
     return Scaffold(
       backgroundColor: const Color(0xFF0F172A),
       body: CustomScrollView(
         slivers: [
-          // SliverAppBar - Chỉ có title và back button
+          // SliverAppBar - Chá»‰ cÃ³ title vÃ  back button
           SliverAppBar(
             backgroundColor: const Color(0xFF1E293B),
             floating: false,
             pinned: true,
-            title: const Text(
-              'Question Bank',
-              style:
-                  TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+            title: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Question Bank',
+                  style: TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.w600),
+                ),
+                Text(
+                  'Course: ${widget.courseCode}',
+                  style: TextStyle(
+                    color: Colors.grey[400],
+                    fontSize: 12,
+                    fontWeight: FontWeight.normal,
+                  ),
+                ),
+              ],
             ),
             actions: [
               // Desktop: Button "+ Add Question"
@@ -205,6 +167,7 @@ class _QuestionBankPageState extends ConsumerState<QuestionBankPage> {
             delegate: _SearchFilterDelegate(
               searchController: _searchController,
               selectedDifficulty: _selectedDifficulty,
+              questionCounts: questionCounts,
               onSearchChanged: (value) {
                 setState(() {
                   _searchQuery = value;
@@ -217,66 +180,118 @@ class _QuestionBankPageState extends ConsumerState<QuestionBankPage> {
               },
               buildFilterChip: _buildFilterChip,
             ),
-            floating: true, // Floating behavior khi scroll
+            floating: true,
             pinned: false,
           ),
 
-          // Question List
-          SliverPadding(
-            padding: EdgeInsets.all(isDesktop ? 24 : 16),
-            sliver: _filteredQuestions.isEmpty
-                ? SliverFillRemaining(
-                    child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.quiz_outlined,
-                              size: 64, color: Colors.grey[700]),
-                          const SizedBox(height: 16),
-                          Text(
-                            _searchQuery.isNotEmpty ||
-                                    _selectedDifficulty != 'all'
-                                ? 'No questions found'
-                                : 'No questions yet',
-                            style: TextStyle(
-                              color: Colors.grey[500],
-                              fontSize: 16,
-                            ),
+          // Question List - Using real data
+          questionsAsync.when(
+            data: (allQuestions) {
+              // Apply filters
+              var filteredQuestions = allQuestions;
+
+              // Filter by difficulty
+              if (_selectedDifficulty != 'all') {
+                filteredQuestions = filteredQuestions
+                    .where((q) => q.difficulty.name == _selectedDifficulty)
+                    .toList();
+              }
+
+              // Filter by search query
+              if (_searchQuery.isNotEmpty) {
+                final query = _searchQuery.toLowerCase();
+                filteredQuestions = filteredQuestions
+                    .where((q) => q.question.toLowerCase().contains(query))
+                    .toList();
+              }
+
+              if (filteredQuestions.isEmpty) {
+                return SliverFillRemaining(
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.quiz_outlined,
+                            size: 64, color: Colors.grey[700]),
+                        const SizedBox(height: 16),
+                        Text(
+                          _searchQuery.isNotEmpty ||
+                                  _selectedDifficulty != 'all'
+                              ? 'No questions found'
+                              : 'No questions yet',
+                          style: TextStyle(
+                            color: Colors.grey[500],
+                            fontSize: 16,
                           ),
-                          const SizedBox(height: 8),
-                          Text(
-                            _searchQuery.isNotEmpty ||
-                                    _selectedDifficulty != 'all'
-                                ? 'Try adjusting your filters'
-                                : 'Tap + to create your first question',
-                            style: TextStyle(
-                              color: Colors.grey[600],
-                              fontSize: 14,
-                            ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _searchQuery.isNotEmpty ||
+                                  _selectedDifficulty != 'all'
+                              ? 'Try adjusting your filters'
+                              : 'Tap + to create your first question',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 14,
                           ),
-                        ],
-                      ),
-                    ),
-                  )
-                : SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        final question = _filteredQuestions[index];
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: Center(
-                            child: ConstrainedBox(
-                              constraints: BoxConstraints(
-                                maxWidth: isDesktop ? 800 : double.infinity,
-                              ),
-                              child: _buildQuestionCard(question),
-                            ),
-                          ),
-                        );
-                      },
-                      childCount: _filteredQuestions.length,
+                        ),
+                      ],
                     ),
                   ),
+                );
+              }
+
+              return SliverPadding(
+                padding: EdgeInsets.all(isDesktop ? 24 : 16),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final question = filteredQuestions[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Center(
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxWidth: isDesktop ? 800 : double.infinity,
+                            ),
+                            child: _buildQuestionCard(question),
+                          ),
+                        ),
+                      );
+                    },
+                    childCount: filteredQuestions.length,
+                  ),
+                ),
+              );
+            },
+            loading: () => const SliverFillRemaining(
+              child: Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.purple),
+                ),
+              ),
+            ),
+            error: (error, stack) => SliverFillRemaining(
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.error_outline, size: 64, color: Colors.red[400]),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Error loading questions',
+                      style: TextStyle(color: Colors.grey[400], fontSize: 16),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      error.toString(),
+                      style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -292,7 +307,7 @@ class _QuestionBankPageState extends ConsumerState<QuestionBankPage> {
     );
   }
 
-  Widget _buildFilterChip(String label, String value) {
+  Widget _buildFilterChip(String label, String value, int count) {
     final isSelected = _selectedDifficulty == value;
     Color chipColor;
 
@@ -305,8 +320,6 @@ class _QuestionBankPageState extends ConsumerState<QuestionBankPage> {
     } else {
       chipColor = Colors.purple;
     }
-
-    final count = _getQuestionCount(value);
 
     return GestureDetector(
       onTap: () {
@@ -359,8 +372,8 @@ class _QuestionBankPageState extends ConsumerState<QuestionBankPage> {
     );
   }
 
-  Widget _buildQuestionCard(Question question) {
-    final difficultyColor = _getDifficultyColor(question.difficulty);
+  Widget _buildQuestionCard(QuestionModel question) {
+    final difficultyColor = _getDifficultyColor(question.difficulty.name);
 
     return Container(
       decoration: BoxDecoration(
@@ -404,7 +417,7 @@ class _QuestionBankPageState extends ConsumerState<QuestionBankPage> {
                                 color: difficultyColor.withOpacity(0.5)),
                           ),
                           child: Text(
-                            _getDifficultyLabel(question.difficulty),
+                            _getDifficultyLabel(question.difficulty.name),
                             style: TextStyle(
                               color: difficultyColor,
                               fontSize: 11,
@@ -418,7 +431,7 @@ class _QuestionBankPageState extends ConsumerState<QuestionBankPage> {
 
                     // Question Text
                     Text(
-                      question.text,
+                      question.question,
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 15,
@@ -456,7 +469,7 @@ class _QuestionBankPageState extends ConsumerState<QuestionBankPage> {
                     tooltip: 'Edit',
                   ),
                   IconButton(
-                    onPressed: () => _deleteQuestion(question.id),
+                    onPressed: () => _deleteQuestion(question),
                     icon: const Icon(Icons.delete_outline, size: 20),
                     color: Colors.red[400],
                     tooltip: 'Delete',
@@ -470,22 +483,30 @@ class _QuestionBankPageState extends ConsumerState<QuestionBankPage> {
     );
   }
 
-  void _navigateToEditor({Question? question}) async {
+  void _navigateToEditor({QuestionModel? question}) async {
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => QuestionEditorPage(
           courseId: widget.courseId,
+          courseCode: widget.courseCode,
           question: question,
         ),
       ),
     );
 
-    // Refresh list if question was saved
-    if (result == true) {
-      setState(() {
-        // TODO: Reload questions from repository
-      });
+    // Auto-refresh via Riverpod stream
+    if (result == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            question == null
+                ? 'Question added successfully'
+                : 'Question updated successfully',
+          ),
+          backgroundColor: Colors.green,
+        ),
+      );
     }
   }
 }
@@ -494,13 +515,15 @@ class _QuestionBankPageState extends ConsumerState<QuestionBankPage> {
 class _SearchFilterDelegate extends SliverPersistentHeaderDelegate {
   final TextEditingController searchController;
   final String selectedDifficulty;
+  final Map<String, int> questionCounts;
   final Function(String) onSearchChanged;
   final Function(String) onDifficultyChanged;
-  final Widget Function(String, String) buildFilterChip;
+  final Widget Function(String, String, int) buildFilterChip;
 
   _SearchFilterDelegate({
     required this.searchController,
     required this.selectedDifficulty,
+    required this.questionCounts,
     required this.onSearchChanged,
     required this.onDifficultyChanged,
     required this.buildFilterChip,
@@ -548,13 +571,14 @@ class _SearchFilterDelegate extends SliverPersistentHeaderDelegate {
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
-                buildFilterChip('All', 'all'),
+                buildFilterChip('All', 'all', questionCounts['all'] ?? 0),
                 const SizedBox(width: 8),
-                buildFilterChip('Easy', 'easy'),
+                buildFilterChip('Easy', 'easy', questionCounts['easy'] ?? 0),
                 const SizedBox(width: 8),
-                buildFilterChip('Medium', 'medium'),
+                buildFilterChip(
+                    'Medium', 'medium', questionCounts['medium'] ?? 0),
                 const SizedBox(width: 8),
-                buildFilterChip('Hard', 'hard'),
+                buildFilterChip('Hard', 'hard', questionCounts['hard'] ?? 0),
               ],
             ),
           ),
@@ -564,11 +588,11 @@ class _SearchFilterDelegate extends SliverPersistentHeaderDelegate {
   }
 
   @override
-  double get maxExtent => 130; // Chiều cao tối đa
+  double get maxExtent => 130; // Chiá»u cao tá»‘i Ä‘a
 
   @override
   double get minExtent =>
-      130; // Chiều cao tối thiểu (giống maxExtent để cố định)
+      130; // Chiá»u cao tá»‘i thiá»ƒu (giá»‘ng maxExtent Ä‘á»ƒ cá»‘ Ä‘á»‹nh)
 
   @override
   bool shouldRebuild(covariant _SearchFilterDelegate oldDelegate) {

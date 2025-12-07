@@ -1,6 +1,6 @@
-// ========================================
+﻿// ========================================
 // FILE: submission_model.dart
-// MÔ TẢ: Model nộp bài của sinh viên
+// MÃ” Táº¢: Model ná»™p bÃ i cá»§a sinh viÃªn
 // ========================================
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -12,19 +12,19 @@ class SubmissionModel {
   final String studentName;
   final String courseId;
   final String
-      semesterId; // ✅ NEW: Root Collection support - semester filtering
-  final String groupId; // ✅ NEW: Root Collection support - group filtering
+      semesterId; // âœ… NEW: Root Collection support - semester filtering
+  final String groupId; // âœ… NEW: Root Collection support - group filtering
   final DateTime submittedAt;
   final SubmissionStatus status;
   final List<AttachmentModel> attachments;
-  final String? textContent; // Nội dung text nếu có
-  final double? score; // Điểm số (nullable khi chưa chấm)
-  final double? maxScore; // Điểm tối đa
-  final String? feedback; // Phản hồi từ giảng viên
-  final String? gradedBy; // UID của người chấm điểm
-  final DateTime? gradedAt; // Thời gian chấm điểm
-  final bool isLate; // Nộp muộn
-  final int attemptNumber; // Lần nộp thứ mấy
+  final String? textContent; // Ná»™i dung text náº¿u cÃ³
+  final double? score; // Äiá»ƒm sá»‘ (nullable khi chÆ°a cháº¥m)
+  final double? maxScore; // Äiá»ƒm tá»‘i Ä‘a
+  final String? feedback; // Pháº£n há»“i tá»« giáº£ng viÃªn
+  final String? gradedBy; // UID cá»§a ngÆ°á»i cháº¥m Ä‘iá»ƒm
+  final DateTime? gradedAt; // Thá»i gian cháº¥m Ä‘iá»ƒm
+  final bool isLate; // Ná»™p muá»™n
+  final int attemptNumber; // Láº§n ná»™p thá»© máº¥y
   final DateTime? lastModified;
 
   const SubmissionModel({
@@ -33,8 +33,8 @@ class SubmissionModel {
     required this.studentId,
     required this.studentName,
     required this.courseId,
-    required this.semesterId, // ✅ REQUIRED: Root Collection support
-    required this.groupId, // ✅ REQUIRED: Root Collection support
+    required this.semesterId, // âœ… REQUIRED: Root Collection support
+    required this.groupId, // âœ… REQUIRED: Root Collection support
     required this.submittedAt,
     required this.status,
     this.attachments = const [],
@@ -50,8 +50,8 @@ class SubmissionModel {
   });
 
   // ========================================
-  // HÀM: fromMap()
-  // MÔ TẢ: Tạo SubmissionModel từ Map (Firebase data)
+  // HÃ€M: fromMap()
+  // MÃ” Táº¢: Táº¡o SubmissionModel tá»« Map (Firebase data)
   // ========================================
   factory SubmissionModel.fromMap(Map<String, dynamic> map) {
     final attachments = _parseAttachments(map['attachments']);
@@ -63,8 +63,8 @@ class SubmissionModel {
       studentId: map['studentId'] ?? '',
       studentName: map['studentName'] ?? '',
       courseId: map['courseId'] ?? '',
-      semesterId: map['semesterId'] ?? '', // ✅ Read semesterId from Firebase
-      groupId: map['groupId'] ?? '', // ✅ Read groupId from Firebase
+      semesterId: map['semesterId'] ?? '', // âœ… Read semesterId from Firebase
+      groupId: map['groupId'] ?? '', // âœ… Read groupId from Firebase
       submittedAt: submittedAt ?? DateTime.now(),
       status: _parseStatus(map['status'] ?? 'submitted'),
       attachments: attachments,
@@ -83,19 +83,21 @@ class SubmissionModel {
   }
 
   // ========================================
-  // HÀM: toMap()
-  // MÔ TẢ: Chuyển SubmissionModel thành Map để lưu Firebase
+  // HÃ€M: toMap()
+  // MÃ” Táº¢: Chuyá»ƒn SubmissionModel thÃ nh Map Ä‘á»ƒ lÆ°u Firebase
+  // âš ï¸ NOTE: 'id' is NOT included because it's stored as document ID, not a field
   // ========================================
   Map<String, dynamic> toMap() {
     return {
-      'id': id,
+      // 'id': id, // âŒ REMOVED: ID should not be saved as a field in Firestore
       'assignmentId': assignmentId,
       'studentId': studentId,
       'studentName': studentName,
       'courseId': courseId,
-      'semesterId': semesterId, // ✅ Write semesterId to Firebase
-      'groupId': groupId, // ✅ Write groupId to Firebase
-      'submittedAt': submittedAt.toIso8601String(),
+      'semesterId': semesterId, // âœ… Write semesterId to Firebase
+      'groupId': groupId, // âœ… Write groupId to Firebase
+      'submittedAt':
+          submittedAt.toUtc().toIso8601String(), // ✅ Convert to UTC first
       'status': status.name,
       'attachments':
           attachments.map((attachment) => attachment.toMap()).toList(),
@@ -104,16 +106,17 @@ class SubmissionModel {
       'maxScore': maxScore,
       'feedback': feedback,
       'gradedBy': gradedBy,
-      'gradedAt': gradedAt?.toIso8601String(),
+      'gradedAt': gradedAt?.toUtc().toIso8601String(), // ✅ Convert to UTC first
       'isLate': isLate,
       'attemptNumber': attemptNumber,
-      'lastModified': lastModified?.toIso8601String(),
+      'lastModified':
+          lastModified?.toUtc().toIso8601String(), // ✅ Convert to UTC first
     };
   }
 
   // ========================================
-  // HÀM: copyWith()
-  // MÔ TẢ: Tạo bản sao với một số field thay đổi
+  // HÃ€M: copyWith()
+  // MÃ” Táº¢: Táº¡o báº£n sao vá»›i má»™t sá»‘ field thay Ä‘á»•i
   // ========================================
   SubmissionModel copyWith({
     String? id,
@@ -121,8 +124,8 @@ class SubmissionModel {
     String? studentId,
     String? studentName,
     String? courseId,
-    String? semesterId, // ✅ Support semesterId updates
-    String? groupId, // ✅ Support groupId updates
+    String? semesterId, // âœ… Support semesterId updates
+    String? groupId, // âœ… Support groupId updates
     DateTime? submittedAt,
     SubmissionStatus? status,
     List<AttachmentModel>? attachments,
@@ -161,13 +164,13 @@ class SubmissionModel {
 
   // ========================================
   // GETTER: isGraded
-  // MÔ TẢ: Kiểm tra đã được chấm điểm chưa
+  // MÃ” Táº¢: Kiá»ƒm tra Ä‘Ã£ Ä‘Æ°á»£c cháº¥m Ä‘iá»ƒm chÆ°a
   // ========================================
   bool get isGraded => score != null && gradedAt != null;
 
   // ========================================
   // GETTER: scorePercentage
-  // MÔ TẢ: Điểm số theo phần trăm
+  // MÃ” Táº¢: Äiá»ƒm sá»‘ theo pháº§n trÄƒm
   // ========================================
   double? get scorePercentage {
     if (score == null || maxScore == null || maxScore == 0) return null;
@@ -176,22 +179,22 @@ class SubmissionModel {
 
   // ========================================
   // GETTER: hasAttachments
-  // MÔ TẢ: Kiểm tra có file đính kèm không
+  // MÃ” Táº¢: Kiá»ƒm tra cÃ³ file Ä‘Ã­nh kÃ¨m khÃ´ng
   // ========================================
   bool get hasAttachments => attachments.isNotEmpty;
 
   // ========================================
   // GETTER: hasTextContent
-  // MÔ TẢ: Kiểm tra có nội dung text không
+  // MÃ” Táº¢: Kiá»ƒm tra cÃ³ ná»™i dung text khÃ´ng
   // ========================================
   bool get hasTextContent => textContent != null && textContent!.isNotEmpty;
 
   // ========================================
   // GETTER: gradeDisplay
-  // MÔ TẢ: Hiển thị điểm số
+  // MÃ” Táº¢: Hiá»ƒn thá»‹ Ä‘iá»ƒm sá»‘
   // ========================================
   String get gradeDisplay {
-    if (!isGraded) return 'Chưa chấm điểm';
+    if (!isGraded) return 'ChÆ°a cháº¥m Ä‘iá»ƒm';
 
     if (scorePercentage != null) {
       return '${score!.toStringAsFixed(1)}/${maxScore!.toStringAsFixed(1)} (${scorePercentage!.toStringAsFixed(1)}%)';
@@ -201,8 +204,8 @@ class SubmissionModel {
   }
 
   // ========================================
-  // HÀM: grade()
-  // MÔ TẢ: Chấm điểm bài nộp
+  // HÃ€M: grade()
+  // MÃ” Táº¢: Cháº¥m Ä‘iá»ƒm bÃ i ná»™p
   // ========================================
   SubmissionModel grade({
     required double score,
@@ -264,16 +267,16 @@ class SubmissionModel {
 
   static SubmissionStatus _parseStatus(String status) {
     switch (status.toLowerCase()) {
-      case 'draft':
-        return SubmissionStatus.draft;
+      case 'missing':
+        return SubmissionStatus.missing;
       case 'submitted':
         return SubmissionStatus.submitted;
+      case 'late':
+        return SubmissionStatus.late;
       case 'graded':
         return SubmissionStatus.graded;
-      case 'returned':
-        return SubmissionStatus.returned;
       default:
-        return SubmissionStatus.submitted;
+        return SubmissionStatus.missing;
     }
   }
 
@@ -296,7 +299,7 @@ class SubmissionModel {
       final parsed = DateTime.parse(dateData.toString());
       return parsed;
     } catch (e) {
-      print('DEBUG: ⚠️ Error parsing date: $e');
+      print('DEBUG: âš ï¸ Error parsing date: $e');
       return null;
     }
   }
@@ -318,46 +321,46 @@ class SubmissionModel {
 
 // ========================================
 // ENUM: SubmissionStatus
-// MÔ TẢ: Trạng thái bài nộp
+// MÃ” Táº¢: Tráº¡ng thÃ¡i bÃ i ná»™p
 // ========================================
 enum SubmissionStatus {
-  draft, // Nháp
-  submitted, // Đã nộp
-  graded, // Đã chấm điểm
-  returned, // Trả lại (cần sửa)
+  missing,
+  submitted,
+  late,
+  graded,
 }
 
 extension SubmissionStatusExtension on SubmissionStatus {
   String get displayName {
     switch (this) {
-      case SubmissionStatus.draft:
-        return 'Nháp';
+      case SubmissionStatus.missing:
+        return 'ChÆ°a ná»™p';
       case SubmissionStatus.submitted:
-        return 'Đã nộp';
+        return 'ÄÃ£ ná»™p';
+      case SubmissionStatus.late:
+        return 'Ná»™p muá»™n';
       case SubmissionStatus.graded:
-        return 'Đã chấm điểm';
-      case SubmissionStatus.returned:
-        return 'Trả lại';
+        return 'ÄÃ£ cháº¥m Ä‘iá»ƒm';
     }
   }
 
   String get name {
     switch (this) {
-      case SubmissionStatus.draft:
-        return 'draft';
+      case SubmissionStatus.missing:
+        return 'missing';
       case SubmissionStatus.submitted:
         return 'submitted';
+      case SubmissionStatus.late:
+        return 'late';
       case SubmissionStatus.graded:
         return 'graded';
-      case SubmissionStatus.returned:
-        return 'returned';
     }
   }
 }
 
 // ========================================
 // CLASS: AttachmentModel
-// MÔ TẢ: Tái sử dụng cho file đính kèm
+// MÃ” Táº¢: TÃ¡i sá»­ dá»¥ng cho file Ä‘Ã­nh kÃ¨m
 // ========================================
 class AttachmentModel {
   final String id;

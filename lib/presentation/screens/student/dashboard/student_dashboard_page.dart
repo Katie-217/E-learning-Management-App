@@ -290,7 +290,7 @@ class _StudentDashboardPageState extends ConsumerState<StudentDashboardPage> {
       ),
       child: Scaffold(
         backgroundColor: const Color(0xFF0F1720),
-        appBar: widget.showSidebar ? const StudentDashboardAppBar() : null,
+        appBar: widget.showSidebar ? StudentDashboardAppBar() : null,
         body: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

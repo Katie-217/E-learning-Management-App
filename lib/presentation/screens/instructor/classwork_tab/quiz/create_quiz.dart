@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:elearning_management_app/domain/models/course_model.dart';
+import 'package:elearning_management_app/data/repositories/quiz/quiz_repository.dart';
+import 'package:elearning_management_app/data/repositories/question/question_repository.dart';
+import 'package:elearning_management_app/data/repositories/group/group_repository.dart';
+import 'package:elearning_management_app/presentation/widgets/course/Instructor_Course/classwork_tab_widget/assignment/choose_group_create.dart';
 import 'package:intl/intl.dart';
 
 class CreateQuizPage extends ConsumerStatefulWidget {
@@ -28,6 +32,8 @@ class _CreateQuizPageState extends ConsumerState<CreateQuizPage> {
 
   // Configuration controllers
   final _durationController = TextEditingController(text: '45');
+  final _maxAttemptsController = TextEditingController(text: '1');
+  final _pointsController = TextEditingController(text: '100');
 
   // Available questions from bank (TODO: fetch from Firestore)
   int _availableEasy = 50;
@@ -41,9 +47,15 @@ class _CreateQuizPageState extends ConsumerState<CreateQuizPage> {
   TimeOfDay? _closeTime;
 
   // Settings
-  int _maxAttempts = 1;
   bool _shuffleAnswers = true;
   bool _showScore = true;
+
+  // Groups
+  List<String> _availableGroups = [];
+  List<String> _selectedGroups = [];
+  Map<String, String> _groupIdToName =
+      {}; // Map groupId -> groupName for display
+  bool _isLoadingGroups = true;
 
   // Validation errors
   String? _easyError;
@@ -55,10 +67,11 @@ class _CreateQuizPageState extends ConsumerState<CreateQuizPage> {
   @override
   void initState() {
     super.initState();
-    // TODO: Fetch available question counts from Firestore
     _loadAvailableQuestions();
+    _loadGroups();
   }
 
+  @override
   @override
   void dispose() {
     _titleController.dispose();
@@ -67,17 +80,68 @@ class _CreateQuizPageState extends ConsumerState<CreateQuizPage> {
     _mediumCountController.dispose();
     _hardCountController.dispose();
     _durationController.dispose();
+    _maxAttemptsController.dispose();
+    _pointsController.dispose();
     super.dispose();
   }
 
   Future<void> _loadAvailableQuestions() async {
-    // TODO: Implement Firestore query to count questions by difficulty
-    // For now, using mock data
-    setState(() {
-      _availableEasy = 50;
-      _availableMedium = 30;
-      _availableHard = 20;
-    });
+    // Load real question counts from Firestore by courseCode
+    try {
+      final counts = await QuestionRepository.getQuestionCountByDifficulty(
+        widget.course.code, // ✅ Use courseCode, not courseId
+      );
+
+      setState(() {
+        _availableEasy = counts['easy'] ?? 0;
+        _availableMedium = counts['medium'] ?? 0;
+        _availableHard = counts['hard'] ?? 0;
+      });
+    } catch (e) {
+      // Show error but keep mock data as fallback
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('⚠️ Failed to load question bank: $e'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _loadGroups() async {
+    try {
+      final groups = await GroupRepository.getGroupsByCourse(widget.course.id);
+      setState(() {
+        // Store group IDs for selection, not names
+        _groupIdToName = {
+          'all': 'All Groups',
+          for (var g in groups) g.id: g.name
+        };
+        _availableGroups = ['all', ...groups.map((g) => g.id).toList()];
+        _selectedGroups = [
+          'all',
+          ...groups.map((g) => g.id).toList()
+        ]; // Default: all selected
+        _isLoadingGroups = false;
+      });
+    } catch (e) {
+      setState(() {
+        _availableGroups = ['all'];
+        _selectedGroups = ['all'];
+        _groupIdToName = {'all': 'All Groups'};
+        _isLoadingGroups = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('⚠️ Failed to load groups: $e'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    }
   }
 
   int get _totalQuestions {
@@ -166,8 +230,49 @@ class _CreateQuizPageState extends ConsumerState<CreateQuizPage> {
     });
 
     try {
-      // TODO: Implement Firestore save logic
-      await Future.delayed(const Duration(seconds: 1)); // Simulate save
+      // Build structure map from controllers
+      final structure = <String, int>{};
+      final easyCount = int.tryParse(_easyCountController.text) ?? 0;
+      final mediumCount = int.tryParse(_mediumCountController.text) ?? 0;
+      final hardCount = int.tryParse(_hardCountController.text) ?? 0;
+
+      if (easyCount > 0) structure['easy'] = easyCount;
+      if (mediumCount > 0) structure['medium'] = mediumCount;
+      if (hardCount > 0) structure['hard'] = hardCount;
+
+      // Combine date and time
+      final openDateTime = DateTime(
+        _openDate!.year,
+        _openDate!.month,
+        _openDate!.day,
+        _openTime!.hour,
+        _openTime!.minute,
+      );
+
+      final closeDateTime = DateTime(
+        _closeDate!.year,
+        _closeDate!.month,
+        _closeDate!.day,
+        _closeTime!.hour,
+        _closeTime!.minute,
+      );
+
+      // Create quiz via repository
+      final quizRepository = QuizRepository();
+      await quizRepository.createQuiz(
+        courseId: widget.course.id,
+        title: _titleController.text.trim(),
+        description: _descriptionController.text.trim(),
+        openDate: openDateTime,
+        closeDate: closeDateTime,
+        durationMinutes: int.parse(_durationController.text),
+        maxAttempts: int.parse(_maxAttemptsController.text),
+        points: double.parse(_pointsController.text),
+        structure: structure,
+        shuffleAnswers: _shuffleAnswers,
+        showScore: _showScore,
+        selectedGroups: _selectedGroups,
+      );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -328,47 +433,100 @@ class _CreateQuizPageState extends ConsumerState<CreateQuizPage> {
                 hintText: 'Enter instructions for students...',
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 24),
+
+            // Group Selection
+            _buildSectionTitle('Assign to Groups', required: true),
+            const SizedBox(height: 8),
+            if (_isLoadingGroups)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: CircularProgressIndicator(),
+                ),
+              )
+            else
+              ChooseGroupCreate(
+                availableGroups: _availableGroups
+                    .map((id) => _groupIdToName[id] ?? id)
+                    .toList(),
+                selectedGroups: _selectedGroups
+                    .map((id) => _groupIdToName[id] ?? id)
+                    .toList(),
+                onSelectionChanged: (selectedNames) {
+                  setState(() {
+                    // Convert names back to IDs
+                    final nameToId =
+                        _groupIdToName.map((id, name) => MapEntry(name, id));
+                    _selectedGroups = selectedNames
+                        .map((name) => nameToId[name] ?? name)
+                        .toList();
+                  });
+                },
+                validator: (value) {
+                  if (_selectedGroups.isEmpty) {
+                    return 'Please select at least one group';
+                  }
+                  return null;
+                },
+              ),
+            const SizedBox(height: 24),
 
             // Quiz Structure Builder
-            _buildSectionTitle('Randomize Questions from Bank', required: true),
+            _buildSectionTitle('Quiz Structure', required: true),
             const SizedBox(height: 8),
-            Text(
-              'Set the number of questions to randomly select from each difficulty level',
-              style: TextStyle(color: Colors.grey[400], fontSize: 14),
-            ),
-            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0F172A),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey[800]!),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Configure question count by difficulty level',
+                    style: TextStyle(
+                      color: Colors.grey,
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
 
-            // Easy questions counter
-            _buildQuestionCounter(
-              label: 'Easy',
-              icon: Icons.check_circle,
-              color: Colors.green,
-              controller: _easyCountController,
-              available: _availableEasy,
-              error: _easyError,
-            ),
-            const SizedBox(height: 16),
+                  // Easy questions counter
+                  _buildQuestionCounter(
+                    label: 'Easy',
+                    icon: Icons.check_circle,
+                    color: Colors.green,
+                    controller: _easyCountController,
+                    available: _availableEasy,
+                    error: _easyError,
+                  ),
+                  const SizedBox(height: 16),
 
-            // Medium questions counter
-            _buildQuestionCounter(
-              label: 'Medium',
-              icon: Icons.adjust,
-              color: Colors.orange,
-              controller: _mediumCountController,
-              available: _availableMedium,
-              error: _mediumError,
-            ),
-            const SizedBox(height: 16),
+                  // Medium questions counter
+                  _buildQuestionCounter(
+                    label: 'Medium',
+                    icon: Icons.adjust,
+                    color: Colors.orange,
+                    controller: _mediumCountController,
+                    available: _availableMedium,
+                    error: _mediumError,
+                  ),
+                  const SizedBox(height: 16),
 
-            // Hard questions counter
-            _buildQuestionCounter(
-              label: 'Hard',
-              icon: Icons.warning,
-              color: Colors.red,
-              controller: _hardCountController,
-              available: _availableHard,
-              error: _hardError,
+                  // Hard questions counter
+                  _buildQuestionCounter(
+                    label: 'Hard',
+                    icon: Icons.warning,
+                    color: Colors.red,
+                    controller: _hardCountController,
+                    available: _availableHard,
+                    error: _hardError,
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 24),
 
@@ -502,70 +660,62 @@ class _CreateQuizPageState extends ConsumerState<CreateQuizPage> {
             ),
           ),
           const SizedBox(height: 8),
-          DropdownButtonFormField<int>(
-            value: _maxAttempts,
-            dropdownColor: const Color(0xFF1E293B),
+          TextFormField(
+            controller: _maxAttemptsController,
             style: const TextStyle(color: Colors.white, fontSize: 15),
-            decoration: _buildInputDecoration(
-              hintText: 'Select max attempts',
-            ),
-            items: [
-              const DropdownMenuItem(value: 1, child: Text('1 attempt')),
-              const DropdownMenuItem(value: 2, child: Text('2 attempts')),
-              const DropdownMenuItem(value: 3, child: Text('3 attempts')),
-              const DropdownMenuItem(value: -1, child: Text('Unlimited')),
+            keyboardType: TextInputType.number,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
             ],
-            onChanged: (value) {
-              setState(() {
-                _maxAttempts = value!;
-              });
+            decoration: _buildInputDecoration(
+              hintText: 'Enter max attempts (e.g., 1, 2, 3...)',
+            ),
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Max attempts is required';
+              }
+              final attempts = int.tryParse(value);
+              if (attempts == null || attempts < 1) {
+                return 'Must be at least 1';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 16),
+
+          // Total Points
+          Text(
+            'Total Points',
+            style: TextStyle(
+              color: Colors.grey[300],
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _pointsController,
+            style: const TextStyle(color: Colors.white, fontSize: 15),
+            keyboardType: TextInputType.number,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+            ],
+            decoration: _buildInputDecoration(
+              hintText: '100',
+              suffixIcon: const Icon(Icons.star, color: Colors.grey),
+            ),
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Required';
+              }
+              final points = int.tryParse(value);
+              if (points == null || points <= 0) {
+                return 'Must be greater than 0';
+              }
+              return null;
             },
           ),
           const SizedBox(height: 32),
-
-          // Settings section
-          _buildSectionTitle('Settings'),
-          const SizedBox(height: 16),
-
-          // Shuffle Answers
-          CheckboxListTile(
-            value: _shuffleAnswers,
-            onChanged: (value) {
-              setState(() {
-                _shuffleAnswers = value!;
-              });
-            },
-            title: const Text(
-              'Shuffle Answers',
-              style: TextStyle(color: Colors.white, fontSize: 15),
-            ),
-            subtitle: Text(
-              'Randomize A/B/C/D order for each student',
-              style: TextStyle(color: Colors.grey[400], fontSize: 13),
-            ),
-            activeColor: Colors.purple[600],
-            contentPadding: EdgeInsets.zero,
-          ),
-
-          // Show Score
-          CheckboxListTile(
-            value: _showScore,
-            onChanged: (value) {
-              setState(() {
-                _showScore = value!;
-              });
-            },
-            title: const Text(
-              'Show Score Immediately',
-              style: TextStyle(color: Colors.white, fontSize: 15),
-            ),
-            subtitle: Text(
-              'Display score right after submission',
-              style: TextStyle(color: Colors.grey[400], fontSize: 13),
-            ),
-            activeColor: Colors.purple[600],
-            contentPadding: EdgeInsets.zero,
-          ),
         ],
       ),
     );
