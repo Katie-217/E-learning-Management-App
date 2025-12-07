@@ -316,6 +316,9 @@ class _InstructorChatScreenState extends ConsumerState<InstructorChatScreen> {
 // ========================================
 // COMPONENT: Chat Window (Khung chat chính)
 // ========================================
+// ========================================
+// COMPONENT: Chat Window (Khung chat chính)
+// ========================================
 class _ChatWindow extends ConsumerStatefulWidget {
   final String conversationId;
   final UserModel otherUser;
@@ -358,8 +361,6 @@ class _ChatWindowState extends ConsumerState<_ChatWindow> {
     final content = _messageController.text.trim();
     if (content.isEmpty) return;
 
-    // 1. Lấy ID của chính mình (Giảng viên) từ Provider
-    // (Dùng .valueOrNull để an toàn nếu chưa load xong)
     final currentUserId = ref.read(currentUserIdProvider).valueOrNull;
 
     if (currentUserId == null) {
@@ -367,10 +368,9 @@ class _ChatWindowState extends ConsumerState<_ChatWindow> {
       return;
     }
 
-    // 2. Gọi hàm sendMessage với đầy đủ 3 tham số
     ref.read(chatControllerProvider.notifier).sendMessage(
       currentUserId: currentUserId,     // ID của bạn
-      otherUserId: widget.otherUser.uid, // ID học sinh (lấy từ widget)
+      otherUserId: widget.otherUser.uid, // ID học sinh
       content: content,
     );
 
@@ -405,6 +405,7 @@ class _ChatWindowState extends ConsumerState<_ChatWindow> {
               const SizedBox(width: 12),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center, // Căn giữa theo chiều dọc
                 children: [
                   Text(
                     widget.otherUser.name,
@@ -414,29 +415,8 @@ class _ChatWindowState extends ConsumerState<_ChatWindow> {
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  Row(
-                    children: [
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: const BoxDecoration(
-                          color: Colors.green,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Online', // Logic check online có thể thêm sau
-                        style: TextStyle(color: ForumTheme.textSecondary, fontSize: 12),
-                      ),
-                    ],
-                  ),
+                  // ĐÃ XÓA ROW CHỨA DẤU CHẤM XANH TẠI ĐÂY
                 ],
-              ),
-              const Spacer(),
-              IconButton(
-                icon: Icon(Icons.info_outline, color: ForumTheme.textSecondary),
-                onPressed: () {}, // Info details
               ),
             ],
           ),
@@ -527,7 +507,6 @@ class _ChatWindowState extends ConsumerState<_ChatWindow> {
     );
   }
 }
-
 // ========================================
 // COMPONENT: Item trong Sidebar (Conversation Tile)
 // ========================================

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-// Import models & providers cũ
+// Import models & providers
 import '../../../domain/models/user_model.dart';
 import '../../../domain/models/private_message_model.dart';
 import '../../../application/controllers/chat/chat_providers.dart';
@@ -18,33 +18,33 @@ class StudentChatScreen extends ConsumerStatefulWidget {
 }
 
 class _StudentChatScreenState extends ConsumerState<StudentChatScreen> {
-  // Màu sắc lấy từ instructor_forum_screen.dart
-  static const Color _bgCard = Color(0xFF1F2937);      // Nền chính
-  static const Color _bgInput = Color(0xFF111827);     // Nền input/search
+  // Colors from instructor_forum_screen.dart
+  static const Color _bgCard = Color(0xFF1F2937);      // Main background
+  static const Color _bgInput = Color(0xFF111827);     // Input/search background
   static const Color _textGrey = Color(0xFF9CA3AF);    // Grey[400]
-  static const Color _bubbleOther = Color(0xFF374151); // Màu bubble người khác
+  static const Color _bubbleOther = Color(0xFF374151); // Other user's bubble color
   
   @override
   Widget build(BuildContext context) {
-    // 1. Lấy thông tin giảng viên (admin)
+    // 1. Get instructor (admin) information
     final instructorAsync = ref.watch(singleInstructorProvider);
 
     return Scaffold(
-      backgroundColor: _bgInput, // Nền tổng thể tối thẫm
+      backgroundColor: _bgInput, // Overall dark background
       body: instructorAsync.when(
         data: (instructor) {
           if (instructor == null) return _buildNoInstructor();
 
-          // 2. Lấy conversation ID
+          // 2. Get conversation ID
           final conversationAsync = ref.watch(
             studentConversationWithInstructorProvider(instructor.uid)
           );
 
           return Row(
             children: [
-              // --- LEFT SIDEBAR (Danh sách hội thoại) ---
+              // --- LEFT SIDEBAR (Conversation list) ---
               Container(
-                width: 350, // Fixed width cho sidebar
+                width: 350, // Fixed width for sidebar
                 decoration: BoxDecoration(
                   color: _bgCard,
                   border: Border(right: BorderSide(color: Colors.grey[800]!)),
@@ -108,7 +108,7 @@ class _StudentChatScreenState extends ConsumerState<StudentChatScreen> {
           ),
           const SizedBox(width: 12),
           const Text(
-            'Tin nhắn',
+            'Messages',
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -121,7 +121,7 @@ class _StudentChatScreenState extends ConsumerState<StudentChatScreen> {
   }
 
   Widget _buildContactItem(UserModel instructor, {required bool isActive}) {
-    // Giả lập giao diện list item giống Card trong Forum nhưng nhỏ gọn
+    // Simulate list item interface like Card in Forum but compact
     return ListView(
       padding: const EdgeInsets.all(12),
       children: [
@@ -133,37 +133,19 @@ class _StudentChatScreenState extends ConsumerState<StudentChatScreen> {
           ),
           child: ListTile(
             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            leading: Stack(
-              children: [
-                CircleAvatar(
-                  radius: 24,
-                  backgroundColor: _bgInput,
-                  backgroundImage: instructor.photoUrl != null && instructor.photoUrl!.isNotEmpty
-                      ? NetworkImage(instructor.photoUrl!)
-                      : null,
-                  child: (instructor.photoUrl == null || instructor.photoUrl!.isEmpty)
-                      ? Text(
-        // SỬA TẠI ĐÂY
-        instructor.displayName.isNotEmpty ? instructor.displayName[0].toUpperCase() : 'GV',
+            leading: CircleAvatar(
+              radius: 24,
+              backgroundColor: _bgInput,
+              backgroundImage: instructor.photoUrl != null && instructor.photoUrl!.isNotEmpty
+                  ? NetworkImage(instructor.photoUrl!)
+                  : null,
+              child: (instructor.photoUrl == null || instructor.photoUrl!.isEmpty)
+                  ? Text(
+        // FIX HERE
+        instructor.displayName.isNotEmpty ? instructor.displayName[0].toUpperCase() : 'IN',
         style: const TextStyle(fontSize: 32, color: Colors.white),
       )
-                      : null,
-                ),
-                // Online indicator dot
-                Positioned(
-                  right: 0,
-                  bottom: 0,
-                  child: Container(
-                    width: 12,
-                    height: 12,
-                    decoration: BoxDecoration(
-                      color: Colors.green[400],
-                      shape: BoxShape.circle,
-                      border: Border.all(color: _bgCard, width: 2),
-                    ),
-                  ),
-                ),
-              ],
+                  : null,
             ),
             title: Text(
               instructor.displayName,
@@ -180,7 +162,7 @@ class _StudentChatScreenState extends ConsumerState<StudentChatScreen> {
                 Icon(Icons.school, size: 12, color: Colors.grey[500]),
                 const SizedBox(width: 4),
                 Text(
-                  'Giảng viên',
+                  'Instructor',
                   style: TextStyle(color: Colors.grey[500], fontSize: 13),
                 ),
               ],
@@ -201,7 +183,7 @@ class _StudentChatScreenState extends ConsumerState<StudentChatScreen> {
           Icon(Icons.person_off_outlined, size: 80, color: _textGrey),
           SizedBox(height: 16),
           Text(
-            'Chưa có giảng viên phụ trách',
+            'No assigned instructor yet',
             style: TextStyle(fontSize: 18, color: _textGrey),
           ),
         ],
@@ -230,7 +212,7 @@ class _StudentChatScreenState extends ConsumerState<StudentChatScreen> {
                   ? Text(
         instructor.displayName.isNotEmpty 
             ? instructor.displayName[0].toUpperCase() 
-            : 'GV', // ✅ Fallback nếu tên rỗng
+            : 'IN', // ✅ Fallback if name is empty
         style: const TextStyle(fontSize: 32, color: Colors.white),
       )
                   : null,
@@ -247,14 +229,14 @@ class _StudentChatScreenState extends ConsumerState<StudentChatScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Bắt đầu trao đổi việc học tập với giảng viên',
+            'Start discussing learning matters with the instructor',
             style: TextStyle(color: Colors.grey[400]),
           ),
           const SizedBox(height: 32),
           ElevatedButton.icon(
             onPressed: () => _startConversation(instructor),
             icon: const Icon(Icons.send_rounded, size: 18),
-            label: const Text('Tạo cuộc hội thoại'),
+            label: const Text('Create conversation'),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.indigo,
               foregroundColor: Colors.white,
@@ -274,10 +256,10 @@ class _StudentChatScreenState extends ConsumerState<StudentChatScreen> {
         children: [
           Icon(Icons.warning_amber_rounded, size: 60, color: Colors.red[400]),
           const SizedBox(height: 16),
-          Text('Có lỗi xảy ra', style: TextStyle(color: Colors.red[400])),
+          Text('An error occurred', style: TextStyle(color: Colors.red[400])),
           TextButton(
             onPressed: () => ref.refresh(studentConversationWithInstructorProvider(instructor.uid)),
-            child: const Text('Thử lại', style: TextStyle(color: Colors.indigoAccent)),
+            child: const Text('Try again', style: TextStyle(color: Colors.indigoAccent)),
           ),
         ],
       ),
@@ -285,12 +267,12 @@ class _StudentChatScreenState extends ConsumerState<StudentChatScreen> {
   }
 
   Widget _buildErrorLoadingInstructor(Object error) {
-    return const Center(child: Text('Lỗi tải giảng viên', style: TextStyle(color: Colors.red)));
+    return const Center(child: Text('Error loading instructor', style: TextStyle(color: Colors.red)));
   }
 
 Future<void> _startConversation(UserModel instructor) async {
-    // 1. Lấy Current User ID từ Provider
-    // Lưu ý: .value có thể null nếu chưa load xong, nên dùng .asData?.value hoặc check null
+    // 1. Get Current User ID from Provider
+    // Note: .value may be null if not loaded yet, so use .asData?.value or check null
     final currentUserId = ref.read(currentUserIdProvider).value;
 
     if (currentUserId == null) {
@@ -306,7 +288,7 @@ Future<void> _startConversation(UserModel instructor) async {
     );
 
     try {
-      // 2. Gọi Controller với đúng tham số
+      // 2. Call Controller with correct parameters
       final conversationId = await ref
           .read(chatControllerProvider.notifier)
           .initializeConversation(
@@ -315,11 +297,11 @@ Future<void> _startConversation(UserModel instructor) async {
           );
 
       if (!mounted) return;
-      Navigator.pop(context); // Đóng loading
+      Navigator.pop(context); // Close loading
 
       if (conversationId != null) {
-        // Refresh provider để UI tự động chuyển sang màn hình Chat
-        // Sử dụng unused result để đảm bảo refresh
+        // Refresh provider so UI automatically switches to Chat screen
+        // Use unused result to ensure refresh
         ref.invalidate(studentConversationWithInstructorProvider(instructor.uid));
       } else {
       }
@@ -362,8 +344,8 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final myId = ref.read(currentUserIdProvider).value;
       if (myId != null) {
-        // Gọi repo trực tiếp hoặc qua controller nếu controller hỗ trợ
-        // Ở đây gọi repo thông qua provider cho nhanh gọn vì controller hàm markAsRead ở trên chưa hoàn thiện logic ID
+        // Call repo directly or through controller if controller supports
+        // Here call repo through provider for simplicity since controller markAsRead function above is not complete with ID logic
         ref.read(chatRepositoryProvider).markConversationAsRead(widget.conversationId, myId);
       }
     });
@@ -398,7 +380,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
           ),
           child: Row(
             children: [
-          // --- Trong ChatDetailScreen ---
+          // --- In ChatDetailScreen ---
           CircleAvatar(
             radius: 20,
             backgroundImage: widget.otherUser.photoUrl != null && widget.otherUser.photoUrl!.isNotEmpty
@@ -406,13 +388,13 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                 : null,
             backgroundColor: Colors.indigo,
             child: (widget.otherUser.photoUrl == null || widget.otherUser.photoUrl!.isEmpty)
-                // SỬA TẠI ĐÂY: Kiểm tra isNotEmpty trước khi lấy [0]
-                ? Text(
-                    widget.otherUser.displayName.isNotEmpty 
-                        ? widget.otherUser.displayName[0].toUpperCase() 
-                        : '?', 
-                    style: const TextStyle(color: Colors.white),
-                  )
+                // FIX HERE: Check isNotEmpty before taking [0]
+                ?  Text(
+          widget.otherUser.displayName.isNotEmpty 
+              ? widget.otherUser.displayName[0].toUpperCase() 
+              : '?',  // ✅ MUST ADD THIS LINE
+          style: const TextStyle(color: Colors.white),
+        )
                 : null,
           ),
               const SizedBox(width: 16),
@@ -427,17 +409,8 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  Text(
-                    'Đang hoạt động',
-                    style: TextStyle(color: Colors.green[400], fontSize: 12),
-                  ),
                 ],
               ),
-              const Spacer(),
-              IconButton(
-                icon: Icon(Icons.info_outline, color: Colors.grey[400]),
-                onPressed: () {}, // Info action placeholder
-              )
             ],
           ),
         ),
@@ -445,7 +418,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
         // --- MESSAGES LIST ---
         Expanded(
           child: Container(
-            color: const Color(0xFF111827), // Nền vùng chat tối hơn sidebar
+            color: const Color(0xFF111827), // Chat area background darker than sidebar
             child: messagesAsync.when(
               data: (messages) {
                 if (messages.isEmpty) {
@@ -456,7 +429,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                         Icon(Icons.waving_hand, size: 48, color: Colors.grey[700]),
                         const SizedBox(height: 16),
                         Text(
-                          'Hãy nói xin chào!',
+                          'Say hello!',
                           style: TextStyle(color: Colors.grey[600]),
                         ),
                       ],
@@ -470,16 +443,16 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                   padding: const EdgeInsets.all(24),
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
-                    // Kiểm tra an toàn index
+                    // Safe index check
                     if (index >= messages.length) return const SizedBox.shrink();
 
                     final message = messages[index];
                     final isMe = message.senderId != widget.otherUser.uid;
                     
-                    // Logic kiểm tra tin nhắn liền kề an toàn hơn
+                    // Safer logic for checking consecutive messages
                     bool isSequence = false;
                     if (index < messages.length - 1) {
-                      // Chỉ kiểm tra phần tử tiếp theo nếu index chưa phải là cuối cùng
+                      // Only check next element if index is not the last
                       isSequence = messages[index + 1].senderId == message.senderId;
                     }
 
@@ -493,7 +466,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                 );
               },
               loading: () => const Center(child: CircularProgressIndicator(color: Colors.indigo)),
-              error: (e, s) => Center(child: Text('Lỗi: $e', style: const TextStyle(color: Colors.red))),
+              error: (e, s) => Center(child: Text('Error: $e', style: const TextStyle(color: Colors.red))),
             ),
           ),
         ),
@@ -507,12 +480,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
           ),
           child: Row(
             children: [
-              // Nút đính kèm ảnh (Placeholder UI)
-              IconButton(
-                icon: Icon(Icons.image, color: Colors.indigo[300]),
-                onPressed: () {},
-              ),
-              const SizedBox(width: 8),
+
               
               // Input Field
               Expanded(
@@ -520,10 +488,10 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                   controller: _messageController,
                   style: const TextStyle(color: Colors.white),
                   decoration: InputDecoration(
-                    hintText: 'Nhập tin nhắn...',
+                    hintText: 'Enter message...',
                     hintStyle: TextStyle(color: Colors.grey[500]),
                     filled: true,
-                    fillColor: _bgInput, // Style giống search bar forum
+                    fillColor: _bgInput, // Style like forum search bar
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(24),
                       borderSide: BorderSide.none,
@@ -570,11 +538,11 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
     final content = _messageController.text.trim();
     if (content.isEmpty) return;
 
-    // 1. Lấy Current User ID
+    // 1. Get Current User ID
     final currentUserId = ref.read(currentUserIdProvider).value;
     if (currentUserId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Lỗi xác thực: Không tìm thấy ID người dùng')),
+        const SnackBar(content: Text('Authentication error: User ID not found')),
       );
       return;
     }
@@ -582,10 +550,10 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
     setState(() => _isSending = true);
 
     try {
-      // 2. Gọi Controller gửi tin
+      // 2. Call Controller to send message
       await ref.read(chatControllerProvider.notifier).sendTextMessage(
             conversationId: widget.conversationId,
-            senderId: currentUserId, // QUAN TRỌNG: Phải truyền ID người gửi
+            senderId: currentUserId, // IMPORTANT: Must pass sender ID
             content: content,
           );
 
@@ -600,7 +568,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lỗi gửi tin: $e')),
+        SnackBar(content: Text('Message sending error: $e')),
       );
     } finally {
       if (mounted) setState(() => _isSending = false);
@@ -634,7 +602,7 @@ class MessageBubble extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           if (!isMe) ...[
-// --- Trong MessageBubble ---
+// --- In MessageBubble ---
             if (showAvatar)
               CircleAvatar(
                 radius: 14,
@@ -643,11 +611,13 @@ class MessageBubble extends StatelessWidget {
                     : null,
                 backgroundColor: Colors.indigo,
                 child: (otherUser.photoUrl == null || otherUser.photoUrl!.isEmpty)
-                    // SỬA TẠI ĐÂY: Thêm kiểm tra isNotEmpty
+                    // FIX HERE: Add check isNotEmpty
                     ? Text(
-                        otherUser.displayName.isNotEmpty ? otherUser.displayName[0].toUpperCase() : '?',
-                        style: const TextStyle(fontSize: 10, color: Colors.white)
-                      )
+          otherUser.displayName.isNotEmpty 
+              ? otherUser.displayName[0].toUpperCase() 
+              : '?',  // ✅ MUST ADD THIS LINE
+          style: const TextStyle(fontSize: 10, color: Colors.white)
+        )
                     : null,
               )
             else
@@ -659,11 +629,11 @@ class MessageBubble extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: BoxDecoration(
-                // Style Bubble
+                // Bubble Style
                 gradient: isMe 
-                  ? const LinearGradient(colors: [Colors.indigo, Colors.purple]) // Gradient cho Me
+                  ? const LinearGradient(colors: [Colors.indigo, Colors.purple]) // Gradient for Me
                   : null,
-                color: isMe ? null : const Color(0xFF374151), // Màu tối xám cho Others
+                color: isMe ? null : const Color(0xFF374151), // Dark gray for Others
                 borderRadius: BorderRadius.only(
                   topLeft: const Radius.circular(18),
                   topRight: const Radius.circular(18),
@@ -677,7 +647,7 @@ class MessageBubble extends StatelessWidget {
                   Text(
                     message.content,
                     style: const TextStyle(
-                      color: Colors.white, // Text luôn trắng trên nền tối/gradient
+                      color: Colors.white, // Text always white on dark/gradient background
                       fontSize: 15,
                     ),
                   ),

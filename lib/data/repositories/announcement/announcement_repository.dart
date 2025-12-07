@@ -14,18 +14,17 @@ class AnnouncementRepository {
   
   /// Get announcements stream for a course (REMOVED isPinned ordering)
   Stream<List<Map<String, dynamic>>> getAnnouncementsStream(String courseId) {
-    return _firestore
-        .collection('courses')
-        .doc(courseId)
-        .collection('announcements')
-        .orderBy('createdAt', descending: true) // Only sort by date
-        .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) {
-              final data = doc.data();
-              data['id'] = doc.id;
-              return data;
-            }).toList());
-  }
+      return _firestore
+          .collection('announcements') // ✅ ĐỔI: Root collection
+          .where('courseId', isEqualTo: courseId) // ✅ THÊM: Filter theo course
+          .orderBy('createdAt', descending: true)
+          .snapshots()
+          .map((snapshot) => snapshot.docs.map((doc) {
+                final data = doc.data();
+                data['id'] = doc.id;
+                return data;
+              }).toList());
+    }
 
   /// Create new announcement (REMOVED isPinned parameter)
   Future<String> createAnnouncement({
@@ -40,11 +39,9 @@ class AnnouncementRepository {
   }) async {
     try {
       final docRef = await _firestore
-          .collection('courses')
-          .doc(courseId)
-          .collection('announcements')
+          .collection('announcements') // ✅ ĐỔI: Root collection
           .add({
-        'courseId': courseId,
+        'courseId': courseId, // Quan trọng để lọc
         'title': title,
         'content': content,
         'authorId': authorId,
@@ -85,16 +82,13 @@ class AnnouncementRepository {
       if (targetGroupIds != null) updateData['targetGroupIds'] = targetGroupIds;
       
       await _firestore
-          .collection('courses')
-          .doc(courseId)
-          .collection('announcements')
-          .doc(announcementId)
+          .collection('announcements') // ✅ ĐỔI: Root collection
+          .doc(announcementId) // Truy cập thẳng bằng ID
           .update(updateData);
     } catch (e) {
       throw Exception('Failed to update announcement: $e');
     }
   }
-
   /// Delete announcement (and cleanup related data)
   Future<void> deleteAnnouncement({
     required String courseId,
@@ -103,83 +97,72 @@ class AnnouncementRepository {
     try {
       final batch = _firestore.batch();
       
-      // Delete announcement
+      // Delete announcement from Root
       batch.delete(
         _firestore
-            .collection('courses')
-            .doc(courseId)
-            .collection('announcements')
+            .collection('announcements') // ✅ ĐỔI: Root collection
             .doc(announcementId),
       );
       
-      // Delete all comments
+      // Xóa comments (Giữ nguyên logic)
       final commentsSnapshot = await _firestore
           .collection('comments')
           .where('announcementId', isEqualTo: announcementId)
           .get();
+      for (var doc in commentsSnapshot.docs) batch.delete(doc.reference);
       
-      for (var doc in commentsSnapshot.docs) {
-        batch.delete(doc.reference);
-      }
-      
-      // Delete all tracking data
+      // Xóa tracking (Giữ nguyên logic)
       final trackingSnapshot = await _firestore
           .collection('announcementTracking')
           .where('announcementId', isEqualTo: announcementId)
           .get();
-      
-      for (var doc in trackingSnapshot.docs) {
-        batch.delete(doc.reference);
-      }
+      for (var doc in trackingSnapshot.docs) batch.delete(doc.reference);
       
       await batch.commit();
     } catch (e) {
       throw Exception('Failed to delete announcement: $e');
     }
   }
-
   // ===========================================================================
   // 2. TRACKING OPERATIONS
   // ===========================================================================
 
   /// Track view
   Future<void> trackView({
-    required String announcementId,
-    required String studentId,
-    required String courseId,
-  }) async {
-    final trackingId = AnnouncementTrackingModel.generateId(
-      announcementId: announcementId,
-      studentId: studentId,
-    );
+      required String announcementId,
+      required String studentId,
+      required String courseId,
+    }) async {
+      final trackingId = AnnouncementTrackingModel.generateId(
+        announcementId: announcementId,
+        studentId: studentId,
+      );
 
-    final batch = _firestore.batch();
-    
-    // Update tracking document
-    batch.set(
-      _firestore.collection('announcementTracking').doc(trackingId),
-      {
-        'announcementId': announcementId,
-        'studentId': studentId,
-        'courseId': courseId,
-        'hasViewed': true,
-        'lastViewedAt': FieldValue.serverTimestamp(),
-      },
-      SetOptions(merge: true),
-    );
-    
-    // Increment view count
-    batch.update(
-      _firestore
-          .collection('courses')
-          .doc(courseId)
-          .collection('announcements')
-          .doc(announcementId),
-      {'viewCount': FieldValue.increment(1)},
-    );
-    
-    await batch.commit();
-  }
+      final batch = _firestore.batch();
+      
+      // Update tracking doc (Giữ nguyên)
+      batch.set(
+        _firestore.collection('announcementTracking').doc(trackingId),
+        {
+          'announcementId': announcementId,
+          'studentId': studentId,
+          'courseId': courseId,
+          'hasViewed': true,
+          'lastViewedAt': FieldValue.serverTimestamp(),
+        },
+        SetOptions(merge: true),
+      );
+      
+      // Increment view count (SỬA: Update vào Root Announcement)
+      batch.update(
+        _firestore
+            .collection('announcements') // ✅ ĐỔI: Root collection
+            .doc(announcementId),
+        {'viewCount': FieldValue.increment(1)},
+      );
+      
+      await batch.commit();
+    }
 
   /// Track download
   Future<void> trackDownload({
@@ -300,7 +283,7 @@ class AnnouncementRepository {
     try {
       final batch = _firestore.batch();
       
-      // Create comment
+      // Create comment (Giữ nguyên)
       final commentRef = _firestore.collection('comments').doc();
       batch.set(commentRef, {
         'id': commentRef.id,
@@ -314,12 +297,10 @@ class AnnouncementRepository {
         'isDeleted': false,
       });
       
-      // Increment comment count
+      // Increment comment count (SỬA: Update vào Root Announcement)
       batch.update(
         _firestore
-            .collection('courses')
-            .doc(courseId)
-            .collection('announcements')
+            .collection('announcements') // ✅ ĐỔI: Root collection
             .doc(announcementId),
         {'commentCount': FieldValue.increment(1)},
       );
@@ -330,7 +311,7 @@ class AnnouncementRepository {
     }
   }
 
-  /// Delete comment (soft delete)
+  /// Delete comment (SỬA: Decrement commentCount trong Root)
   Future<void> deleteComment({
     required String commentId,
     required String courseId,
@@ -339,21 +320,14 @@ class AnnouncementRepository {
     try {
       final batch = _firestore.batch();
       
-      // Soft delete comment
       batch.update(
         _firestore.collection('comments').doc(commentId),
-        {
-          'isDeleted': true,
-          'content': '[Comment deleted]',
-        },
+        {'isDeleted': true, 'content': '[Comment deleted]'},
       );
       
-      // Decrement comment count
       batch.update(
         _firestore
-            .collection('courses')
-            .doc(courseId)
-            .collection('announcements')
+            .collection('announcements') // ✅ ĐỔI: Root collection
             .doc(announcementId),
         {'commentCount': FieldValue.increment(-1)},
       );
@@ -368,24 +342,22 @@ class AnnouncementRepository {
   // 4. STUDENT-SPECIFIC QUERIES
   // ===========================================================================
 
-  /// Get announcements for student (filtered by group)
+  /// Get announcements for student (SỬA: Query từ Root)
   Stream<List<Map<String, dynamic>>> getStudentAnnouncementsStream({
     required String courseId,
     required String studentGroupId,
   }) {
     return _firestore
-        .collection('courses')
-        .doc(courseId)
-        .collection('announcements')
+        .collection('announcements') // ✅ ĐỔI: Root collection
+        .where('courseId', isEqualTo: courseId) // ✅ THÊM: Filter course
         .where('isPublished', isEqualTo: true)
-        .orderBy('createdAt', descending: true) // Only sort by date
+        .orderBy('createdAt', descending: true)
         .snapshots()
+        // ... (Phần logic filter group bên dưới giữ nguyên)
         .map((snapshot) => snapshot.docs
             .where((doc) {
               final data = doc.data();
               final targetGroups = List<String>.from(data['targetGroupIds'] ?? []);
-              
-              // Show if: no target groups (all groups) OR student's group is in target
               return targetGroups.isEmpty || targetGroups.contains(studentGroupId);
             })
             .map((doc) {
@@ -436,6 +408,7 @@ class AnnouncementRepository {
       return false;
     }
   }
+  
 }
 
 // ===========================================================================

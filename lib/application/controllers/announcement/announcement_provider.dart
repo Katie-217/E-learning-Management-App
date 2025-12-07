@@ -11,7 +11,20 @@ import '../../../data/repositories/announcement/announcement_repository.dart';
 // Provider lấy danh sách thông báo theo CourseId
 final announcementListProvider = StreamProvider.family<List<Map<String, dynamic>>, String>((ref, courseId) {
   final repo = ref.watch(AnnouncementRepositoryProvider);
-  return repo.getAnnouncementsStream(courseId);
+  
+  // 👇 SỬA ĐOẠN NÀY: Thêm .handleError vào cuối dòng
+  return repo.getStudentAnnouncementsStream( // Hoặc getAnnouncementsStream tùy code bạn
+    courseId: courseId,
+    studentGroupId: 'YOUR_GROUP_ID' // (Nếu bạn đang hardcode để test)
+  ).handleError((error) {
+    // 🖨️ IN LỖI RA MÀN HÌNH MÁY TÍNH
+    print("=================================================");
+    print("🔥🔥🔥 LỖI FIRESTORE (COPY LINK Ở DƯỚI):");
+    print(error.toString());
+    print("=================================================");
+    
+    throw error; // Ném lỗi lại để UI vẫn hiện thông báo đỏ (nếu cần)
+  });
 });
 
 // Provider lấy danh sách comments theo AnnouncementId

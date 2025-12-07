@@ -101,6 +101,7 @@ class ForumRepository {
   }
 
   /// Create new topic with validation
+/// Create new topic with validation
   Future<String> createTopic({
     required String courseId,
     required String title,
@@ -109,13 +110,12 @@ class ForumRepository {
     required String authorName,
     List<String> attachments = const [],
   }) async {
+    print("🔥 [Repo] Bắt đầu ghi vào Firestore...");
+    print("   Path: forums/$courseId/topics");
+    
     // Validation
-    if (title.trim().isEmpty) {
-      throw Exception('Tiêu đề không được để trống');
-    }
-    if (content.trim().isEmpty) {
-      throw Exception('Nội dung không được để trống');
-    }
+    if (title.trim().isEmpty) throw Exception('Tiêu đề trống');
+    if (content.trim().isEmpty) throw Exception('Nội dung trống');
 
     try {
       final docRef = await _firestore
@@ -133,8 +133,11 @@ class ForumRepository {
         'lastReplyAt': FieldValue.serverTimestamp(),
         'attachments': attachments,
       });
+      
+      print("✅ [Repo] Ghi thành công! Doc ID: ${docRef.id}");
       return docRef.id;
     } catch (e) {
+      print("❌ [Repo] LỖI GHI FIRESTORE: $e"); // Log lỗi đỏ lòm
       throw Exception('Không thể tạo chủ đề: $e');
     }
   }
